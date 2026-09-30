@@ -841,6 +841,8 @@ class MainWindow(QMainWindow):
 
     def _on_send_error(self, kind: str, detail: str) -> None:
         """Report a write that failed on the worker thread (U52: GUI never blocks)."""
+        if kind in ("timeout", "queue"):
+            self._stop_repeat()      # U64: stop the loop instead of hammering a stuck device
         if kind == "timeout":
             self._notify(tr("err.tx.timeout"), "error")
         elif kind == "queue":
@@ -1628,6 +1630,8 @@ class MainWindow(QMainWindow):
             save_config(config)
         except (AttributeError, RuntimeError):
             pass
+        self.worker.close_port()     # U64: non-blocking; the worker closes the port
+        self.worker.wait(1500)       # bounded wait so quitting can never hang
         self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()

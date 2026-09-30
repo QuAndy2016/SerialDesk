@@ -1,11 +1,14 @@
 """Serial worker: background QThread doing read loop, emits (timestamp, data).
 
-U52 (hang fix): *all* blocking serial I/O happens on this thread.
-- Outgoing frames are handed over through a bounded queue (`send()` only enqueues),
-  so a stalled write can never freeze the GUI.
+U52/U64 design notes - the GUI thread never performs serial I/O:
+- Outgoing frames are handed over through a bounded queue (`send()` only enqueues).
 - Writes carry a `write_timeout`, so a driver that never completes the transfer
   (e.g. hardware flow control waiting for CTS) raises instead of blocking forever.
-- Modem status lines are polled here and cached; `signals()` is a plain dict read.
+- The queue is drained a few frames per loop turn so the receive path and the
+  modem-status polling keep running even when a device stopped accepting data.
+- The worker thread closes its own port: closing a handle while the driver is
+  still completing a write can block for seconds, which used to freeze the window
+  and prevent the app from exiting.
 """
 
 from __future__ import annotations
@@ -19,10 +22,11 @@ from PySide6.QtCore import QThread, Signal
 import serial
 from serial.tools import list_ports
 
-WRITE_TIMEOUT = 0.3        # seconds; a stuck write must not hang the app
-READ_TIMEOUT = 0.1         # seconds
-SIGNAL_POLL_INTERVAL = 0.2  # seconds between modem-status reads (was 50 ms in the GUI)
-MAX_TX_QUEUE = 64          # frames; protects memory if the port stops draining
+WRITE_TIMEOUT = 0.3         # seconds; a stuck write must not hang the app
+READ_TIMEOUT = 0.1          # seconds
+SIGNAL_POLL_INTERVAL = 0.2  # seconds between modem-status reads
+MAX_TX_QUEUE = 64           # frames; protects memory if the port stops draining
+MAX_TX_PER_TICK = 2         # frames written per loop turn (keeps RX alive, U64)
 
 
 def list_serial_ports() -> list:
@@ -81,15 +85,15 @@ class SerialWorker(QThread):
         return True
 
     def close_port(self):
+        """Ask the worker to stop. Never touches the port from this thread (U64)."""
         self._running = False
         with self._tx_lock:
             self._tx_queue.clear()
-        if self._port is not None:
-            try:
-                self._port.close()
-            except Exception:  # noqa: BLE001
-                pass
-            self._port = None
+        # The worker owns the handle: if it is not running we may close directly,
+        # otherwise it closes on the way out (closing inside a pending write can
+        # block the caller for seconds and used to freeze the whole window).
+        if not self.isRunning():
+            self._close_port_safely()
         with self._sig_lock:
             self._sig_cache = {"open": False, "cts": False, "dsr": False,
                                "dcd": False, "ri": False}
@@ -140,6 +144,15 @@ class SerialWorker(QThread):
 
     # -- internals (worker thread) ------------------------------------------
 
+    def _close_port_safely(self) -> None:
+        """Close the port handle (worker thread, or when no thread is running)."""
+        if self._port is not None:
+            try:
+                self._port.close()
+            except Exception:  # noqa: BLE001
+                pass
+            self._port = None
+
     def _poll_signals(self) -> None:
         """Refresh the modem-status cache (worker thread only)."""
         port = self._port
@@ -158,27 +171,36 @@ class SerialWorker(QThread):
             self._sig_cache = state
 
     def _drain_tx(self) -> None:
-        """Write queued frames with a bounded timeout (worker thread only)."""
-        while True:
+        """Write at most MAX_TX_PER_TICK frames, then let the read loop run (U64).
+
+        Draining without a limit starves the receive path (RX stays 0) whenever a
+        device stops accepting writes.
+        """
+        for _ in range(MAX_TX_PER_TICK):
             with self._tx_lock:
                 if not self._tx_queue:
                     return
                 data = self._tx_queue.popleft()
-            port = self._port
-            if port is None or not port.is_open:
-                self.send_error.emit("closed", "")
-                return
-            try:
-                port.write(data)
-                self.log.emit(f"TX {len(data)} bytes")
-            except serial.SerialTimeoutException as exc:
-                # driver never accepted the bytes (buffer full / CTS never asserted)
-                self.log.emit(f"send timeout: {exc}")
-                self.send_error.emit("timeout", str(exc))
-            except Exception as exc:  # noqa: BLE001
-                self.log.emit(f"send failed: {exc}")
-                self.send_error.emit("io", str(exc))
-                return
+            self._write_one(data)
+
+    def _write_one(self, data: bytes) -> None:
+        """Write a single frame (worker thread only)."""
+        port = self._port
+        if port is None or not port.is_open:
+            self.send_error.emit("closed", "")
+            return
+        try:
+            port.write(data)
+            self.log.emit(f"TX {len(data)} bytes")
+        except serial.SerialTimeoutException as exc:
+            # driver never accepted the bytes (buffer full / CTS never asserted)
+            with self._tx_lock:
+                self._tx_queue.clear()      # U64: drop the stale backlog
+            self.log.emit(f"send timeout: {exc}")
+            self.send_error.emit("timeout", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            self.log.emit(f"send failed: {exc}")
+            self.send_error.emit("io", str(exc))
 
     # -- thread body ----------------------------------------------------------
 
@@ -205,13 +227,8 @@ class SerialWorker(QThread):
                 self.log.emit(f"read error: {exc}")
                 self.opened.emit(False)
                 break
-        # drain anything left before exit
-        if self._port is not None and self._port.is_open:
-            try:
-                self._port.close()
-            except Exception:  # noqa: BLE001
-                pass
-            self._port = None
+        # the worker closes its own handle on the way out (U64)
+        self._close_port_safely()
         with self._sig_lock:
             self._sig_cache = {"open": False, "cts": False, "dsr": False,
                                "dcd": False, "ri": False}

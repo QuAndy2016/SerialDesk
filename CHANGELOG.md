@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.4.17] - 2026-10-01
+
+### Fixed
+
+- **Repeat-sending into a device that stopped reading froze the window and blocked exit (U64)**: with hardware
+  flow control (RTS/CTS) and a peer that never asserts CTS, every write timed out and the repeat loop kept
+  refilling the queue, so the worker thread sat inside `write()` and the receive path starved (RX stayed 0).
+  Closing the port from the GUI then blocked inside the driver, which is what turned into "Not Responding"
+  and an app that would not quit.
+  - The worker now drains at most two frames per loop turn, so signal polling and the receive path keep
+    running while a device is stuck.
+  - A write timeout clears the stale backlog instead of retrying it forever, and stops the repeat loop with
+    the existing red timeout message.
+  - `close_port()` no longer touches the port from the GUI thread: it asks the worker to stop and returns
+    immediately, and the owning thread closes the handle on its way out. Shutdown waits at most 1.5 s, so
+    quitting can never hang.
+
 ## [v0.4.16] - 2026-09-30
 
 ### Fixed
