@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.11.0] - 2026-10-01
+
+### Changed
+
+- **The receive controls are one row, not two (U96)**: split mode, the timestamp switch, both display switches and the
+  log actions now share a single line, which hands the pane back roughly 34 px of height. Clear still sits alone at
+  the far right so it can never be hit while reaching for a switch.
+- **The timestamp is a switch with a single format (U96)**: the four-option dropdown ("None", `HH:MM:SS`,
+  `HH:MM:SS.mmm`, `yyyy-MM-dd HH:MM:SS.mmm`) is gone. Tick the box and every receive line starts with
+  `[04:02:10.456]`; the choice is remembered in the config (`timestamp_on`, on by default) - previously it was not
+  saved at all and reset on every start.
+- **One log folder for everything (U97)**: the settings entry is now "Log saving settings..." with a *Save location*
+  group on top and an *Auto-save* group below it, because the folder is shared by the one-click Save log, the start
+  folder of Save as... and auto-save. Save as... now opens in the configured folder instead of the default one.
+
+### Removed
+
+- **The duplicate Auto-save switch in the receive row (U97)**: auto-save has a single owner now, the settings dialog,
+  so the two places can no longer disagree. The unused `log.autosave` strings went with it, and the dialog note now
+  explains the shared folder and how the two file names differ (`serial_...` for auto-save, `serial_RX_...` for a
+  manual snapshot).
+
 ## [v0.10.0] - 2026-10-01
 
 ### Changed

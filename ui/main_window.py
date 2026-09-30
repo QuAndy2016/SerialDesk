@@ -123,11 +123,8 @@ SPLIT_AUTO = 1
 SPLIT_MANUAL = 2
 SPLIT_HEADER = 3
 
-# -- timestamp formats ---------------------------------------------------------
-TS_OFF = 0
-TS_HMS = 1
-TS_HMS_MS = 2
-TS_FULL_MS = 3
+# -- timestamp (U96): an on/off switch with a single fixed format ---------------
+TS_PREFIX_TEMPLATE = "[{hms}.{ms:03d}] "      # -> [04:02:10.456]
 
 CHECKSUM_KEYS = ["none", "crc16-modbus", "crc16-ccitt", "crc32", "sum8"]
 
@@ -235,7 +232,6 @@ class MainWindow(QMainWindow):
             max_mb=int(_cfg.get("autosave_max_mb", 2) or 2),
             max_minutes=int(_cfg.get("autosave_max_minutes", 30) or 30),
             folder=self._log_dir)
-        self.autosave_check.setChecked(bool(_cfg.get("autosave_enabled", False)))
 
         # send history (T5) from config
         _hcfg = load_config()
@@ -469,6 +465,7 @@ class MainWindow(QMainWindow):
         self._autosave_dlg.set_values(enabled=False, max_mb=2, max_minutes=30, folder=self._log_dir)
         self._apply_autosave_settings()
         self.autoscroll_check.setChecked(True)
+        self.ts_check.setChecked(True)          # U96: timestamps are on by default
         self._send_history = []
         self._update_history_button()
         self._auto_rules = []
@@ -499,13 +496,17 @@ class MainWindow(QMainWindow):
         config["autosave_max_minutes"] = int(values["max_minutes"])
         config["log_dir"] = self._log_dir
         save_config(config)
-        if self.autosave_check.isChecked() != values["enabled"]:
-            self.autosave_check.blockSignals(True)
-            self.autosave_check.setChecked(values["enabled"])
-            self.autosave_check.blockSignals(False)
         if values["enabled"]:
             if self._log_fp is None:
                 self._log_open()
+            if self._log_fp is None:
+                # U97: opening the file failed - the dialog is the only switch now, so
+                # it must fall back to "off" instead of showing an enabled state.
+                config["autosave_enabled"] = False
+                save_config(config)
+                self._autosave_dlg.set_values(
+                    enabled=False, max_mb=max(1, int(values["max_mb"])),
+                    max_minutes=max(1, int(values["max_minutes"])), folder=self._log_dir)
         else:
             self._log_close()
 
@@ -519,6 +520,12 @@ class MainWindow(QMainWindow):
         """Remember the auto-scroll preference (U75)."""
         config = load_config()
         config["autoscroll"] = bool(checked)
+        save_config(config)
+
+    def _on_timestamp_toggled(self, checked: bool) -> None:
+        """Remember the timestamp preference (U96)."""
+        config = load_config()
+        config["timestamp_on"] = bool(checked)
         save_config(config)
 
     def _on_reconnect_toggled(self, checked: bool) -> None:
@@ -640,10 +647,8 @@ class MainWindow(QMainWindow):
         self.split_ms_edit.setToolTip(tr("split.ms.tip"))
         self.header_edit.setPlaceholderText(tr("header.placeholder.hex"))
         self.header_edit.setToolTip(tr("header.tip"))
-        self._ts_lbl.setText(tr("ts.label"))
-        self._reload_combo(self.ts_combo, [
-            tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
-        self.ts_combo.setToolTip(tr("ts.tip"))
+        self.ts_check.setText(tr("ts.label"))
+        self.ts_check.setToolTip(tr("ts.tip"))
         self.clear_btn.setText(tr("btn.clear"))
         self.save_log_btn.setText(tr("btn.save_log_quick"))
         self.save_log_btn.setToolTip(tr("sc.save.tip"))
@@ -664,12 +669,10 @@ class MainWindow(QMainWindow):
         self.send_file_btn.setText(tr("btn.cancel_send") if self._file_timer.isActive()
                                     else tr("btn.send_file"))
         self.send_file_btn.setToolTip(tr("btn.send_file"))
-        self.autosave_check.setText(tr("log.autosave"))
         self.echo_tx_check.setText(tr("rx.echo_tx"))
         self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
         self.autoscroll_check.setText(tr("rx.autoscroll"))
         self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
-        self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._reconnect_act.setText(tr("conn.auto"))
         self._reconnect_act.setToolTip(tr("conn.auto.tip"))
         self.params_summary.setToolTip(tr("portset.tip"))
@@ -876,60 +879,49 @@ class MainWindow(QMainWindow):
         self.split_slot.addWidget(self.header_edit)      # 2 by header
         rx_opts.addWidget(self.split_slot)
 
-        self._ts_lbl = QLabel(tr("ts.label"))
-        rx_opts.addWidget(self._ts_lbl)
-        self.ts_combo = QComboBox()
-        self.ts_combo.addItems([tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
-        self.ts_combo.setCurrentIndex(TS_HMS_MS)
-        # U80: do not size the box to the longest format ("yyyy-MM-dd HH:MM:SS.mmm"
-        # made it 235 px wide) - the dropdown still lists every format in full.
-        self.ts_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.ts_combo.setMinimumContentsLength(12)
-        self.ts_combo.setToolTip(tr("ts.tip"))
-        rx_opts.addWidget(self.ts_combo)
+        # U96: one row, not two. The stream settings come first, then the display
+        # switches, then the log actions; Clear stays alone at the far right (U95's
+        # rule for destructive actions), which is what the stretch is there for.
+        # The in-row Auto-save switch is gone (U97) - the settings dialog owns it.
+        rx_opts.addSpacing(12)
+        self.ts_check = QCheckBox(tr("ts.label"))                   # U96: on/off only
+        self.ts_check.setChecked(bool(load_config().get("timestamp_on", True)))
+        self.ts_check.setToolTip(tr("ts.tip"))
+        self.ts_check.toggled.connect(self._on_timestamp_toggled)
+        rx_opts.addWidget(self.ts_check)
 
-        # U95 (档 2): the row is grouped instead of being a flat line of controls -
-        # stream settings on the left, the two display switches on the right, and the
-        # stretch sitting between the groups rather than inside one of them.
-        rx_opts.addStretch(1)
+        rx_opts.addSpacing(12)
         self.echo_tx_check = QCheckBox(tr("rx.echo_tx"))
         self.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
         self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
         rx_opts.addWidget(self.echo_tx_check)
-        rx_opts.addSpacing(12)                       # U95: each switch gets its own space
+        rx_opts.addSpacing(12)
         self.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
         self.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
         self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
         self.autoscroll_check.toggled.connect(self._on_autoscroll_toggled)
         rx_opts.addWidget(self.autoscroll_check)
+
+        rx_opts.addSpacing(18)
+        self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
+        self.save_log_btn.setToolTip(tr("log.quick.tip"))
+        self.save_log_btn.clicked.connect(self.on_save_log_quick)
+        rx_opts.addWidget(self.save_log_btn)
+
+        self.save_log_as_btn = QPushButton(tr("btn.save_log_as"))
+        self.save_log_as_btn.clicked.connect(self.on_save_log_as)
+        rx_opts.addWidget(self.save_log_as_btn)
+
+        rx_opts.addStretch(1)
+        self.clear_btn = QPushButton(tr("btn.clear"))
+        self.clear_btn.clicked.connect(self.on_clear)
+        self.clear_btn.setToolTip(tr("sc.clear.tip"))
+        rx_opts.addWidget(self.clear_btn)
         rx_layout.addWidget(_fixed_row(rx_opts))
         # U95: the slot only exists for manual/header mode; set that before the log view
         # is created, so the initial state must not run the full change handler.
         self.split_slot.setVisible(self.split_combo.currentIndex() in (SPLIT_MANUAL, SPLIT_HEADER))
 
-        # Row 2 (U95): the log actions on the left, and the destructive Clear kept
-        # alone at the far right so it can never be hit while reaching for a switch.
-        toolbar = QHBoxLayout()
-        self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
-        self.save_log_btn.setToolTip(tr("log.quick.tip"))
-        self.save_log_btn.clicked.connect(self.on_save_log_quick)
-        toolbar.addWidget(self.save_log_btn)
-
-        self.save_log_as_btn = QPushButton(tr("btn.save_log_as"))
-        self.save_log_as_btn.clicked.connect(self.on_save_log_as)
-        toolbar.addWidget(self.save_log_as_btn)
-
-        self.autosave_check = QCheckBox(tr("log.autosave"))
-        self.autosave_check.setToolTip(tr("log.autosave.tip"))
-        self.autosave_check.toggled.connect(self._on_autosave_toggled)
-        toolbar.addWidget(self.autosave_check)
-
-        toolbar.addStretch(1)
-        self.clear_btn = QPushButton(tr("btn.clear"))
-        self.clear_btn.clicked.connect(self.on_clear)
-        self.clear_btn.setToolTip(tr("sc.clear.tip"))
-        toolbar.addWidget(self.clear_btn)
-        rx_layout.addWidget(_fixed_row(toolbar))
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
@@ -1263,9 +1255,9 @@ class MainWindow(QMainWindow):
     def _setup_tab_order(self) -> None:
         """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
         names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
-                 "split_combo", "split_ms_edit", "header_edit", "ts_combo",
+                 "split_combo", "split_ms_edit", "header_edit", "ts_check",
                  "echo_tx_check", "autoscroll_check",
-                 "save_log_btn", "save_log_as_btn", "autosave_check", "clear_btn", "rx_view",
+                 "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
                  "tx_fmt_combo", "escape_check", "crlf_check",
                  "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
                  "history_btn", "send_btn", "send_file_btn"]
@@ -1714,21 +1706,6 @@ class MainWindow(QMainWindow):
             self._log_close()
             self.on_log_line(tr("log.save_fail", e=exc))
 
-    def _on_autosave_toggled(self, checked: bool) -> None:
-        if self._autosave_dlg.enable_check.isChecked() != checked:
-            self._autosave_dlg.enable_check.blockSignals(True)   # U75: one shared state
-            self._autosave_dlg.enable_check.setChecked(checked)
-            self._autosave_dlg.enable_check.blockSignals(False)
-        config = load_config()
-        config["autosave_enabled"] = bool(checked)
-        save_config(config)
-        if checked:
-            self._log_open()
-            if self._log_fp is None:
-                self.autosave_check.setChecked(False)
-        else:
-            self._log_close()
-
     def on_save_log_quick(self) -> None:
         """One-click save of the receive pane into logs/ (U25-D)."""
         try:
@@ -1744,10 +1721,10 @@ class MainWindow(QMainWindow):
     def on_save_log_as(self) -> None:
         """Save the receive pane to a user-chosen path (U25-D)."""
         try:
-            os.makedirs(LOG_DIR, exist_ok=True)
+            os.makedirs(self._log_dir, exist_ok=True)      # U97: the configured log folder
         except OSError:
             pass
-        default = os.path.join(LOG_DIR, time.strftime("serial_%Y%m%d_%H%M%S.txt"))
+        default = os.path.join(self._log_dir, time.strftime("serial_%Y%m%d_%H%M%S.txt"))
         path, _ = QFileDialog.getSaveFileName(self, tr("log.save.title"), default, "Text (*.txt)")
         if not path:
             return
@@ -2073,17 +2050,12 @@ class MainWindow(QMainWindow):
         return f"{hex_s} | {text_s}"
 
     def _ts_prefix(self, ts: float) -> str:
-        mode = self.ts_combo.currentIndex()
-        if mode == TS_OFF:
+        """'[04:02:10.456] ' when the timestamp switch is on, '' when it is off (U96)."""
+        if not self.ts_check.isChecked():
             return ""
         wall = ts + self._clock_offset
-        t = time.localtime(wall)
         ms = int((wall - int(wall)) * 1000)
-        if mode == TS_HMS:
-            return time.strftime("[%H:%M:%S] ", t)
-        if mode == TS_HMS_MS:
-            return time.strftime(f"[%H:%M:%S.{ms:03d}] ", t)
-        return time.strftime(f"[%Y-%m-%d %H:%M:%S.{ms:03d}] ", t)
+        return time.strftime(f"[%H:%M:%S.{ms:03d}] ", time.localtime(wall))
 
     # -- actions -----------------------------------------------------------------
 

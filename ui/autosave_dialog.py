@@ -1,8 +1,12 @@
-"""Auto-save settings dialog (U75).
+"""Log-saving settings dialog (U75; renamed from auto-save in U97).
 
-Auto-save writes every received line (and echoed TX lines) to a file while the
-port is open. This dialog lets the user decide whether it runs, how large a
-segment may grow and how long it may stay open, plus where the files land.
+Two groups, because the folder is shared while the rest is auto-save specific:
+
+* **Save location** - one folder for every log the app writes. The one-click
+  "Save log" button, the "Save as..." start folder and auto-save all use it, so
+  the user only ever has to remember a single place.
+* **Auto-save** - whether it runs, how large a segment may grow and how long it
+  may stay open.
 """
 
 from __future__ import annotations
@@ -25,17 +29,43 @@ from PySide6.QtWidgets import (
 from app.i18n import tr
 
 
+def _heading(label: QLabel) -> QLabel:
+    """Make a plain label read as a section heading (no stylesheet needed)."""
+    font = label.font()
+    font.setBold(True)
+    label.setFont(font)
+    return label
+
+
 class AutoSaveDialog(QDialog):
-    """Modeless auto-save settings; every change applies immediately (U75)."""
+    """Modeless log-saving settings; every change applies immediately (U75)."""
 
     settingsChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setModal(False)
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(440)
 
         root = QVBoxLayout(self)
+
+        self.target_lbl = _heading(QLabel(tr("as.group.target")))   # U97: save location
+        root.addWidget(self.target_lbl)
+
+        form = QFormLayout()
+        self._dir_lbl = QLabel(tr("as.dir"))
+        dir_row = QHBoxLayout()
+        self.dir_edit = QLineEdit("")
+        self.dir_edit.setReadOnly(True)
+        dir_row.addWidget(self.dir_edit, 1)
+        self.browse_btn = QPushButton(tr("as.browse"))
+        self.browse_btn.clicked.connect(self._choose_dir)
+        dir_row.addWidget(self.browse_btn)
+        form.addRow(self._dir_lbl, dir_row)
+        root.addLayout(form)
+
+        self.auto_lbl = _heading(QLabel(tr("as.group.auto")))       # U97: auto-save
+        root.addWidget(self.auto_lbl)
 
         self.enable_check = QCheckBox(tr("as.enable"))
         self.enable_check.toggled.connect(lambda *_: self.settingsChanged.emit())
@@ -53,17 +83,6 @@ class AutoSaveDialog(QDialog):
         self.max_min_edit.setValidator(QIntValidator(1, 1440, self))
         self.max_min_edit.textChanged.connect(lambda *_: self.settingsChanged.emit())
         form.addRow(self._min_lbl, self.max_min_edit)
-
-        self._dir_lbl = QLabel(tr("as.dir"))
-        dir_row = QHBoxLayout()
-        self.dir_edit = QLineEdit("")
-        self.dir_edit.setReadOnly(True)
-        dir_row.addWidget(self.dir_edit, 1)
-        self.browse_btn = QPushButton(tr("as.browse"))
-        self.browse_btn.clicked.connect(self._choose_dir)
-        dir_row.addWidget(self.browse_btn)
-        form.addRow(self._dir_lbl, dir_row)
-
         root.addLayout(form)
 
         self.note_lbl = QLabel(tr("as.note"))
@@ -111,6 +130,8 @@ class AutoSaveDialog(QDialog):
 
     def retranslate(self) -> None:
         self.setWindowTitle(tr("as.title"))
+        self.target_lbl.setText(tr("as.group.target"))
+        self.auto_lbl.setText(tr("as.group.auto"))
         self.enable_check.setText(tr("as.enable"))
         self._mb_lbl.setText(tr("as.max_mb"))
         self._min_lbl.setText(tr("as.max_minutes"))

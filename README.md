@@ -66,7 +66,7 @@
 - **定时循环发送** —— 10~60000 ms 间隔自动重复，带已发送计数，关串口自动停
 - **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
 - **收发同屏** —— 接收区回显发送数据：TX 行 `->` 标记并染色、RX 行 `<-` 标记，等宽标记不打乱 HEX 对齐，可一键关闭
-- **接收日志保存** —— 接收区上方独立工具条：一键存到 logs/（状态栏给出路径）、另存为…、自动保存（2 MB 或 30 分钟分段）
+- **接收日志保存** —— 接收区同一行里一键保存到日志目录（状态栏给出路径）、另存为…；自动保存的开关、单文件上限、时长和日志目录统一在「设置 → 日志保存设置…」，接收区不再放重复开关
 - **发送历史** —— 最近 50 条自动记录、去重、持久化；弹窗列表可筛选、等宽显示，每条带格式/字节数/时间，双击或回车回填，删除需二次确认
 - **发送文件** —— 文本 / HEX / 二进制文件按 4 KB 分块发送，带进度条与预计耗时，可中途取消
 - **多编码** —— 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码
@@ -218,7 +218,7 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 - **Repeat send** — auto-repeat at 10-60000 ms with a sent counter, stops when the port closes
 - **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
 - **TX echo** — sent data mirrored into the receive pane: TX lines marked `->` and coloured, RX lines `<-`, equal-width markers keep HEX columns aligned, one click to turn off
-- **Receive log to file** — its own toolbar above the pane: one-click save into logs/ (path shown in the status bar), Save as…, and auto-save (segmented at 2 MB / 30 minutes)
+- **Receive log to file** — one-click save into the log folder (path shown in the status bar) and Save as… sit on the receive row itself; the auto-save switch, its size/duration limits and the log folder all live in Settings → Log saving settings…
 - **Send history** — the last 50 commands, deduplicated and persisted; the popup list is filterable, monospaced and shows format/size/age per entry, double-click or Enter recalls it, and clearing asks twice
 - **File send** — text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel
 - **Encodings** — ASCII / UTF-8 / GBK / GB2312 for received and sent text, so GBK frames stop garbling
