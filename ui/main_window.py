@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
@@ -213,6 +214,16 @@ class MainWindow(QMainWindow):
         self._lang_zh.triggered.connect(lambda: self._set_language("zh"))
         self._lang_en.triggered.connect(lambda: self._set_language("en"))
 
+        # config import / export (T15)
+        view_menu.addSeparator()
+        self._cfg_menu = view_menu.addMenu(tr("cfg.menu"))
+        self._cfg_export_act = QAction(tr("cfg.export"), self)
+        self._cfg_import_act = QAction(tr("cfg.import"), self)
+        self._cfg_export_act.triggered.connect(self.on_export_config)
+        self._cfg_import_act.triggered.connect(self.on_import_config)
+        self._cfg_menu.addAction(self._cfg_export_act)
+        self._cfg_menu.addAction(self._cfg_import_act)
+
     def _set_language(self, lang: str):
         """Switch UI language, persist the choice, rebuild every visible string."""
         i18n.set_language(lang)
@@ -234,6 +245,9 @@ class MainWindow(QMainWindow):
         """Re-apply every translated string (called after a language change)."""
         self._view_menu.setTitle(tr("menu.view"))
         self._lang_menu.setTitle(tr("menu.language"))
+        self._cfg_menu.setTitle(tr("cfg.menu"))
+        self._cfg_export_act.setText(tr("cfg.export"))
+        self._cfg_import_act.setText(tr("cfg.import"))
         self._theme_system.setText(tr("theme.system"))
         self._theme_dark.setText(tr("theme.dark"))
         self._theme_light.setText(tr("theme.light"))
@@ -603,6 +617,83 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
     # -- helpers ---------------------------------------------------------------
+
+    # -- config import / export (T15) ----------------------------------------
+
+    def on_export_config(self) -> None:
+        """Write the current settings (quick send, theme, history, rules...) to a JSON file."""
+        default = os.path.join(os.path.expanduser("~"),
+                               time.strftime("serialdesk_config_%Y%m%d_%H%M%S.json"))
+        path, _ = QFileDialog.getSaveFileName(self, tr("cfg.export.title"), default, tr("cfg.filter"))
+        if not path:
+            return
+        payload = {
+            "_app": "SerialDesk",
+            "_version": __version__,
+            "_exported": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "config": load_config(),
+        }
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh, ensure_ascii=False, indent=2)
+            self.statusBar().showMessage(tr("cfg.exported", path=path), 5000)
+        except OSError as exc:
+            self.on_log_line(tr("cfg.export_fail", e=exc))
+
+    def on_import_config(self) -> None:
+        """Merge a previously exported config file back into the current settings."""
+        path, _ = QFileDialog.getOpenFileName(self, tr("cfg.import.title"), "", tr("cfg.filter"))
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            self.on_log_line(tr("cfg.import_fail", e=exc))
+            return
+        if not isinstance(data, dict):
+            self.on_log_line(tr("cfg.import_bad"))
+            return
+        incoming = data.get("config") if isinstance(data.get("config"), dict) else data
+
+        config = load_config()
+        for key in ("theme", "language", "quick_send", "send_history",
+                    "auto_reply", "auto_reply_enabled"):
+            if key in incoming:
+                config[key] = incoming[key]
+        if not save_config(config):
+            self.on_log_line(tr("cfg.import_fail", e="config.json"))
+            return
+        self._apply_config()
+        self.statusBar().showMessage(tr("cfg.imported", path=path), 5000)
+
+    def _apply_config(self) -> None:
+        """Re-apply settings loaded from config.json (used after an import)."""
+        cfg = load_config()
+
+        choice = cfg.get("theme", "system")
+        if choice == "dark":
+            theme.set_override(True)
+        elif choice == "light":
+            theme.set_override(False)
+        else:
+            theme.set_override(None)
+        theme.apply_theme(QApplication.instance())
+        {"dark": self._theme_dark, "light": self._theme_light}.get(
+            choice, self._theme_system).setChecked(True)
+
+        i18n.set_language(str(cfg.get("language", "system")))
+        self.retranslate()
+
+        self.quick_panel.reload_from_config()
+
+        self._send_history = [str(h) for h in cfg.get("send_history", []) if str(h).strip()][:HISTORY_MAX]
+        self.history_combo.clear()
+        self.history_combo.addItems(self._send_history)
+
+        self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
+        self.auto_reply_check.setChecked(bool(cfg.get("auto_reply_enabled", False)))
+        self._reply_buf = b""
 
     # -- auto reply (T10) ----------------------------------------------------
 

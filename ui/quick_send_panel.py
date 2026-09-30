@@ -140,6 +140,14 @@ class QuickSendPanel(QWidget):
                 return e
         return None
 
+    def reload_from_config(self):
+        """Drop every row and rebuild the panel from config.json (used after a config import)."""
+        for entry in list(self._rows):
+            entry["widget"].setParent(None)
+            self._rows.remove(entry)
+        self._load()
+        self._update_count()
+
     def _update_count(self):
         self.count_label.setText(f"{len(self._rows)}/{MAX_ENTRIES}")
 

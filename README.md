@@ -61,6 +61,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 - **转义解析开关** —— \r \n \t \xNN 可解析为控制字符，也可按字面原样发送
 - **DTR/RTS 控制 + 信号线监视** —— 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新）
 - **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化
+- **配置导入导出** —— 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复
 - **背景 QThread 读取** —— UI 永不卡顿
 
 ### 界面预览
@@ -81,7 +82,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 | v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | 已完成 |
 | v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | ✅ 已完成 |
 | v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | ✅ 已完成 |
-| v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、指令序列、断线重连、配置导入导出 | 计划中 |
+| v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、指令序列、断线重连 | 计划中（配置导入导出已提前在 v0.4.1 完成）|
 
 ## 快速开始
 
@@ -201,6 +202,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 - **Escape parsing toggle** — \r \n \t \xNN are interpreted by default, or sent literally
 - **DTR/RTS control + status lines** — drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms)
 - **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted
+- **Config import / export** — quick-send list, theme, language, send history and auto-reply rules in one JSON file; import it on another machine to restore everything
 - **Background QThread reading** — the UI never blocks
 
 ### Screenshots
@@ -221,7 +223,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 | v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | Done |
 | v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | ✅ Done |
 | v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | ✅ Done |
-| v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, command sequences, auto-reconnect, config import/export | Planned |
+| v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, command sequences, auto-reconnect | Planned (config import/export shipped early in v0.4.1) |
 
 ### Quick start
 

@@ -16,6 +16,18 @@ _lang: str = SYSTEM
 # key -> {"zh": ..., "en": ...}
 STRINGS: dict[str, dict[str, str]] = {
     # ---- menus / theme / language ----
+    # ---- config import / export (T15) ----
+    "cfg.menu": {"zh": "配置", "en": "Config"},
+    "cfg.export": {"zh": "导出配置…", "en": "Export config…"},
+    "cfg.import": {"zh": "导入配置…", "en": "Import config…"},
+    "cfg.export.title": {"zh": "导出配置", "en": "Export config"},
+    "cfg.import.title": {"zh": "导入配置", "en": "Import config"},
+    "cfg.filter": {"zh": "JSON 配置 (*.json)", "en": "JSON config (*.json)"},
+    "cfg.exported": {"zh": "配置已导出: {path}", "en": "Config exported: {path}"},
+    "cfg.imported": {"zh": "配置已导入: {path}", "en": "Config imported: {path}"},
+    "cfg.export_fail": {"zh": "导出配置失败: {e}", "en": "Export failed: {e}"},
+    "cfg.import_fail": {"zh": "导入配置失败: {e}", "en": "Import failed: {e}"},
+    "cfg.import_bad": {"zh": "文件格式不正确（不是 SerialDesk 配置）", "en": "Unsupported file (not a SerialDesk config)"},
     "menu.view": {"zh": "视图", "en": "View"},
     "menu.language": {"zh": "语言", "en": "Language"},
     "theme.system": {"zh": "跟随系统", "en": "Follow system"},

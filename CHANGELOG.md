@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.1] - 2026-09-30
+
+### Added
+
+- **Config import / export (T15, shipped early from the v0.5.0 batch)**: "视图 → 配置 / View → Config"
+  offers *Export config…* and *Import config…*. The export writes a JSON file containing a small header
+  (`_app`, `_version`, `_exported`) plus the whole config (quick-send list, theme, language, send
+  history, auto-reply rules and its on/off flag). Import merges those keys back into config.json and
+  applies them immediately — quick-send rows are rebuilt, history and rules reloaded, theme and language
+  switched. Plain config.json files are accepted too, and malformed files are rejected with a message.
+
 ## [v0.4.0] - 2026-09-30
 
 Feature batch T6-T10.
