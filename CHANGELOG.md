@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.4.14] - 2026-09-30
+
+### Changed
+
+- **The receive pane now has one control row instead of two (U35-P2)**: the split / timestamp controls and the
+  log toolbar share a single row (the button cluster is right-aligned so the two groups never fight for
+  width), and the RX/TX byte counters moved to the status bar where the rest of the global state lives. That
+  reclaims roughly 34 px of height plus about 140 px of horizontal room.
+- **The send pane is two rows lighter (U35-P1)**: the checksum selector moved onto the format row, and the
+  primary Send button now sits at the end of the repeat-send row instead of owning a row of its own, giving
+  the data panes back about 70 px of height.
+
 ## [v0.4.13] - 2026-09-30
 
 ### Changed

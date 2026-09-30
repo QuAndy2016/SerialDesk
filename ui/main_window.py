@@ -576,10 +576,9 @@ class MainWindow(QMainWindow):
         rx_opts.addWidget(self.ts_combo)
 
         rx_opts.addStretch(1)
-        rx_layout.addLayout(rx_opts)
-
-        # receive toolbar (U25): its own row so the log buttons are easy to spot
-        toolbar = QHBoxLayout()
+        # U35-P2: the log/toolbar buttons share this row (was a second row) - the
+        # button cluster is right-aligned so the two groups never fight for width.
+        toolbar = rx_opts
         self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
         self.save_log_btn.setToolTip(tr("log.quick.tip"))
         self.save_log_btn.clicked.connect(self.on_save_log_quick)
@@ -603,10 +602,11 @@ class MainWindow(QMainWindow):
         self.clear_btn.clicked.connect(self.on_clear)
         toolbar.addWidget(self.clear_btn)
 
-        toolbar.addStretch(1)
+        rx_layout.addLayout(rx_opts)
+        # RX/TX counters live in the status bar (Z4): global state, and it frees
+        # ~140 px of horizontal room for the single receive row (U35-P2).
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
-        toolbar.addWidget(self.rx_count_label)
-        rx_layout.addLayout(toolbar)
+        self.statusBar().addPermanentWidget(self.rx_count_label)
 
         self.rx_view = QPlainTextEdit()
         self.rx_view.setReadOnly(True)
@@ -655,16 +655,14 @@ class MainWindow(QMainWindow):
         self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
         self.tx_edit.textChanged.connect(self._check_hex_input)
         self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
-        tx_col.addLayout(tx_fmt_row)
-
-        crc_row = QHBoxLayout()
+        # U35-P1: checksum shares the format row (one row instead of two)
         self._crc_lbl = QLabel(tr("crc.label"))
-        crc_row.addWidget(self._crc_lbl)
+        tx_fmt_row.addWidget(self._crc_lbl)
         self.checksum_combo = QComboBox()
         self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
         self.checksum_combo.setToolTip(tr("crc.tip"))
-        crc_row.addWidget(self.checksum_combo)
-        tx_col.addLayout(crc_row)
+        tx_fmt_row.addWidget(self.checksum_combo)
+        tx_col.addLayout(tx_fmt_row)
 
         repeat_row = QHBoxLayout()
         self.repeat_check = QCheckBox(tr("tx.repeat"))
@@ -681,12 +679,14 @@ class MainWindow(QMainWindow):
         repeat_row.addWidget(self.repeat_ms)
         self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
         repeat_row.addWidget(self.sent_lbl)
-        tx_col.addLayout(repeat_row)
-
+        # U35-P1: the primary action sits at the end of the send row (one row saved)
+        repeat_row.addStretch(1)
         self.send_btn = QPushButton(tr("btn.send"))
         self.send_btn.clicked.connect(self.on_send)
         self.send_btn.setDefault(True)
-        tx_col.addWidget(self.send_btn)
+        self.send_btn.setMinimumWidth(96)
+        repeat_row.addWidget(self.send_btn)
+        tx_col.addLayout(repeat_row)
         tx_col.addStretch(1)
         tx_row.addLayout(tx_col)
         tx_layout.addLayout(tx_row)
