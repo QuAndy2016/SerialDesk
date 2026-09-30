@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.14.0] - 2026-10-01
+
+### Fixed
+
+- **A divider drag could push labels out of their pane (U101)**: the left column had a hard-coded 360 px floor (U63) although its
+  rows needed up to 805 px in English, so dragging the horizontal divider left squeezed the send and receive rows until the
+  right-most controls were clipped. The column's floor is now measured from the panes' own measured floors (recomputed on a
+  language switch), so no divider position can clip a row.
+- **Every text control now pins its minimum width to its own label (U101)**: buttons, checkboxes, labels and the two option
+  combos set their minimum to their current `sizeHint`, and buttons keep a fixed height, so a label can no longer be squeezed
+  or truncated by a narrow column. Measured (label / width): 发送 56/104, 循环发送 82/82, 保存日志 82/82, 清空 56/56,
+  Send 63/104, History (0) 99/104, Repeat send 112/112.
+
+### Changed
+
+- **The shrink order is a rule now**, not a judgement call: flexible items give way first (the input box, elidable labels and
+  hints), then secondary controls are hidden or moved into a menu (as U50/U98/U99 already do), and only then is a container's
+  floor raised. The font never changes with the window size - that is what breaks the type scale and the readability.
+
 ## [v0.13.1] - 2026-10-01
 
 ### Fixed

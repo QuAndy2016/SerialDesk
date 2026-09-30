@@ -857,6 +857,7 @@ class MainWindow(QMainWindow):
         splitter = QSplitter()
 
         left = QWidget()
+        self._left_column = left      # U101: its floor is measured, not hard-coded
         left_layout = QVBoxLayout(left)
 
         # receive group -----------------------------------------------------
@@ -1154,7 +1155,7 @@ class MainWindow(QMainWindow):
         splitter.setCollapsible(1, False)
         self._splitter = splitter
         splitter.setChildrenCollapsible(False)                  # U63: no zero-width panes
-        left.setMinimumWidth(360)
+        left.setMinimumWidth(360)   # U63 floor; _fit_minimum_width() raises it to fit the rows
         splitter.setSizes(self._saved_sizes("split_sizes", DATA_FIRST_H))
 
         root.addWidget(splitter, 1)
@@ -1248,6 +1249,29 @@ class MainWindow(QMainWindow):
             pad = max(0, group.width() - holder.width())   # group frame + margins
             group.setMinimumWidth(widest + pad)
 
+    def _lock_control_widths(self) -> None:
+        """Text controls never shrink below their label (U101).
+
+        Qt already refuses to go under minimumSizeHint for most widgets, but an
+        explicit minimum or a nested layout can still squeeze one; locking the width to
+        the current sizeHint - recomputed on every language switch - keeps every label
+        readable at every splitter position without ever touching the font.
+        """
+        controls = (self._port_lbl, self._baud_lbl, self.refresh_btn, self.open_btn,
+                    self._settings_btn, self._crc_lbl, self._repeat_lbl,
+                    self.tx_fmt_combo, self.checksum_combo,
+                    self.ts_check, self.echo_tx_check, self.autoscroll_check,
+                    self.crlf_check, self.escape_check,
+                    self.save_log_btn, self.save_log_as_btn, self.clear_btn,
+                    self.send_file_btn, self.repeat_btn, self.send_btn, self.history_btn)
+        for wdg in controls:
+            if wdg is None:
+                continue
+            wdg.setMinimumWidth(max(wdg.minimumWidth(), wdg.sizeHint().width()))
+            if isinstance(wdg, (QPushButton, QCheckBox)):
+                # U101: height stays put as well - a button must not grow with the row
+                wdg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+
     def _fit_minimum_width(self) -> None:
         """Window floor = the connection bar (spans the window) or both panes side by side.
 
@@ -1255,6 +1279,7 @@ class MainWindow(QMainWindow):
         follows the actual font, DPI scale and translation - a hard-coded value is
         only right for the machine it was measured on.
         """
+        self._lock_control_widths()          # U101: before measuring, pin the labels
         # let the layouts recompute with the current font and translation first, or
         # measurements taken right after a language switch use the old label widths
         for lay in self._control_rows():
@@ -1263,6 +1288,13 @@ class MainWindow(QMainWindow):
         if central is not None:
             central.activate()
         self._fit_pane_minimums()
+        # U101: the left column (both panes, stacked vertically) must be able to hold
+        # its own rows, or dragging the horizontal divider clips them. A vertical
+        # splitter's width floor is the widest pane, not the sum - and neither pane's
+        # cached hint is reliable at this point, so take the measured floors directly.
+        pane_need = max(self._rx_group.minimumWidth(), self._tx_group.minimumWidth())
+        pad = max(0, self._left_column.width() - self._v_splitter.width())
+        self._left_column.setMinimumWidth(max(360, pane_need + pad))
         rows = self._control_rows()
         connect_need = self._row_need(rows[0]) if rows else 0
         panel_min = (max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width())
