@@ -1096,6 +1096,7 @@ class MainWindow(QMainWindow):
             self.status_light.setStyleSheet("color: #ff4136; font-weight: bold; padding-right: 8px;")
             self._stop_repeat()
             self._abort_file_send()
+            self.quick_panel.stop_sequence()
             self.refresh_timer.start()
             for combo in self._param_combos:
                 combo.setEnabled(True)

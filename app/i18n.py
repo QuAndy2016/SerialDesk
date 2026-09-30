@@ -199,6 +199,18 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.empty": {"zh": "指令内容为空", "en": "Command is empty"},
     "qs.bad_fmt": {"zh": "指令格式错误: {e}", "en": "Invalid command format: {e}"},
     "qs.save_fail": {"zh": "保存配置失败: {e}", "en": "Failed to save config: {e}"},
+    # ---- command sequence (T13) ----
+    "qs.seq": {"zh": "序列模式", "en": "Sequence mode"},
+    "qs.seq.tip": {
+        "zh": "按顺序发送：每条指令可单独设延迟（毫秒），点「运行」依次自动发出",
+        "en": "Send rows in order: each row has its own delay (ms); press Run to fire them automatically",
+    },
+    "qs.run": {"zh": "运行", "en": "Run"},
+    "qs.stop": {"zh": "停止", "en": "Stop"},
+    "qs.delay.tip": {"zh": "本条发送后等待的毫秒数", "en": "Milliseconds to wait after sending this row"},
+    "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
+    "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
+    "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
 }
 
 

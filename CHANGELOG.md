@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.4.3] - 2026-09-30
+
+### Added
+
+- **Command sequence (T13, shipped early)**: the quick-send panel gained a sequence mode — tick
+  "序列模式 / Sequence mode" and each row shows a delay box (0-60000 ms). Press Run and the rows are sent
+  one by one, each waiting its own delay, with a "Step i/n" indicator; Run turns into Stop at any time,
+  the sequence stops when the port closes, and invalid rows are skipped with a message instead of
+  breaking the run. Per-row delays are persisted in config.json.
+
 ## [v0.4.2] - 2026-09-30
 
 ### Changed
