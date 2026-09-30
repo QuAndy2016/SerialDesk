@@ -20,7 +20,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 
 但真正顺手的串口工具并不多：功能强的往往界面停留在上个十年，清爽的又缺了工程师每天都要用的那几个开关。这个项目想做的事很朴素 —— 界面现代、开箱即用、开源可改，把日常调试里最高频的能力一次做对。
 
-它不追求做下一个 VOFA+，只想成为你调试时最不需要思考的那一个窗口。
+它不追求功能堆叠，只想成为你调试时最不需要思考的那一个窗口。
 
 ## 下载 Windows EXE（无需 Python）
 
@@ -41,7 +41,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 ## 功能
 
 - **串口枚举自动刷新** —— 3 秒轮询，插拔自动感知
-- **波特率 26 档预设（110 ~ 3000000）** —— 兼容 LLCOM 档位，并支持自定义输入（非法值即时红框提示）
+- **波特率 26 档预设（110 ~ 3000000）** —— 支持自定义输入（非法值即时红框提示）
 - **接收格式** —— ASCII / HEX / HEX+ASCII 双显示
 - **发送格式** —— ASCII / HEX
 - **分包模式** —— 不分包 / 自动按波特率（3.5 字符法则）/ 手动 ms / 按帧头（字节级）
@@ -119,17 +119,6 @@ assets/                  # logo, donation QR, arrow icons
 tests/                   # unit tests
 ```
 
-## 致谢
-
-这个项目的功能取舍与交互细节，受了下面这些前辈工具很多启发，在此致谢：
-
-- **SSCOM** —— 经典串口调试助手，功能范式的参照（作者：大虾丁丁，[大虾电子网](http://www.daxia.com)）
-- **LLCOM** —— 开源串口工具，支持 Lua 自动化、串口调试、串口曲线、TCP/MQTT 测试（[chenxuuu/llcom](https://github.com/chenxuuu/llcom)）
-- **UartAssist** —— 指令序列、自动应答、追加换行等实用功能的启发（未找到稳定官方站点，不贴链接）
-- **VOFA+** —— 上位机波形可视化工具（[vofa.plus](https://www.vofa.plus)）
-
-也感谢 **PySide6 / PySerial / PyInstaller** 及整个 Python 开源社区。
-
 ## 参与贡献
 
 Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issue 描述你的场景即可。
@@ -163,7 +152,7 @@ MIT — see [LICENSE](LICENSE).
 
 Serial is the oldest and most reliable interface in embedded work. Every new board, every Modbus frame, every firmware log ends up as lines of bytes scrolling on a screen. Yet decent serial tools are rare: the powerful ones look like they were designed a decade ago, and the tidy ones are missing the switches engineers use every day.
 
-This project aims for something simple — a modern interface, ready out of the box, open for you to change, with the daily essentials done right. It is not trying to be the next VOFA+; it just wants to be the window you never have to think about.
+This project aims for something simple — a modern interface, ready out of the box, open for you to change, with the daily essentials done right. It is not trying to pile on features; it just wants to be the window you never have to think about.
 
 ### Download for Windows
 
@@ -184,7 +173,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 ### Features
 
 - **Auto-refreshing port list** — 3s polling, hot-plug aware
-- **26 baud presets (110 ~ 3000000)** — LLCOM-compatible, plus editable custom input (invalid values get a red border)
+- **26 baud presets (110 ~ 3000000)** — plus editable custom input (invalid values get a red border)
 - **Receive format** — ASCII / HEX / HEX+ASCII dual display
 - **Send format** — ASCII / HEX
 - **Frame splitting** — off / auto by baud rate (3.5-char rule) / manual ms / by header (byte level)
@@ -247,17 +236,6 @@ Run tests:
 ```bash
 pytest tests/ -v
 ```
-
-### Acknowledgements
-
-This project owes a lot to the tools that came before it:
-
-- **SSCOM** — the classic Chinese serial assistant and our functional reference ([daxia.com](http://www.daxia.com))
-- **LLCOM** — open-source serial toolkit with Lua automation ([chenxuuu/llcom](https://github.com/chenxuuu/llcom))
-- **UartAssist** — inspiration for command sequences, auto-reply and append-CRLF
-- **VOFA+** — waveform host tool ([vofa.plus](https://www.vofa.plus))
-
-Thanks also to **PySide6 / PySerial / PyInstaller** and the Python community.
 
 ### Contributing
 
