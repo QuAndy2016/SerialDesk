@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" width="96" alt="SerialDesk logo">
+</p>
+
 # SerialDesk
 
 **串口台 —— 嵌入式工程师的串口伴侣，一个干净、够用、能一直长下去的跨平台串口调试工具。**

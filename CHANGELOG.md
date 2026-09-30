@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.16] - 2026-09-30
+
+### Changed
+
+- **New logo (U24)**: the UART-waveform icon was replaced by a simple "SD" monogram — navy rounded
+  square, white bold letters and a cyan underline bar. It stays legible down to 16 px (taskbar, Explorer,
+  repository avatar), unlike the previous waveform artwork.
+- `assets/icon.png` is now 512×512 and `assets/icon.ico` ships six sizes (16/32/48/64/128/256);
+  the window, taskbar and EXE icons all use it, and the README now shows the logo in its header.
+
 ## [v0.2.15] - 2026-09-30
 
 ### Added
