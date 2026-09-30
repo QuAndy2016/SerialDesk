@@ -29,6 +29,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "cfg.import_fail": {"zh": "导入配置失败: {e}", "en": "Import failed: {e}"},
     "cfg.import_bad": {"zh": "文件格式不正确（不是 SerialDesk 配置）", "en": "Unsupported file (not a SerialDesk config)"},
     "menu.view": {"zh": "视图", "en": "View"},
+    "menu.settings": {"zh": "设置", "en": "Settings"},
+    "theme.menu": {"zh": "主题", "en": "Theme"},
     "menu.language": {"zh": "语言", "en": "Language"},
     "theme.system": {"zh": "跟随系统", "en": "Follow system"},
     "theme.dark": {"zh": "深色", "en": "Dark"},

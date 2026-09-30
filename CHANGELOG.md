@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.4.9] - 2026-09-30
+
+### Changed
+
+- **Settings moved to the top-right corner (U33)**: theme, language and config import/export now live in a
+  single "Settings" button pinned to the top-right of the menu bar, and the old "View" menu is gone. Low
+  frequency options sit in one predictable place instead of competing with the data for a menu row.
+- **Receive and send panes are a draggable splitter (U35-P0)**: the data pane and the send pane can be
+  resized by dragging; the proportion is remembered in `config.json` when the app closes, and the receive
+  pane keeps the larger share by default.
+- **The quick-send column can be widened (U47)**: the hard 380-420 px width cap is gone (minimum 300 px,
+  maximum whatever the horizontal splitter allows).
+- **Explicit Tab order (U54)**: focus walks the five zones in reading order (port -> baud -> open ->
+  receive options -> receive pane -> send options -> send -> quick send) instead of widget creation order.
+- **Minimum window size (U55)**: 980x600, below which the five zones stop being usable.
+
 ## [v0.4.8] - 2026-09-30
 
 ### Fixed

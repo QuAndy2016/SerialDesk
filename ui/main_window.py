@@ -28,11 +28,13 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
     QSplitter,
+    QToolButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -122,6 +124,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"SerialDesk v{__version__}")
         self.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
         self.resize(1180, 680)
+        self.setMinimumSize(980, 600)   # U55: below this the zones stop being usable
 
         self.worker = SerialWorker(self)
         self.worker.received.connect(self.on_received)
@@ -165,6 +168,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._build_menu()
+        self._setup_tab_order()
 
         # send history (T5) from config
         self._send_history = [str(h) for h in load_config().get("send_history", [])
@@ -196,8 +200,17 @@ class MainWindow(QMainWindow):
     # -- UI -----------------------------------------------------------------
 
     def _build_menu(self):
-        self._view_menu = self.menuBar().addMenu(tr("menu.view"))
-        view_menu = self._view_menu
+        # U33: one "Settings" button in the top-right corner holds theme/language/config
+        self._settings_btn = QToolButton()
+        self._settings_btn.setText(tr("menu.settings"))
+        self._settings_btn.setToolTip(tr("menu.settings"))
+        self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._settings_menu = QMenu(self._settings_btn)
+        self._settings_btn.setMenu(self._settings_menu)
+        self.menuBar().setCornerWidget(self._settings_btn, Qt.Corner.TopRightCorner)
+        view_menu = self._settings_menu
+        self._theme_menu = view_menu.addMenu(tr("theme.menu"))
+        view_menu = self._theme_menu
         self._theme_group = QActionGroup(self)
         self._theme_group.setExclusive(True)
 
@@ -222,9 +235,8 @@ class MainWindow(QMainWindow):
         self._theme_dark.triggered.connect(self._set_theme_dark)
         self._theme_light.triggered.connect(self._set_theme_light)
 
-        # language submenu (U19)
-        view_menu.addSeparator()
-        self._lang_menu = view_menu.addMenu(tr("menu.language"))
+        # language submenu (U19) - sibling of the theme submenu inside Settings
+        self._lang_menu = self._settings_menu.addMenu(tr("menu.language"))
         self._lang_group = QActionGroup(self)
         self._lang_group.setExclusive(True)
         self._lang_system = QAction(tr("lang.system"), self, checkable=True)
@@ -240,8 +252,7 @@ class MainWindow(QMainWindow):
         self._lang_en.triggered.connect(lambda: self._set_language("en"))
 
         # config import / export (T15)
-        view_menu.addSeparator()
-        self._cfg_menu = view_menu.addMenu(tr("cfg.menu"))
+        self._cfg_menu = self._settings_menu.addMenu(tr("cfg.menu"))
         self._cfg_export_act = QAction(tr("cfg.export"), self)
         self._cfg_import_act = QAction(tr("cfg.import"), self)
         self._cfg_export_act.triggered.connect(self.on_export_config)
@@ -268,7 +279,8 @@ class MainWindow(QMainWindow):
 
     def retranslate(self):
         """Re-apply every translated string (called after a language change)."""
-        self._view_menu.setTitle(tr("menu.view"))
+        self._settings_btn.setText(tr("menu.settings"))
+        self._theme_menu.setTitle(tr("theme.menu"))
         self._lang_menu.setTitle(tr("menu.language"))
         self._cfg_menu.setTitle(tr("cfg.menu"))
         self._cfg_export_act.setText(tr("cfg.export"))
@@ -585,7 +597,9 @@ class MainWindow(QMainWindow):
         self.rx_view.setReadOnly(True)
         self.rx_view.setMaximumBlockCount(20000)
         rx_layout.addWidget(self.rx_view)
-        left_layout.addWidget(rx_group, 3)
+        self._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
+        self._v_splitter.addWidget(rx_group)
+        self._v_splitter.setStretchFactor(0, 3)
 
         # send group ----------------------------------------------------------
         self._tx_group = QGroupBox(tr("group.tx"))
@@ -683,7 +697,10 @@ class MainWindow(QMainWindow):
         self.rules_btn.clicked.connect(self._edit_rules)
         file_row.addWidget(self.rules_btn)
         tx_layout.addLayout(file_row)
-        left_layout.addWidget(tx_group, 1)
+        self._v_splitter.addWidget(tx_group)
+        self._v_splitter.setStretchFactor(1, 2)
+        self._v_splitter.setSizes(self._saved_sizes("v_split_sizes", [420, 260]))
+        left_layout.addWidget(self._v_splitter, 1)
 
         splitter.addWidget(left)
 
@@ -694,7 +711,8 @@ class MainWindow(QMainWindow):
         self.quick_panel.error.connect(lambda m: self._notify(m, "error"))
         self.quick_panel.deleted.connect(self._on_row_deleted)
         splitter.addWidget(self.quick_panel)
-        splitter.setSizes([820, 340])
+        self._splitter = splitter
+        splitter.setSizes(self._saved_sizes("split_sizes", [820, 340]))
 
         root.addWidget(splitter, 1)
 
@@ -715,6 +733,28 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self._undo_btn)
         self._notify(tr("status.idle"))
         self.setCentralWidget(central)
+
+    def _saved_sizes(self, key: str, default: list) -> list:
+        """Restore a persisted splitter size list, falling back to the default (U35)."""
+        value = load_config().get(key)
+        if isinstance(value, list) and len(value) == len(default):
+            try:
+                return [int(v) for v in value]
+            except (TypeError, ValueError):
+                return list(default)
+        return list(default)
+
+    def _setup_tab_order(self) -> None:
+        """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
+        names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
+                 "split_combo", "split_ms_edit", "header_edit", "ts_combo",
+                 "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
+                 "tx_fmt_combo", "encoding_combo", "escape_check", "crlf_check",
+                 "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
+                 "history_combo", "send_btn", "send_file_btn"]
+        widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
+        for first, second in zip(widgets, widgets[1:]):
+            QWidget.setTabOrder(first, second)
 
     # -- notifications (U30/U36/U37/U38) --------------------------------------
 
@@ -1487,6 +1527,13 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self._sig_timer.stop()
         self._flush_history_save()
+        try:   # U35: remember the layout the user dragged
+            config = load_config()
+            config["split_sizes"] = self._splitter.sizes()
+            config["v_split_sizes"] = self._v_splitter.sizes()
+            save_config(config)
+        except (AttributeError, RuntimeError):
+            pass
         self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()
