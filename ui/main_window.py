@@ -216,6 +216,8 @@ class MainWindow(QMainWindow):
         self._build_settings_button()   # U72: the connect row hosts this button
         self._build_ui()
         self._build_menu()
+        if load_config().get("quick_panel_collapsed"):     # U88: restore the folded state
+            self._on_quick_panel_collapsed(True)
         self._setup_tab_order()
         self._setup_shortcuts()
         self._first_run_hint()
@@ -278,6 +280,14 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         # U33: one "Settings" button in the top-right corner holds theme/language/config
         view_menu = self._settings_menu
+        # U88: the panel can be folded away, so it needs an entry outside itself
+        self._quick_panel_act = QAction(tr("menu.quick_panel"), self)
+        self._quick_panel_act.setCheckable(True)
+        self._quick_panel_act.setChecked(True)
+        self._quick_panel_act.triggered.connect(
+            lambda: self._on_quick_panel_collapsed(not self._quick_panel_act.isChecked()))
+        view_menu.addAction(self._quick_panel_act)
+        view_menu.addSeparator()
         self._theme_menu = view_menu.addMenu(tr("theme.menu"))
         view_menu = self._theme_menu
         self._theme_group = QActionGroup(self)
@@ -351,6 +361,20 @@ class MainWindow(QMainWindow):
         self._about_act.triggered.connect(self._show_about)
         self._settings_menu.addAction(self._about_act)
 
+    def _on_quick_panel_collapsed(self, collapsed: bool) -> None:
+        """Fold the quick-send panel away (or bring it back) and remember it (U88)."""
+        self.quick_panel.setVisible(not collapsed)
+        if hasattr(self, "_quick_panel_act"):
+            self._quick_panel_act.setChecked(not collapsed)
+        save_config({"quick_panel_collapsed": bool(collapsed)})
+        self._fit_minimum_width()
+        self._notify(tr("qs.collapsed") if collapsed else tr("qs.expanded"),
+                     "info", ms=5000 if collapsed else 4000)
+
+    def _toggle_quick_panel(self) -> None:
+        """Ctrl+B / menu: fold the quick-send panel when it is showing (U88)."""
+        self._on_quick_panel_collapsed(self.quick_panel.isVisible())
+
     def _toggle_find_bar(self, show: bool | None = None) -> None:
         """Show/hide the receive find bar (U41)."""
         visible = (not self._find_bar.isVisible()) if show is None else show
@@ -392,6 +416,7 @@ class MainWindow(QMainWindow):
             ("Ctrl+S", self.on_save_log_quick),
             ("Ctrl+K", lambda: self.tx_edit.setFocus()),
             ("F5", self.toggle_open),
+            ("Ctrl+B", self._toggle_quick_panel),          # U88: fold/unfold the panel
             ("Ctrl+F", lambda: self._toggle_find_bar(True)),
             ("Esc", self._esc_action),
         ):
@@ -445,6 +470,9 @@ class MainWindow(QMainWindow):
         self._custom_split_sizes = False
         self._split_room_done = True
         QTimer.singleShot(0, self._give_data_area_the_room)
+        self.quick_panel.setVisible(True)       # U88: defaults = panel shown again
+        if hasattr(self, "_quick_panel_act"):
+            self._quick_panel_act.setChecked(True)
         self.quick_panel.reload_from_config()   # seeds the default rows when config is gone
         self._update_params_summary()
 
@@ -647,7 +675,7 @@ class MainWindow(QMainWindow):
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self._repeat_lbl.setText(tr("tx.interval.label"))
-        self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
+        self.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # U86 (set by the format below)
         self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
         self._reset_act.setText(tr("cfg.reset"))
         self._autosave_act.setText(tr("as.menu"))
@@ -976,7 +1004,7 @@ class MainWindow(QMainWindow):
 
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
-        self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
+        self._update_input_placeholder()   # U86: keep the format-specific hint
         self.tx_edit.setMinimumHeight(60)
         self.tx_edit.textChanged.connect(self._check_hex_input)
         tx_row.addWidget(self.tx_edit, 1)
@@ -1054,6 +1082,7 @@ class MainWindow(QMainWindow):
         self.quick_panel.error.connect(lambda m: self._notify(m, "error"))
         self.quick_panel.deleted.connect(self._on_row_deleted)
         splitter.addWidget(self.quick_panel)
+        self.quick_panel.collapsed_changed.connect(self._on_quick_panel_collapsed)   # U88
         splitter.setCollapsible(0, False)           # U63: same, after the panes exist
         splitter.setCollapsible(1, False)
         self._splitter = splitter
@@ -1169,7 +1198,8 @@ class MainWindow(QMainWindow):
         self._fit_pane_minimums()
         rows = self._control_rows()
         connect_need = self._row_need(rows[0]) if rows else 0
-        panel_min = max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width())
+        panel_min = (max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width())
+                     if self.quick_panel.isVisible() else 0)   # U88: a folded panel costs nothing
         pair_need = (self._rx_group.minimumWidth() + panel_min + self._splitter.handleWidth()
                      + max(0, self.width() - self._splitter.width()))
         self.setMinimumWidth(max(980, connect_need, pair_need))
@@ -1339,7 +1369,7 @@ class MainWindow(QMainWindow):
         """Live-validate the TX box in HEX mode: red border + tooltip (U36)."""
         if self.tx_fmt_combo.currentIndex() != 0:
             self.tx_edit.setStyleSheet("")
-            self.tx_edit.setToolTip(tr("tx.hex.tip"))
+            self.tx_edit.setToolTip(tr("tx.input.tip.ascii"))   # U86
             return
         try:
             hex_str_to_bytes(self.tx_edit.toPlainText())
@@ -1921,6 +1951,14 @@ class MainWindow(QMainWindow):
     def _on_tx_fmt_changed(self, index: int):
         # appending CRLF only makes sense for ASCII (index 1)
         self.crlf_check.setEnabled(index == 1)
+        self._update_input_placeholder()   # U86: hint follows the send format
+
+    def _update_input_placeholder(self) -> None:
+        """Show a format-specific example in the send box (U86)."""
+        if not hasattr(self, "tx_edit"):
+            return          # the format row is built before the input box
+        key = "tx.placeholder.hex" if self.tx_fmt_combo.currentIndex() == 0 else "tx.placeholder.ascii"
+        self.tx_edit.setPlaceholderText(tr(key))
 
     def _on_split_mode_changed(self, index: int):
         self._flush_rx_frames()   # don't lose a half-collected frame (U57)

@@ -247,6 +247,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "十六进制格式：可空格分隔，也支持 0x 前缀与逗号/短横线分隔",
         "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
+    "tx.placeholder.hex": {"zh": "例如：01 03 00 00", "en": "e.g. 01 03 00 00"},
+    "tx.placeholder.ascii": {"zh": "例如：AT+VERSION?", "en": "e.g. AT+VERSION?"},
+    "tx.input.tip.ascii": {
+        "zh": "字符串模式：按文本发送（勾选「解析转义符」后 \\r\\n 等转义生效）",
+        "en": "Text mode: sent as characters (\\r\\n escapes apply when the escape option is on)",
+    },
     "tx.placeholder": {
         "zh": "在此输入要发送的内容；HEX 模式如 01 03 00 00（支持 0x 前缀与逗号）",
         "en": "Type what to send; in HEX mode e.g. 01 03 00 00 (0x prefixes and commas are fine)",
@@ -377,6 +383,16 @@ STRINGS: dict[str, dict[str, str]] = {
     "status.closed": {"zh": "串口已关闭", "en": "Port closed"},
     "log.send_error": {"zh": "发送内容错误: {e}", "en": "Send error: {e}"},
     # ---- quick send panel ----
+    "qs.collapse.tip": {
+        "zh": "折叠快速发送面板，把宽度让给数据显示区（Ctrl+B 可再展开）",
+        "en": "Collapse the quick-send panel to free width for the log (Ctrl+B reopens it)",
+    },
+    "menu.quick_panel": {"zh": "显示快速发送面板", "en": "Show the quick-send panel"},
+    "qs.collapsed": {
+        "zh": "已折叠快速发送面板，显示区已加宽（Ctrl+B 或「设置」菜单可恢复）",
+        "en": "Quick-send panel collapsed - the log is wider now (Ctrl+B or the Settings menu restores it)",
+    },
+    "qs.expanded": {"zh": "已展开快速发送面板", "en": "Quick-send panel expanded"},
     "qs.title": {"zh": "快速发送", "en": "Quick send"},
     "qs.add": {"zh": "+ 添加指令", "en": "+ Add command"},
     "qs.add.tip": {"zh": "添加一条快速指令（最多 {n} 条）", "en": "Add a quick command (up to {n})"},

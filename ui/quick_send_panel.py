@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -39,6 +40,7 @@ class QuickSendPanel(QWidget):
     error = Signal(str)            # user-facing format error text (U36)
     deleted = Signal(dict)         # removed row payload + index (U58: undo)
     log = Signal(str)
+    collapsed_changed = Signal(bool)   # U88: fold the panel away
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,6 +61,15 @@ class QuickSendPanel(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
 
         head = QHBoxLayout()
+        # U88: fold the whole panel away - it is the biggest single consumer of width,
+        # so folding it hands the log roughly a third of the window.
+        self._collapse_btn = QToolButton()
+        self._collapse_btn.setObjectName("qsCollapse")
+        self._collapse_btn.setText("\u25be")
+        self._collapse_btn.setAutoRaise(True)
+        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
+        self._collapse_btn.clicked.connect(lambda: self.collapsed_changed.emit(True))
+        head.addWidget(self._collapse_btn)
         self._title_lbl = QLabel(tr("qs.title"))
         head.addWidget(self._title_lbl)
         head.addStretch(1)
