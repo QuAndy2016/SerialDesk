@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSpinBox,
+    QSizePolicy,
     QSplitter,
     QToolButton,
     QStackedWidget,
@@ -73,6 +74,19 @@ def resource_path(rel: str) -> str:
     if os.path.dirname(base).endswith("ui") or base.endswith("ui"):
         base = os.path.dirname(base)
     return os.path.join(base, rel)
+
+
+def _fixed_row(layout) -> QWidget:
+    """Wrap a control row so it keeps its natural height (U70).
+
+    A nested layout handed straight to a vertical box absorbs spare space and
+    centres its widgets, which made the split row drift downwards whenever the
+    receive group grew. A holder with a Fixed vertical policy pins it to the top.
+    """
+    holder = QWidget()
+    holder.setLayout(layout)
+    holder.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+    return holder
 
 
 RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
@@ -710,7 +724,7 @@ class MainWindow(QMainWindow):
         self.clear_btn.setToolTip(tr("sc.clear.tip"))
         toolbar.addWidget(self.clear_btn)
 
-        rx_layout.addLayout(rx_opts)
+        rx_layout.addWidget(_fixed_row(rx_opts))   # U70: pinned to the top
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
@@ -738,6 +752,8 @@ class MainWindow(QMainWindow):
         self.find_close_btn.setToolTip(tr("find.close.tip"))
         self.find_close_btn.clicked.connect(lambda: self._toggle_find_bar(False))
         find_row.addWidget(self.find_close_btn)
+        self._find_bar.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                    QSizePolicy.Policy.Fixed)   # U70
         self._find_bar.hide()
         rx_layout.addWidget(self._find_bar)
 
@@ -745,7 +761,7 @@ class MainWindow(QMainWindow):
         self.rx_view.setReadOnly(True)
         self.rx_view.verticalScrollBar().actionTriggered.connect(self._pause_autoscroll)   # U43
         self.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
-        rx_layout.addWidget(self.rx_view)
+        rx_layout.addWidget(self.rx_view, 1)   # U70: the view absorbs all spare height
         self._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
         self._v_splitter.setChildrenCollapsible(False)          # U63: never collapse a pane
         self._v_splitter.addWidget(rx_group)
@@ -767,7 +783,7 @@ class MainWindow(QMainWindow):
         self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
         self.history_combo.activated.connect(self._on_history_pick)
         hist_row.addWidget(self.history_combo, 1)
-        tx_layout.addLayout(hist_row)
+        tx_layout.addWidget(_fixed_row(hist_row))   # U70
 
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
@@ -800,7 +816,7 @@ class MainWindow(QMainWindow):
         self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
         self.checksum_combo.setToolTip(tr("crc.tip"))
         tx_fmt_row.addWidget(self.checksum_combo)
-        tx_col.addLayout(tx_fmt_row)
+        tx_col.addWidget(_fixed_row(tx_fmt_row))   # U70
 
         repeat_row = QHBoxLayout()
         self.repeat_check = QCheckBox(tr("tx.repeat"))
@@ -818,7 +834,7 @@ class MainWindow(QMainWindow):
         self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
         repeat_row.addWidget(self.sent_lbl)
         repeat_row.addStretch(1)
-        tx_col.addLayout(repeat_row)
+        tx_col.addWidget(_fixed_row(repeat_row))   # U70
         tx_col.addStretch(1)
         tx_row.addLayout(tx_col)
         tx_layout.addLayout(tx_row)
@@ -851,7 +867,7 @@ class MainWindow(QMainWindow):
         self.rules_btn = QPushButton(tr("rb.rules_btn"))
         self.rules_btn.clicked.connect(self._edit_rules)
         file_row.addWidget(self.rules_btn)
-        tx_layout.addLayout(file_row)
+        tx_layout.addWidget(_fixed_row(file_row))   # U70
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 2)
         tx_group.setMinimumHeight(190)                          # U63

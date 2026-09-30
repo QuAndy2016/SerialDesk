@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.4] - 2026-10-01
+
+### Fixed
+
+- **The split row drifted whenever the panes were resized (U70)**: the receive control row was a nested layout
+  handed straight to the group's vertical box, so it absorbed spare height and centred its widgets - dragging the
+  send pane down grew the receive group and visibly pushed the split/timestamp row downwards (the same for the
+  send-side rows). Control rows (receive options, send history, format/checksum, repeat interval, file row) now
+  live in holders with a fixed vertical size policy, and the data view takes every spare pixel, so each row is
+  pinned to the top of its group with the data area starting right below it. Verified at three splitter
+  positions: the control band stays constant at 46 px while the view grows 94 -> 207 -> 300 px.
+
 ## [v0.6.3] - 2026-10-01
 
 ### Changed
