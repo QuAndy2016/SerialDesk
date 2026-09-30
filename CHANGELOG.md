@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.6] - 2026-10-01
+
+### Changed
+
+- **The connection row now owns the top of the window (U72)**: the Settings button moved out of the menu bar to the
+  end of the connection row, so Port / Baud / Refresh / Open / RX format / Port settings / Settings all sit on one
+  line (verified: every control reports the same vertical centre). The menu bar is empty now and hidden, which
+  removes a whole wasted row and lifts that line to the top of the window - it used to sit lower than the Settings
+  button because the menu bar took a row of its own.
+- **"Port settings..." left the Settings menu (U72)**: the button at the end of the connection row already opens the
+  same dialog, so the duplicate entry is gone. The menu is now Theme / Language / Config / Auto-reconnect / About.
+
 ## [v0.6.5] - 2026-10-01
 
 ### Changed

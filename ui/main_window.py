@@ -197,6 +197,7 @@ class MainWindow(QMainWindow):
         self._file_pos = 0
         self._file_path = ""
 
+        self._build_settings_button()   # U72: the connect row hosts this button
         self._build_ui()
         self._build_menu()
         self._setup_tab_order()
@@ -235,13 +236,11 @@ class MainWindow(QMainWindow):
 
     # -- UI -----------------------------------------------------------------
 
-    def _build_menu(self):
-        # U33: one "Settings" button in the top-right corner holds theme/language/config
+    def _build_settings_button(self) -> None:
+        """Create the Settings button/menu before the row that hosts it (U72)."""
         self._settings_btn = QToolButton()
         self._settings_btn.setObjectName("settingsBtn")
         self._settings_btn.setText(tr("menu.settings"))
-        self._settings_btn.setToolTip(tr("menu.settings"))
-        self._fit_settings_btn()
         self._settings_btn.setToolTip(tr("menu.settings"))
         self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
@@ -249,14 +248,10 @@ class MainWindow(QMainWindow):
         self._settings_menu = QMenu(self._settings_btn)
         self._settings_btn.setMenu(self._settings_menu)
         self._fit_settings_btn()
-        # U60: keep the button off the window edge (keep a Python reference: the
-        # corner widget must not be garbage collected)
-        self._settings_holder = QWidget(self.menuBar())
-        holder_layout = QHBoxLayout(self._settings_holder)
-        holder_layout.setContentsMargins(0, 0, 14, 0)
-        holder_layout.setSpacing(0)
-        holder_layout.addWidget(self._settings_btn)
-        self.menuBar().setCornerWidget(self._settings_holder, Qt.Corner.TopRightCorner)
+        self.menuBar().hide()   # U72: nothing lives in the menu bar any more
+
+    def _build_menu(self):
+        # U33: one "Settings" button in the top-right corner holds theme/language/config
         view_menu = self._settings_menu
         self._theme_menu = view_menu.addMenu(tr("theme.menu"))
         view_menu = self._theme_menu
@@ -316,10 +311,6 @@ class MainWindow(QMainWindow):
         self._reconnect_act.setChecked(bool(load_config().get("auto_reconnect", False)))
         self._reconnect_act.toggled.connect(self._on_reconnect_toggled)
         self._settings_menu.addAction(self._reconnect_act)
-
-        self._portset_act = QAction(tr("portset.menu"), self)
-        self._portset_act.triggered.connect(self._show_port_settings)
-        self._settings_menu.addAction(self._portset_act)
 
         self._about_act = QAction(tr("about.menu"), self)
         self._about_act.triggered.connect(self._show_about)
@@ -617,6 +608,9 @@ class MainWindow(QMainWindow):
         self.port_set_btn.setToolTip(tr("portset.tip"))
         self.port_set_btn.clicked.connect(self._show_port_settings)
         bar.addWidget(self.port_set_btn)
+
+        bar.addSpacing(10)
+        bar.addWidget(self._settings_btn)   # U72: same line as Port / Baud / Open
 
         bar.addStretch(1)
         root.addLayout(bar)
