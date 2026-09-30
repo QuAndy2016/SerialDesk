@@ -8,7 +8,7 @@ import shutil
 import sys
 import time
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
 
 from PySide6.QtGui import (
@@ -909,6 +909,10 @@ class MainWindow(QMainWindow):
         self.history_combo.setMinimumWidth(130)   # U69: keeps the group narrow enough
         self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
         self.history_combo.activated.connect(self._on_history_pick)
+        # U77: make the history list manageable (right-click delete / clear, Delete key)
+        self.history_combo.view().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.history_combo.view().customContextMenuRequested.connect(self._on_history_context_menu)
+        self.history_combo.view().installEventFilter(self)
         hist_row.addWidget(self.history_combo, 1)
         tx_layout.addWidget(_fixed_row(hist_row))   # U70
 
@@ -1596,6 +1600,14 @@ class MainWindow(QMainWindow):
         if log:
             self._log_append(text)
 
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+        """Delete the highlighted history entry with the keyboard (U77)."""
+        if obj is self.history_combo.view() and event.type() == QEvent.Type.KeyPress \
+                and event.key() == Qt.Key.Key_Delete:
+            self._remove_history_entry(self.history_combo.view().currentIndex().row())
+            return True
+        return super().eventFilter(obj, event)
+
     def _snapshot_rx_fragments(self) -> list:
         """Capture (text, kind) for every fragment so clearing can be undone (U42).
 
@@ -1684,11 +1696,49 @@ class MainWindow(QMainWindow):
             return
         self._send_history = [text] + [h for h in self._send_history if h != text]
         self._send_history = self._send_history[:HISTORY_MAX]
+        self._refresh_history_combo()
+        self._schedule_history_save()
+
+    def _refresh_history_combo(self) -> None:
+        """Rebuild the dropdown from the history list (U77)."""
         self.history_combo.blockSignals(True)
         self.history_combo.clear()
         self.history_combo.addItems(self._send_history)
         self.history_combo.blockSignals(False)
+
+    def _on_history_context_menu(self, pos) -> None:
+        """Right-click menu on the history dropdown: delete one entry or all (U77)."""
+        view = self.history_combo.view()
+        index = view.indexAt(pos)
+        menu = QMenu(self)
+        act_delete = menu.addAction(tr("tx.history.delete"))
+        act_delete.setEnabled(index.isValid())
+        menu.addSeparator()
+        act_clear = menu.addAction(tr("tx.history.clear"))
+        act_clear.setEnabled(bool(self._send_history))
+        chosen = menu.exec(view.mapToGlobal(pos))
+        if chosen is act_delete and index.isValid():
+            self._remove_history_entry(index.row())
+        elif chosen is act_clear:
+            self._clear_history()
+
+    def _remove_history_entry(self, row: int) -> None:
+        """Drop one entry from the send history and persist (U77)."""
+        if not (0 <= row < len(self._send_history)):
+            return
+        removed = self._send_history.pop(row)
+        self._refresh_history_combo()
         self._schedule_history_save()
+        self._notify(tr("tx.history.removed", text=removed), "info", ms=3000)
+
+    def _clear_history(self) -> None:
+        """Forget every remembered command (U77)."""
+        if not self._send_history:
+            return
+        self._send_history = []
+        self._refresh_history_combo()
+        self._schedule_history_save()
+        self._notify(tr("tx.history.cleared"), "info", ms=3000)
 
     def _on_repeat_toggled(self, checked: bool):
         if checked and not self._ensure_port():

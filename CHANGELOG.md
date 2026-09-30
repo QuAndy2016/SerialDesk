@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.6.11] - 2026-10-01
+
+### Added
+
+- **The send history is manageable now (U77)**: right-click an entry in the history dropdown to delete just that one,
+  or to clear the whole list - and while the dropdown is open, Delete removes the highlighted entry. Changes apply
+  immediately and are stored with the rest of the history, so a mistyped command no longer has to stay there forever.
+  The history tooltip documents both gestures.
+
 ## [v0.6.10] - 2026-10-01
 
 ### Added

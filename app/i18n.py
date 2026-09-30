@@ -288,8 +288,15 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.repeat.tip": {"zh": "按设定间隔重复发送当前内容", "en": "Repeat the current input at the set interval"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
     "tx.sent_count": {"zh": "已发送 {n} 次", "en": "Sent {n} times"},
+    "tx.history.delete": {"zh": "删除此条", "en": "Delete this entry"},
+    "tx.history.clear": {"zh": "清空发送历史", "en": "Clear the history"},
+    "tx.history.removed": {"zh": "已删除历史：{text}", "en": "Removed from history: {text}"},
+    "tx.history.cleared": {"zh": "已清空发送历史", "en": "Send history cleared"},
     "tx.history": {"zh": "发送历史:", "en": "History:"},
-    "tx.history.tip": {"zh": "最近发送过的指令（最多 {n} 条），选中即回填", "en": "Recently sent commands (up to {n}); pick one to fill the box"},
+    "tx.history.tip": {
+        "zh": "最近发送过的指令（最多 {n} 条），选中即回填；在下拉列表里右键可删除单条或清空历史（也可按 Delete 键删除高亮项）",
+        "en": "Recently sent commands (up to {n}); pick one to fill the box. Right-click an entry to delete it or clear the list (Delete removes the highlighted one)",
+    },
     # ---- file send (T6) ----
     "btn.send_file": {"zh": "发送文件", "en": "Send file"},
     "btn.cancel_send": {"zh": "取消发送", "en": "Cancel send"},
