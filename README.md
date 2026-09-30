@@ -51,6 +51,11 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 - **主题切换** —— 跟随系统 / 深色 / 浅色，选择持久化
 - **收发字节计数 + 状态指示灯**（显示端口与波特率）
 - **正式图标** —— 窗口 / 任务栏 / EXE 文件图标
+- **完整串口参数** —— 数据位 5~8 / 停止位 1·1.5·2 / 校验 无·奇·偶·Mark·Space / 流控 无·软件·硬件（打开端口时生效）
+- **定时循环发送** —— 10~60000 ms 间隔自动重复，带已发送计数，关串口自动停
+- **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
+- **接收日志保存** —— 一键保存接收区；可开自动保存，写入 logs/ 目录（2 MB 或 30 分钟分段）
+- **发送历史** —— 最近 50 条自动记录、去重、持久化，下拉选中即回填
 - **背景 QThread 读取** —— UI 永不卡顿
 
 ### 界面预览
@@ -69,7 +74,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 | v0.1.0 | 基础收发 + HEX/ASCII + CRC16 | 已完成 |
 | v0.2.0 | 格式下拉 / 分包 / 毫秒时间戳 / 校验套件 / 快速发送 / 主题 | 已完成 |
 | v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | 已完成 |
-| v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | 计划中 |
+| v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | ✅ 已完成 |
 | v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | 计划中 |
 | v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、指令序列、断线重连、配置导入导出 | 计划中 |
 
@@ -181,6 +186,11 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 - **Themes** — follow system / dark / light, remembered across restarts
 - **RX/TX byte counters + status light** showing port and baud rate
 - **Proper icons** for window, taskbar and the EXE
+- **Full serial parameters** — data bits 5-8 / stop bits 1, 1.5, 2 / parity none-odd-even-mark-space / flow none, XON/XOFF, RTS/CTS (applied when the port opens)
+- **Repeat send** — auto-repeat at 10-60000 ms with a sent counter, stops when the port closes
+- **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
+- **Receive log to file** — one-click save, or auto-save into logs/ (segmented at 2 MB / 30 minutes)
+- **Send history** — the last 50 commands, deduplicated and persisted; pick one to refill
 - **Background QThread reading** — the UI never blocks
 
 ### Screenshots
@@ -199,7 +209,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 | v0.1.0 | Core TX/RX + HEX/ASCII + CRC16 | Done |
 | v0.2.0 | Format dropdowns / splitting / ms timestamps / checksums / quick send / themes | Done |
 | v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | Done |
-| v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | Planned |
+| v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | ✅ Done |
 | v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | Planned |
 | v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, command sequences, auto-reconnect, config import/export | Planned |
 
