@@ -34,13 +34,15 @@
 
 本项目没有购买代码签名证书，新发布的 exe 首次运行时 Windows 会有提示，属正常现象，三步可解：
 
-1. **Edge 下载被拦（最常见）**：点下载面板里「删除」**旁边的小箭头 ∨**，在弹出的菜单里选「**仍然保留**」。
+1. **Edge 下载被拦（最常见）**：在下载面板里**「长按」**「删除」**旁边的小箭头 ∨**，等弹出菜单后选「**仍然保留**」。
 
 <p align="center">
-  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge 下载面板：点「删除」旁边的小箭头，选「仍然保留」">
+  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge 下载面板：长按「删除」旁边的小箭头，再选「仍然保留」">
   <br>
-  <sub>关键：点「删除」旁边的小箭头 ∨ → 选「仍然保留」；千万不要点「删除」本身</sub>
+  <sub><b>关键：长按「删除」旁边的小箭头 ∨ → 选「仍然保留」；千万不要按在「删除」本身</b></sub>
 </p>
+
+> ⚠ **注意：是「长按」，不是「单击」**——轻点会直接命中「删除」，文件就被丢进回收站了；必须**长按那个小箭头 ∨** 直到菜单弹出。
 
 2. **SmartScreen 提示「Windows 已保护你的电脑」／「通常不会下载」**：点「更多信息」→「仍要运行」
 3. **提示文件被锁定**：右键 exe → 属性 → 勾选「解除锁定」→ 确定
@@ -184,13 +186,15 @@ Please extract the whole folder and run it from there; the sibling folder holds 
 
 This project has no code-signing certificate, so Windows warns on the first run. That is expected — three steps fix it:
 
-1. **Edge blocks the download (the usual one):** click the small arrow ∨ **next to** "Delete" and pick "**Keep anyway**".
+1. **Edge blocks the download (the usual one):** in the downloads panel, **press and hold** the small arrow ∨ **next to** "Delete", then pick "**Keep anyway**" from the menu that appears.
 
 <p align="center">
-  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge download panel: use the arrow next to Delete, then Keep anyway">
+  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge download panel: press and hold the arrow next to Delete, then pick Keep anyway">
   <br>
-  <sub>Key: the arrow ∨ beside "Delete", then "Keep anyway" - do not click "Delete" itself</sub>
+  <sub><b>Key: press and hold the arrow ∨ beside "Delete", then "Keep anyway" - never press "Delete" itself</b></sub>
 </p>
+
+> ⚠ **Note: press and hold, not a plain click** - a quick click lands on "Delete" and the file goes to the recycle bin; hold the small arrow ∨ until the menu opens.
 
 2. **SmartScreen says Windows protected your PC / "isn't commonly downloaded":** click More info → Run anyway
 3. **File appears locked:** right-click the exe → Properties → tick Unblock → OK
