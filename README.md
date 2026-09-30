@@ -63,7 +63,7 @@
 - **收发字节计数 + 状态指示灯**（显示端口与波特率）
 - **正式图标** —— 窗口 / 任务栏 / EXE 文件图标
 - **完整串口参数** —— 数据位 5~8 / 停止位 1·1.5·2 / 校验 无·奇·偶·Mark·Space / 流控 无·软件·硬件（打开端口时生效）
-- **定时循环发送** —— 10~60000 ms 间隔自动重复，带已发送计数，关串口自动停
+- **定时循环发送** —— 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔自动重复，已发送计数在状态栏，关串口自动停
 - **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
 - **收发同屏** —— 接收区回显发送数据：TX 行 `->` 标记并染色、RX 行 `<-` 标记，等宽标记不打乱 HEX 对齐，可一键关闭
 - **接收日志保存** —— 接收区同一行里一键保存到日志目录（状态栏给出路径）、另存为…；自动保存的开关、单文件上限、时长和日志目录统一在「设置 → 日志保存设置…」，接收区不再放重复开关
@@ -72,7 +72,7 @@
 - **多编码** —— 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码
 - **转义解析开关** —— \r \n \t \xNN 可解析为控制字符，也可按字面原样发送
 - **DTR/RTS 控制 + 信号线监视** —— 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新）
-- **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化
+- **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化；开关与规则入口都在「设置」菜单，不再占用发送区空间
 - **配置导入导出** —— 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复
 - **指令序列** —— 快速发送面板可切序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化流程）
 - **背景 QThread 读取** —— UI 永不卡顿
@@ -215,7 +215,7 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 - **RX/TX byte counters + status light** showing port and baud rate
 - **Proper icons** for window, taskbar and the EXE
 - **Full serial parameters** — data bits 5-8 / stop bits 1, 1.5, 2 / parity none-odd-even-mark-space / flow none, XON/XOFF, RTS/CTS (applied when the port opens)
-- **Repeat send** — auto-repeat at 10-60000 ms with a sent counter, stops when the port closes
+- **Repeat send** — click once to start and again to stop (the button reads Stop repeat while running); auto-repeats at 10-60000 ms, the sent counter sits in the status bar, and closing the port stops it
 - **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
 - **TX echo** — sent data mirrored into the receive pane: TX lines marked `->` and coloured, RX lines `<-`, equal-width markers keep HEX columns aligned, one click to turn off
 - **Receive log to file** — one-click save into the log folder (path shown in the status bar) and Save as… sit on the receive row itself; the auto-save switch, its size/duration limits and the log folder all live in Settings → Log saving settings…
@@ -224,7 +224,7 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 - **Encodings** — ASCII / UTF-8 / GBK / GB2312 for received and sent text, so GBK frames stop garbling
 - **Escape parsing toggle** — \r \n \t \xNN are interpreted by default, or sent literally
 - **DTR/RTS control + status lines** — drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms)
-- **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted
+- **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted, and both the switch and the editor now live in Settings instead of taking up send-area space
 - **Config import / export** — quick-send list, theme, language, send history and auto-reply rules in one JSON file; import it on another machine to restore everything
 - **Command sequence** — sequence mode in the quick-send panel: each row has its own delay, press Run to fire them in order (power-on timing, AT init flows)
 - **Background QThread reading** — the UI never blocks

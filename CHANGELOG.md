@@ -1,5 +1,29 @@
 # Changelog
 
+## [v0.12.0] - 2026-10-01
+
+### Changed
+
+- **The send area is grouped instead of being one flat stack (U98)**: the first line now reads "input first, text
+  decorations second" - format and checksum, then a clear gap, then Append CRLF and Parse escapes. Send and History
+  are no longer stretched to the height of the input box: Send stays the default button and History is a quieter
+  secondary one, both the same width, with a thin rule separating the input from the actions.
+- **Repeat send is a toggle, not a checkbox (U98)**: it starts and stops a process, so it now reads "Repeat send"
+  and switches to "Stop repeat" while running, instead of a checkbox standing in for an action.
+- **Repeat and file sending share one action row (U98)**: two short rows became one, which pays for a taller input
+  box - its minimum went from 60 to 90 px and the send group's floor from 190 to 170 px.
+
+### Added
+
+- The **sent counter moved into the status bar**, next to the RX/TX byte counts, so the send area is left with
+  three parts only: options, input, actions.
+
+### Removed
+
+- **The auto-reply switch and its Rules button left the send area (U98)**: they are receive-side settings, so they
+  now live in Settings as "Auto-reply" (checkable) and "Auto-reply rules...". In HEX mode Append CRLF and Parse
+  escapes are hidden rather than shown greyed out, because they only mean something for ASCII text.
+
 ## [v0.11.0] - 2026-10-01
 
 ### Changed

@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication
 DARK_QSS = """
 QMainWindow { background: #1e1e2e; }
 QDialog { background: #1e1e2e; }
+QFrame#vSep { background: #3a3a4a; }
 QWidget { color: #d4d4d4; font-size: 13px; }
 QGroupBox {
     border: 1px solid #3a3a4a;
@@ -115,6 +116,7 @@ QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.16); border: 1
 LIGHT_QSS = """
 QMainWindow { background: #f5f5f7; }
 QDialog { background: #f5f5f7; }
+QFrame#vSep { background: #d8d8e0; }
 QWidget { color: #1f1f1f; font-size: 13px; }
 QGroupBox {
     border: 1px solid #d0d0d8;

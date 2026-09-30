@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -244,7 +245,7 @@ class MainWindow(QMainWindow):
         cfg = load_config()
         self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
         self._reply_buf = b""
-        self.auto_reply_check.setChecked(bool(cfg.get("auto_reply_enabled", False)))
+        self.auto_reply_act.setChecked(bool(cfg.get("auto_reply_enabled", False)))
 
         # initial theme from config (default: follow system)
         choice = load_config().get("theme", "system")
@@ -353,6 +354,18 @@ class MainWindow(QMainWindow):
         self._autosave_act.setToolTip(tr("as.note"))
         self._autosave_act.triggered.connect(self._show_autosave_settings)
         self._settings_menu.addAction(self._autosave_act)
+
+        # U98: the auto-reply switch and its rules belong with the settings, not in
+        # the middle of the send row next to the file button where they used to sit.
+        self.auto_reply_act = QAction(tr("rb.enable"), self, checkable=True)
+        self.auto_reply_act.setToolTip(tr("rb.enable.tip"))
+        self.auto_reply_act.setChecked(bool(load_config().get("auto_reply_enabled", False)))
+        self.auto_reply_act.toggled.connect(self._on_auto_reply_toggled)
+        self._settings_menu.addAction(self.auto_reply_act)
+
+        self.rules_act = QAction(tr("rb.rules.menu"), self)
+        self.rules_act.triggered.connect(self._edit_rules)
+        self._settings_menu.addAction(self.rules_act)
 
         self._settings_menu.addSeparator()
         self._reconnect_act = QAction(tr("conn.auto"), self, checkable=True)
@@ -469,7 +482,7 @@ class MainWindow(QMainWindow):
         self._send_history = []
         self._update_history_button()
         self._auto_rules = []
-        self.auto_reply_check.setChecked(False)
+        self.auto_reply_act.setChecked(False)
         self._sent_count = 0
         self.sent_lbl.setText(tr("tx.sent_count", n=0))
         # U82: restoring defaults must also restore the data-first proportions, and
@@ -663,9 +676,9 @@ class MainWindow(QMainWindow):
         self.rts_check.setToolTip(tr("sig.rts.tip"))
         self.sig_lbl.setToolTip(tr("sig.in.tip"))
         self._poll_signals()
-        self.auto_reply_check.setText(tr("rb.enable"))
-        self.auto_reply_check.setToolTip(tr("rb.enable.tip"))
-        self.rules_btn.setText(tr("rb.rules_btn"))
+        self.auto_reply_act.setText(tr("rb.enable"))
+        self.auto_reply_act.setToolTip(tr("rb.enable.tip"))
+        self.rules_act.setText(tr("rb.rules.menu"))
         self.send_file_btn.setText(tr("btn.cancel_send") if self._file_timer.isActive()
                                     else tr("btn.send_file"))
         self.send_file_btn.setToolTip(tr("btn.send_file"))
@@ -689,8 +702,9 @@ class MainWindow(QMainWindow):
         for combo in self._param_combos:
             combo.setToolTip(tr("params.tip"))
         self._update_history_button()
-        self.repeat_check.setText(tr("tx.repeat"))
-        self.repeat_check.setToolTip(tr("tx.repeat.tip"))
+        self.repeat_btn.setText(tr("tx.repeat.stop") if self.repeat_btn.isChecked()
+                               else tr("tx.repeat"))
+        self.repeat_btn.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self._repeat_lbl.setText(tr("tx.interval.label"))
         self.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # U86 (set by the format below)
@@ -924,6 +938,8 @@ class MainWindow(QMainWindow):
 
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
+        self.sent_lbl = QLabel(tr("tx.sent_count", n=0))   # U98: out of the send area
+        self.statusBar().addPermanentWidget(self.sent_lbl)
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
         self.statusBar().addPermanentWidget(self.rx_count_label)
 
@@ -983,19 +999,29 @@ class MainWindow(QMainWindow):
         self.tx_fmt_combo.addItems(["HEX", "ASCII"])
         self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
         tx_fmt_row.addWidget(self.tx_fmt_combo)
-        self.crlf_check = QCheckBox(tr("tx.crlf"))
-        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
-        tx_fmt_row.addWidget(self.crlf_check)
-        self.escape_check = QCheckBox(tr("tx.escape"))
-        self.escape_check.setChecked(True)
-        self.escape_check.setToolTip(tr("tx.escape.tip"))
-        tx_fmt_row.addWidget(self.escape_check)
         self._crc_lbl = QLabel(tr("crc.label"))
         tx_fmt_row.addWidget(self._crc_lbl)
         self.checksum_combo = QComboBox()
         self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
         self.checksum_combo.setToolTip(tr("crc.tip"))
         tx_fmt_row.addWidget(self.checksum_combo)
+
+        # U98: input group (format + checksum) first, then - after a clear gap - the
+        # text decorations, which only mean something for ASCII. In HEX mode the whole
+        # group disappears instead of sitting there greyed out (same rule as U50).
+        tx_fmt_row.addSpacing(18)
+        self._tx_mod_group = QWidget()
+        mod_row = QHBoxLayout(self._tx_mod_group)
+        mod_row.setContentsMargins(0, 0, 0, 0)
+        mod_row.setSpacing(10)
+        self.crlf_check = QCheckBox(tr("tx.crlf"))
+        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
+        mod_row.addWidget(self.crlf_check)
+        self.escape_check = QCheckBox(tr("tx.escape"))
+        self.escape_check.setChecked(True)
+        self.escape_check.setToolTip(tr("tx.escape.tip"))
+        mod_row.addWidget(self.escape_check)
+        tx_fmt_row.addWidget(self._tx_mod_group)
         tx_fmt_row.addStretch(1)
         tx_layout.addWidget(_fixed_row(tx_fmt_row))
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
@@ -1005,34 +1031,43 @@ class MainWindow(QMainWindow):
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
         self._update_input_placeholder()   # U86: keep the format-specific hint
-        self.tx_edit.setMinimumHeight(60)
+        self.tx_edit.setMinimumHeight(90)       # U98: the row merge pays for this
         self.tx_edit.textChanged.connect(self._check_hex_input)
         tx_row.addWidget(self.tx_edit, 1)
         self.send_btn = QPushButton(tr("btn.send"))
         self.send_btn.clicked.connect(self.on_send)
         self.send_btn.setDefault(True)
-        self.send_btn.setMinimumWidth(110)
-        self.send_btn.setMinimumHeight(60)
-        self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.send_btn.setMinimumWidth(104)
+        self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.send_btn.setToolTip(tr("sc.send.tip"))
-        tx_row.addWidget(self.send_btn)
+        tx_row.addSpacing(10)
+        tx_sep = QFrame()                        # U98: input area | action area
+        tx_sep.setObjectName("vSep")
+        tx_sep.setFrameShape(QFrame.Shape.VLine)
+        tx_sep.setFixedWidth(1)
+        tx_row.addWidget(tx_sep)
+        tx_row.addSpacing(10)
+        tx_row.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         # U87: the history is a popup now, so it costs one compact button beside the
         # primary action instead of a whole row of its own.
         self.history_btn = QPushButton(tr("tx.history.btn", n=0))
         self.history_btn.setToolTip(tr("tx.history.btn.tip", n=0))
-        self.history_btn.setMinimumWidth(88)
-        self.history_btn.setMinimumHeight(60)
-        self.history_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.history_btn.setMinimumWidth(104)
+        self.history_btn.setProperty("secondary", True)   # U98: a reference, not a peer
+        self.history_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.history_btn.setEnabled(False)
         self.history_btn.clicked.connect(self._show_history)
-        tx_row.addWidget(self.history_btn)
+        tx_row.addWidget(self.history_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
 
         repeat_row = QHBoxLayout()
-        self.repeat_check = QCheckBox(tr("tx.repeat"))
-        self.repeat_check.setToolTip(tr("tx.repeat.tip"))
-        self.repeat_check.toggled.connect(self._on_repeat_toggled)
-        repeat_row.addWidget(self.repeat_check)
+        # U98: "Repeat send" starts and stops a process, so it is a toggle button that
+        # reads "Stop repeat" while running - a checkbox stood in for an action before.
+        self.repeat_btn = QPushButton(tr("tx.repeat"))
+        self.repeat_btn.setCheckable(True)
+        self.repeat_btn.setToolTip(tr("tx.repeat.tip"))
+        self.repeat_btn.toggled.connect(self._on_repeat_toggled)
+        repeat_row.addWidget(self.repeat_btn)
         self._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
         repeat_row.addWidget(self._repeat_lbl)
         self.repeat_ms = QLineEdit("1000")
@@ -1041,38 +1076,36 @@ class MainWindow(QMainWindow):
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.repeat_ms.textChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
-        self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
-        repeat_row.addWidget(self.sent_lbl)
-        repeat_row.addStretch(1)
-        self.tx_size_lbl = QLabel("")           # U74: bytes that will actually go out
-        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
-        repeat_row.addWidget(self.tx_size_lbl)
-        tx_layout.addWidget(_fixed_row(repeat_row))
-
-        file_row = QHBoxLayout()
+        # U98: repeat and file sending share one action row - they are both "send
+        # something over time" actions and neither needs a row of its own, which hands
+        # ~33 px back to the input box.
+        action_row = repeat_row
+        action_row.addSpacing(18)
+        action_sep = QFrame()
+        action_sep.setObjectName("vSep")
+        action_sep.setFrameShape(QFrame.Shape.VLine)
+        action_sep.setFixedWidth(1)
+        action_row.addWidget(action_sep)
+        action_row.addSpacing(18)
         self.send_file_btn = QPushButton(tr("btn.send_file"))
         self.send_file_btn.setToolTip(tr("btn.send_file"))
         self.send_file_btn.clicked.connect(self.on_send_file)
-        file_row.addWidget(self.send_file_btn)
+        action_row.addWidget(self.send_file_btn)
         self.file_progress = QProgressBar()
         self.file_progress.setRange(0, 100)
         self.file_progress.setValue(0)
         self.file_progress.setMaximumWidth(220)
-        file_row.addWidget(self.file_progress)
+        action_row.addWidget(self.file_progress)
         self.file_info_lbl = QLabel("")
-        file_row.addWidget(self.file_info_lbl, 1)
+        action_row.addWidget(self.file_info_lbl, 1)
+        self.tx_size_lbl = QLabel("")           # U74: bytes that will actually go out
+        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        action_row.addWidget(self.tx_size_lbl)
+        tx_layout.addWidget(_fixed_row(action_row))
 
-        self.auto_reply_check = QCheckBox(tr("rb.enable"))
-        self.auto_reply_check.setToolTip(tr("rb.enable.tip"))
-        self.auto_reply_check.toggled.connect(self._on_auto_reply_toggled)
-        file_row.addWidget(self.auto_reply_check)
-        self.rules_btn = QPushButton(tr("rb.rules_btn"))
-        self.rules_btn.clicked.connect(self._edit_rules)
-        file_row.addWidget(self.rules_btn)
-        tx_layout.addWidget(_fixed_row(file_row))
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 2)
-        tx_group.setMinimumHeight(190)                          # U63
+        tx_group.setMinimumHeight(170)                          # U63/U98
         self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
         self._v_splitter.setCollapsible(1, False)   #      the panes are added
         _stored_v = load_config().get("v_split_sizes")
@@ -1258,9 +1291,9 @@ class MainWindow(QMainWindow):
                  "split_combo", "split_ms_edit", "header_edit", "ts_check",
                  "echo_tx_check", "autoscroll_check",
                  "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
-                 "tx_fmt_combo", "escape_check", "crlf_check",
-                 "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
-                 "history_btn", "send_btn", "send_file_btn"]
+                 "tx_fmt_combo", "checksum_combo", "crlf_check", "escape_check",
+                 "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
+                 "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
         for first, second in zip(widgets, widgets[1:]):
             QWidget.setTabOrder(first, second)
@@ -1472,7 +1505,7 @@ class MainWindow(QMainWindow):
         self._update_history_button()
 
         self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
-        self.auto_reply_check.setChecked(bool(cfg.get("auto_reply_enabled", False)))
+        self.auto_reply_act.setChecked(bool(cfg.get("auto_reply_enabled", False)))
         self._reply_buf = b""
 
     # -- auto reply (T10) ----------------------------------------------------
@@ -1495,7 +1528,7 @@ class MainWindow(QMainWindow):
 
     def _check_auto_reply(self, data: bytes) -> None:
         """Send the configured reply when a match string shows up in the stream."""
-        if not self.auto_reply_check.isChecked() or not self._auto_rules:
+        if not self.auto_reply_act.isChecked() or not self._auto_rules:
             return
         self._reply_buf = (self._reply_buf + data)[-512:]
         for rule in self._auto_rules:
@@ -1941,10 +1974,12 @@ class MainWindow(QMainWindow):
 
     def _on_repeat_toggled(self, checked: bool):
         if checked and not self._ensure_port():
-            self.repeat_check.blockSignals(True)   # U61: no repeat loop without a port
-            self.repeat_check.setChecked(False)
-            self.repeat_check.blockSignals(False)
+            self.repeat_btn.blockSignals(True)     # U61: no repeat loop without a port
+            self.repeat_btn.setChecked(False)
+            self.repeat_btn.blockSignals(False)
+            self.repeat_btn.setText(tr("tx.repeat"))
             return
+        self.repeat_btn.setText(tr("tx.repeat.stop") if checked else tr("tx.repeat"))
         if checked:
             self._sent_count = 0
             self.sent_lbl.setText(tr("tx.sent_count", n=0))
@@ -1965,8 +2000,8 @@ class MainWindow(QMainWindow):
             self._repeat_timer.setInterval(self._repeat_value())
 
     def _stop_repeat(self):
-        if self.repeat_check.isChecked():
-            self.repeat_check.setChecked(False)   # triggers _on_repeat_toggled -> stop
+        if self.repeat_btn.isChecked():
+            self.repeat_btn.setChecked(False)     # triggers _on_repeat_toggled -> stop
         else:
             self._repeat_timer.stop()
 
@@ -1982,8 +2017,9 @@ class MainWindow(QMainWindow):
         }
 
     def _on_tx_fmt_changed(self, index: int):
-        # appending CRLF only makes sense for ASCII (index 1)
-        self.crlf_check.setEnabled(index == 1)
+        # U98: CRLF and escape parsing only mean something for ASCII text (index 1);
+        # in HEX mode the group is hidden rather than shown greyed out.
+        self._tx_mod_group.setVisible(index == 1)
         self._update_input_placeholder()   # U86: hint follows the send format
 
     def _update_input_placeholder(self) -> None:
