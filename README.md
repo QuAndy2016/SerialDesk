@@ -4,13 +4,14 @@
 
 # SerialDesk
 
-**串口台 —— 嵌入式工程师的串口伴侣，一个干净、够用、能一直长下去的跨平台串口调试工具。**
+**串口台 —— 让串口调试回归它本该有的样子：插上、打开、收发、存档，不折腾。**
 
-SerialDesk (串口台) — a clean, capable, cross-platform serial debugging tool for embedded engineers.
+**SerialDesk (串口台) — serial debugging the way it should be: plug in, open, send, receive, done. A clean, capable, cross-platform serial debugging tool that keeps growing.**
 
 基于 **PySide6 + PySerial**，面向嵌入式 / 电机控制 / 工业控制工程师。
+Built on **PySide6 + PySerial**, for embedded, motor-control and industrial-control engineers.
 
-> **Language:** 本页默认中文。英文版在页面底部的折叠区，点击展开 **English version — click to expand**。
+> **Language:** This page is in Chinese by default — the English version is in the collapsible section at the bottom: click **English version — click to expand**.
 
 ---
 
@@ -111,6 +112,7 @@ pytest tests/ -v
 main.py                  # entry point
 app/protocol.py          # HEX/ASCII, CRC16/CRC32/SUM8 checksums, Modbus frames
 app/serial_worker.py     # serial QThread (timestamped receive)
+app/framing.py           # frame assembly: merges USB-fragmented chunks (U57)
 app/config.py            # settings persistence (config.json)
 ui/main_window.py        # main window
 ui/quick_send_panel.py   # quick send panel
@@ -245,6 +247,21 @@ Run tests:
 
 ```bash
 pytest tests/ -v
+```
+
+### Directory structure
+
+```
+main.py                  # entry point
+app/protocol.py          # HEX/ASCII, CRC16/CRC32/SUM8 checksums, Modbus frames
+app/serial_worker.py     # serial QThread: all port I/O lives here
+app/framing.py           # frame assembly: merges USB-fragmented chunks
+app/config.py            # settings persistence (config.json)
+ui/main_window.py        # main window
+ui/quick_send_panel.py   # quick send panel
+ui/theme.py              # dark / light / follow-system themes
+assets/                  # logo, donation QR, arrow icons
+tests/                   # unit tests
 ```
 
 ### Acknowledgements
