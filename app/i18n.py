@@ -306,6 +306,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.history.hint": {"zh": "双击（或回车）把该条回填到输入框；Delete 删除选中项",
                         "en": "Double-click (or Enter) to put an entry back in the send box; Delete removes the selected one"},
     "tx.history.fill": {"zh": "回填", "en": "Use"},
+    "tx.history.empty": {"zh": "还没有发送记录", "en": "Nothing sent yet"},
     "tx.history.close": {"zh": "关闭", "en": "Close"},
     "tx.history.delete": {"zh": "删除此条", "en": "Delete this entry"},
     "tx.history.clear": {"zh": "清空发送历史", "en": "Clear the history"},

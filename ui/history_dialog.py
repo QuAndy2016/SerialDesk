@@ -55,7 +55,7 @@ class HistoryDialog(QDialog):
         self.fill_btn.clicked.connect(self._fill_current)
         row.addWidget(self.fill_btn)
 
-        self.del_btn = QPushButton(tr("tx.history.del"))
+        self.del_btn = QPushButton(tr("tx.history.delete"))
         self.del_btn.clicked.connect(self._delete_current)
         row.addWidget(self.del_btn)
 

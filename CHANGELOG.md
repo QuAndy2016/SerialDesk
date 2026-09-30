@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.9.1] - 2026-10-01
+
+### Fixed
+
+- **One button in the history popup showed a raw key**: its delete button referenced a translation key that did
+  not exist, so it read "tx.history.del" instead of "Delete this entry / 删除此条", and the empty-state label had
+  the same problem. Both now use the keys that already existed, and a sweep over every translation call in the
+  codebase (230 call sites, 251 keys) confirms no other string can fall back to its key.
+
 ## [v0.9.0] - 2026-10-01
 
 ### Changed
