@@ -88,10 +88,10 @@ QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #4a4a5a; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
 QCheckBox::indicator { width: 15px; height: 15px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
 QCheckBox::indicator:hover { border-color: #8be9fd; }
-QCheckBox::indicator:checked { background: #8be9fd; border-color: #8be9fd; image: url(__ASSETS__/check_dark.png); }
-QCheckBox::indicator:checked:hover { background: #a5eefd; border-color: #a5eefd; }
+QCheckBox::indicator:checked { background: #1f3a44; border-color: #4b8fa3; image: url(__ASSETS__/check_accent.png); }
+QCheckBox::indicator:checked:hover { background: #27495a; border-color: #63aec4; }
 QCheckBox::indicator:disabled { border-color: #3a3a4a; background: #2a2a35; }
-QCheckBox::indicator:checked:disabled { background: #3c5a66; border-color: #3c5a66; }
+QCheckBox::indicator:checked:disabled { background: #24343c; border-color: #3a545e; }
 QScrollBar:vertical { background: #23232f; width: 13px; margin: 0px; }
 QScrollBar::handle:vertical { background: #4a4a5c; min-height: 30px; border-radius: 6px; margin: 2px; }
 QScrollBar::handle:vertical:hover { background: #6a6a80; }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.6.5] - 2026-10-01
+
+### Changed
+
+- **Softer checked state in the dark theme (U71)**: a ticked box used to be a solid saturated cyan block, which
+  glares against the dark background. It is now a calm dark-teal box with the bright accent reserved for the tick
+  itself (#1f3a44 fill, #4b8fa3 border, cyan check mark), with matching hover and disabled variants. The light
+  theme keeps its blue fill and white tick.
+
 ## [v0.6.4] - 2026-10-01
 
 ### Fixed
