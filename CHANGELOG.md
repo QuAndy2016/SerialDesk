@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.6.1] - 2026-10-01
+
+### Added
+
+- **Choose which commands a sequence runs (U66)**: every quick-send row now carries a tick box. Ticked rows show
+  a small number with their position in the sequence, and Run sends only those, in order; with nothing ticked the
+  sequence behaves exactly as before (every filled row). The selection is persisted with the row.
+
+### Fixed
+
+- **Check boxes looked "filled but unticked" (U67)**: the checked state was a flat colour block without a visible
+  tick, which made several options hard to read. Both themes now draw a real check mark (shipped as assets) with
+  hover and disabled states.
+- **Scroll bars were a hairline (U67)**: they are 13 px wide now, with rounded hoverable handles and no arrow
+  buttons, in both themes.
+- **Layout polish from the review screenshot (U67)**: the connection row sits closer to the top of the window, the
+  receive/send groups lost their extra padding so the control row hugs the group top, the split-mode hint is no
+  longer clipped, and the per-row delay box is about a third narrower.
+
 ## [v0.6.0] - 2026-10-01
 
 ### Added

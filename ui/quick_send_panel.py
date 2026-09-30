@@ -99,13 +99,25 @@ class QuickSendPanel(QWidget):
 
     # -- rows ----------------------------------------------------------------
 
-    def add_row(self, text: str = "", is_hex: bool = True, delay_ms: int = 500):
+    def add_row(self, text: str = "", is_hex: bool = True, delay_ms: int = 500,
+                selected: bool = False):
         if len(self._rows) >= MAX_ENTRIES:
             self.log.emit(tr("qs.max", n=MAX_ENTRIES))
             return
         row = QWidget()
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)
+
+        # U66: pick which rows the sequence runs, with a small order badge
+        sel = QCheckBox()
+        sel.setToolTip(tr("qs.sel.tip"))
+        sel.toggled.connect(self._renumber_selection)
+        h.addWidget(sel)
+        ord_lbl = QLabel("")
+        ord_lbl.setObjectName("seqOrd")
+        ord_lbl.setToolTip(tr("qs.sel.order.tip"))
+        ord_lbl.hide()
+        h.addWidget(ord_lbl)
 
         edit = QLineEdit(text)
         edit.setPlaceholderText(tr("qs.placeholder"))
@@ -118,7 +130,7 @@ class QuickSendPanel(QWidget):
 
         delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
         delay.setValidator(QIntValidator(0, 60000, self))
-        delay.setMaximumWidth(104)
+        delay.setMaximumWidth(76)   # the 3-digit value needs far less room
         delay.setToolTip(tr("qs.delay.tip"))
         h.addWidget(delay)
 
@@ -139,8 +151,32 @@ class QuickSendPanel(QWidget):
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send,
-                           "del": dele, "delay": delay})
+                           "del": dele, "delay": delay, "sel": sel, "ord": ord_lbl})
+        sel.setChecked(bool(selected))
+        self._renumber_selection()
         self._update_count()
+
+    def _renumber_selection(self) -> None:
+        """Show 1..n on the ticked rows so the run order is obvious (U66)."""
+        order = 0
+        for entry in self._rows:
+            widget = entry.get("ord")
+            if widget is None:
+                continue
+            if entry["sel"].isChecked():
+                order += 1
+                widget.setText(str(order))
+                widget.show()
+            else:
+                widget.setText("")
+                widget.hide()
+
+    def _sequence_targets(self) -> list:
+        """Rows the sequence should run: the ticked ones, or all filled rows (U66)."""
+        ticked = [e for e in self._rows if e["sel"].isChecked()]
+        if ticked:
+            return ticked
+        return [e for e in self._rows if e["edit"].text().strip()]
 
     def _payload_for(self, entry: dict) -> bytes | None:
         """Parse one row into bytes (None + log message when it cannot be parsed)."""
@@ -179,7 +215,7 @@ class QuickSendPanel(QWidget):
         if self._seq_running:
             self.stop_sequence()
             return
-        targets = [e for e in self._rows if e["edit"].text().strip()]
+        targets = self._sequence_targets()          # U66: ticked rows only
         if not targets:
             self.log.emit(tr("qs.seq.none"))
             return
@@ -298,6 +334,9 @@ class QuickSendPanel(QWidget):
             entry["send"].setText(tr("qs.send"))
             entry["del"].setToolTip(tr("qs.delete.tip"))
             entry["delay"].setToolTip(tr("qs.delay.tip"))
+            if entry.get("sel") is not None:
+                entry["sel"].setToolTip(tr("qs.sel.tip"))
+                entry["ord"].setToolTip(tr("qs.sel.order.tip"))
 
     # -- persistence -----------------------------------------------------------
 
@@ -316,12 +355,12 @@ class QuickSendPanel(QWidget):
             return
         for item in items:
             self.add_row(str(item.get("text", "")), bool(item.get("hex", True)),
-                         int(item.get("delay", 500) or 0))
+                         int(item.get("delay", 500) or 0), bool(item.get("sel", False)))
 
     def save(self):
         items = [
             {"text": e["edit"].text(), "hex": e["fmt"].currentIndex() == 0,
-             "delay": self._row_delay(e)}
+             "delay": self._row_delay(e), "sel": bool(e["sel"].isChecked())}
             for e in self._rows
         ]
         config = {}

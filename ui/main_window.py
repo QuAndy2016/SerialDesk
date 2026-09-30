@@ -556,6 +556,8 @@ class MainWindow(QMainWindow):
     def _build_ui(self):
         central = QWidget()
         root = QVBoxLayout(central)
+        root.setContentsMargins(8, 6, 8, 6)   # keep the connect row close to the top
+        root.setSpacing(6)
 
         # --- connection bar -------------------------------------------------
         bar = QHBoxLayout()
@@ -633,6 +635,8 @@ class MainWindow(QMainWindow):
         self._rx_group = QGroupBox(tr("group.rx"))
         rx_group = self._rx_group
         rx_layout = QVBoxLayout(rx_group)
+        rx_layout.setContentsMargins(8, 2, 8, 6)   # controls hug the top of the group
+        rx_layout.setSpacing(4)
 
         rx_opts = QHBoxLayout()
         self._split_lbl = QLabel(tr("split.label"))
@@ -659,7 +663,7 @@ class MainWindow(QMainWindow):
         self.split_hint_lbl.setEnabled(False)
 
         self.split_slot = QStackedWidget()
-        self.split_slot.setMinimumWidth(120)
+        self.split_slot.setMinimumWidth(132)   # the mode hint must not clip
         self.split_slot.addWidget(self.split_hint_lbl)   # 0 auto / off
         self.split_slot.addWidget(self.split_ms_edit)    # 1 manual
         self.split_slot.addWidget(self.header_edit)      # 2 by header
@@ -752,6 +756,8 @@ class MainWindow(QMainWindow):
         self._tx_group = QGroupBox(tr("group.tx"))
         tx_group = self._tx_group
         tx_layout = QVBoxLayout(tx_group)
+        tx_layout.setContentsMargins(8, 2, 8, 6)
+        tx_layout.setSpacing(4)
 
         hist_row = QHBoxLayout()
         self._hist_lbl = QLabel(tr("tx.history"))

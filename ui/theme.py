@@ -15,8 +15,8 @@ QWidget { color: #d4d4d4; font-size: 13px; }
 QGroupBox {
     border: 1px solid #3a3a4a;
     border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 6px;
+    margin-top: 8px;
+    padding-top: 2px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -86,6 +86,23 @@ QPushButton#qsDel:hover { color: #ff7b72; background: #3a3a4a; border-radius: 4p
 QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
 QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #4a4a5a; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+QCheckBox::indicator { width: 15px; height: 15px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
+QCheckBox::indicator:hover { border-color: #8be9fd; }
+QCheckBox::indicator:checked { background: #8be9fd; border-color: #8be9fd; image: url(__ASSETS__/check_dark.png); }
+QCheckBox::indicator:checked:hover { background: #a5eefd; border-color: #a5eefd; }
+QCheckBox::indicator:disabled { border-color: #3a3a4a; background: #2a2a35; }
+QCheckBox::indicator:checked:disabled { background: #3c5a66; border-color: #3c5a66; }
+QScrollBar:vertical { background: #23232f; width: 13px; margin: 0px; }
+QScrollBar::handle:vertical { background: #4a4a5c; min-height: 30px; border-radius: 6px; margin: 2px; }
+QScrollBar::handle:vertical:hover { background: #6a6a80; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar:horizontal { background: #23232f; height: 13px; margin: 0px; }
+QScrollBar::handle:horizontal { background: #4a4a5c; min-width: 30px; border-radius: 6px; margin: 2px; }
+QScrollBar::handle:horizontal:hover { background: #6a6a80; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
+QLabel#seqOrd { color: #8be9fd; font-size: 11px; font-weight: bold; min-width: 12px; }
 """
 
 LIGHT_QSS = """
@@ -165,6 +182,23 @@ QPushButton#qsDel:hover { color: #c62828; background: #ececf2; border-radius: 4p
 QToolButton#settingsBtn { color: #1f1f1f; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
 QToolButton#settingsBtn:hover { background: #e0e0e8; border-color: #c8c8d0; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+QCheckBox::indicator { width: 15px; height: 15px; border: 1px solid #b0b0bc; border-radius: 3px; background: #ffffff; }
+QCheckBox::indicator:hover { border-color: #1e5aa8; }
+QCheckBox::indicator:checked { background: #1e5aa8; border-color: #1e5aa8; image: url(__ASSETS__/check_light.png); }
+QCheckBox::indicator:checked:hover { background: #2a6fc4; border-color: #2a6fc4; }
+QCheckBox::indicator:disabled { border-color: #d0d0d8; background: #ececf2; }
+QCheckBox::indicator:checked:disabled { background: #9db4cf; border-color: #9db4cf; }
+QScrollBar:vertical { background: #ececf2; width: 13px; margin: 0px; }
+QScrollBar::handle:vertical { background: #b8b8c4; min-height: 30px; border-radius: 6px; margin: 2px; }
+QScrollBar::handle:vertical:hover { background: #9090a0; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar:horizontal { background: #ececf2; height: 13px; margin: 0px; }
+QScrollBar::handle:horizontal { background: #b8b8c4; min-width: 30px; border-radius: 6px; margin: 2px; }
+QScrollBar::handle:horizontal:hover { background: #9090a0; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
+QLabel#seqOrd { color: #1e5aa8; font-size: 11px; font-weight: bold; min-width: 12px; }
 """
 
 

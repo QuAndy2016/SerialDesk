@@ -242,10 +242,10 @@ STRINGS: dict[str, dict[str, str]] = {
     # ---- repeat send (T2) / send history (T5) ----
     "tx.interval.label": {"zh": "间隔(ms)", "en": "Interval (ms)"},
     "split.auto.hint": {
-        "zh": "按波特率自动（约 3.5 字符）",
-        "en": "Auto by baud (~3.5 chars)",
+        "zh": "按波特率自动",
+        "en": "Auto by baud",
     },
-    "split.off.hint": {"zh": "不按时间分包", "en": "No time-based split"},
+    "split.off.hint": {"zh": "不分包", "en": "No split"},
     "tx.repeat": {"zh": "循环发送", "en": "Repeat send"},
     "tx.repeat.tip": {"zh": "按设定间隔重复发送当前内容", "en": "Repeat the current input at the set interval"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
@@ -337,6 +337,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.max": {"zh": "最多支持 {n} 条指令", "en": "Up to {n} commands supported"},
     "qs.placeholder": {"zh": "指令内容", "en": "Command"},
     "qs.send": {"zh": "发送", "en": "Send"},
+    "qs.sel.tip": {
+        "zh": "勾选后点「运行」只按顺序发送勾选的指令；一个都不勾则发送全部",
+        "en": "Tick to include this row when running the sequence; with nothing ticked every row runs",
+    },
+    "qs.sel.order.tip": {"zh": "该指令在序列中的顺序", "en": "Position of this command in the sequence"},
     "qs.deleted": {
         "zh": "已删除该指令（3 秒内可撤销）",
         "en": "Command deleted (undo within 3 s)",
