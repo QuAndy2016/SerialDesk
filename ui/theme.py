@@ -218,13 +218,18 @@ def apply_theme(app: QApplication, dark: bool | None = None) -> bool:
 
 
 def text_color() -> str:
-    """Default text colour of the receive pane for the effective theme."""
-    return "#e0e0e0" if resolved_dark() else "#111111"
+    """Receive-pane text colour (U62: dark theme softened from #e0e0e0, which glared)."""
+    return "#c0c0c0" if resolved_dark() else "#111111"
 
 
 def tx_color() -> str:
-    """Colour used to highlight echoed TX lines (blue/cyan, never red)."""
-    return "#8be9fd" if resolved_dark() else "#1e5aa8"
+    """Colour used to highlight echoed TX data (calm blue, never red)."""
+    return "#7fb3d5" if resolved_dark() else "#1e5aa8"
+
+
+def meta_color() -> str:
+    """Timestamp + direction marker colour: dimmer than the payload (U62)."""
+    return "#7d8590" if resolved_dark() else "#6d6d78"
 
 
 def watch_system_theme(app: QApplication, callback) -> None:

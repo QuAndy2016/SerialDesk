@@ -15,6 +15,7 @@ from PySide6.QtGui import (
     QActionGroup,
     QColor,
     QIntValidator,
+    QTextFormat,
     QTextCharFormat,
     QTextCursor,
 )
@@ -1015,13 +1016,24 @@ class MainWindow(QMainWindow):
         cursor = QTextCursor(doc)
         block = doc.begin()
         while block.isValid():
-            is_tx = "-> " in block.text()[:34]        # our TX marker, inside the prefix
+            fallback_tx = "-> " in block.text()[:34]   # older lines carry no kind tag
             it = block.begin()
             while not it.atEnd():
                 frag = it.fragment()
                 if frag.isValid():
                     fmt = frag.charFormat()
-                    fmt.setForeground(QColor(theme.tx_color() if is_tx else theme.text_color()))
+                    kind = None
+                    try:
+                        kind = fmt.property(QTextFormat.Property.UserProperty)
+                    except (AttributeError, TypeError):
+                        kind = None
+                    if kind == 2:
+                        colour = theme.meta_color()
+                    elif kind == 1 or (kind is None and fallback_tx):
+                        colour = theme.tx_color()
+                    else:
+                        colour = theme.text_color()
+                    fmt.setForeground(QColor(colour))
                     cursor.setPosition(frag.position())
                     cursor.setPosition(frag.position() + frag.length(),
                                        QTextCursor.MoveMode.KeepAnchor)
@@ -1222,12 +1234,26 @@ class MainWindow(QMainWindow):
 
     # -- quick helpers --------------------------------------------------------
 
-    def _emit_rx_text(self, text: str, tx: bool = False) -> None:
-        """Insert text into the receive pane (coloured by direction) and mirror it to the log."""
+    def _emit_rx_text(self, text: str, tx: bool = False, meta: bool = False) -> None:
+        """Insert text into the receive pane and mirror it to the log.
+
+        kind: 0 = RX payload, 1 = TX payload, 2 = timestamp/marker (dimmed, U62).
+        The kind is stored on the format so a theme switch can recolour it correctly.
+        """
+        kind = 2 if meta else (1 if tx else 0)
         cursor = self.rx_view.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         fmt = QTextCharFormat()
-        fmt.setForeground(QColor(theme.tx_color() if tx else theme.text_color()))
+        if kind == 2:
+            fmt.setForeground(QColor(theme.meta_color()))
+        elif kind == 1:
+            fmt.setForeground(QColor(theme.tx_color()))
+        else:
+            fmt.setForeground(QColor(theme.text_color()))
+        try:
+            fmt.setProperty(QTextFormat.Property.UserProperty, kind)
+        except (AttributeError, TypeError):
+            pass
         cursor.insertText(text, fmt)
         self._log_append(text)
 
@@ -1247,7 +1273,7 @@ class MainWindow(QMainWindow):
         if new_line or self._line_is_tx:
             if has_text:
                 self._emit_rx_text("\n")
-            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
+            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX, meta=True)
         elif has_text:
             separator = self._rx_separator()
             if separator:
@@ -1261,7 +1287,7 @@ class MainWindow(QMainWindow):
             return
         if self.rx_view.document().characterCount() > 1:
             self._emit_rx_text("\n", tx=True)
-        self._emit_rx_text(self._ts_prefix(time.monotonic()) + MARK_TX, tx=True)
+        self._emit_rx_text(self._ts_prefix(time.monotonic()) + MARK_TX, tx=True, meta=True)
         self._emit_rx_text(self._format_rx(data), tx=True)
         self._line_is_tx = True
         bar = self.rx_view.verticalScrollBar()

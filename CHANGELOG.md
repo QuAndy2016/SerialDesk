@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.13] - 2026-09-30
+
+### Changed
+
+- **The dark theme's receive pane was glary (U62)**: alternating RX/TX lines used #e0e0e0 (13.6:1) and the
+  bright cyan #8be9fd (13.0:1), which made dense HEX logs tiring to read. The dark palette is softer now -
+  payload text #c0c0c0 (9.9:1) and TX data a calm blue #7fb3d5 (8.0:1) - and the timestamp plus direction
+  marker are drawn in a dim grey (#7d8590 dark / #6d6d78 light) so the eye lands on the payload instead of
+  the prefix. The kind of every fragment (RX / TX / metadata) is stored on its text format, so a theme switch
+  re-colours each part correctly.
+
 ## [v0.4.12] - 2026-09-30
 
 ### Fixed
