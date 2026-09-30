@@ -167,3 +167,86 @@ class TestFlowControlGuard:
             w.wait(2000)
         finally:
             sw.serial.Serial = real
+
+
+class TestAutoReconnect:
+    """T14: reopen after an unexpected loss, never after a manual close."""
+
+    @staticmethod
+    def _events(worker):
+        seen = []
+        worker.reconnecting.connect(seen.append)
+        worker.reconnected.connect(lambda: seen.append("ok"))
+        worker.disconnected.connect(lambda _r: seen.append("lost"))
+        return seen
+
+    def test_manual_close_never_reconnects(self):
+        w = SerialWorker()
+        w._auto_reconnect = True
+        w._user_closed = True
+        w._port = FakePort()
+        seen = self._events(w)
+        w._handle_disconnect("unplugged")
+        assert seen == ["lost"]
+
+    def test_disabled_does_not_reconnect(self):
+        w = SerialWorker()
+        w._auto_reconnect = False
+        w._user_closed = False
+        w._port = FakePort()
+        seen = self._events(w)
+        w._handle_disconnect("unplugged")
+        assert seen == ["lost"]
+
+    def test_retries_with_bounded_backoff_until_success(self):
+        import app.serial_worker as sw
+
+        w = SerialWorker()
+        w._auto_reconnect = True
+        w._user_closed = False
+        w._running = True
+        w._port = FakePort()
+        seen = self._events(w)
+        sleeps: list[float] = []
+        real_sleep = sw.time.sleep
+        sw.time.sleep = lambda s: sleeps.append(s)      # keep the test instant
+        try:
+            calls = {"n": 0}
+
+            def fake_reopen() -> bool:
+                calls["n"] += 1
+                return calls["n"] >= 3                   # up on the third try
+
+            w._try_reopen = fake_reopen
+            w._handle_disconnect("driver error")
+        finally:
+            sw.time.sleep = real_sleep
+        assert seen == [1, 2, 3, "ok"]
+        assert sleeps == [0.5, 1.0, 1.5]                 # attempt * 0.5 s
+        assert w._user_closed is False
+
+    def test_gives_up_when_still_away(self):
+        import app.serial_worker as sw
+
+        w = SerialWorker()
+        w._auto_reconnect = True
+        w._user_closed = False
+        w._running = True
+        w._port = FakePort()
+        seen = self._events(w)
+        real_sleep = sw.time.sleep
+        sw.time.sleep = lambda s: None
+        try:
+            calls = {"n": 0}
+
+            def always_fails() -> bool:
+                calls["n"] += 1
+                if calls["n"] >= 3:
+                    w._user_closed = True          # the user gives up / closes the app
+                return False
+
+            w._try_reopen = always_fails
+            w._handle_disconnect("still away")
+        finally:
+            sw.time.sleep = real_sleep
+        assert seen[-1] == "lost" and seen.count("lost") == 1

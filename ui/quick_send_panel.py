@@ -24,7 +24,7 @@ from app.protocol import HexFormatError, ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
 DEFAULT_ROWS = 10   # blank rows seeded on first run (U15)
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config.json")
+from app.config import CONFIG_PATH   # U34: one data dir for the whole app
 
 
 class QuickSendPanel(QWidget):

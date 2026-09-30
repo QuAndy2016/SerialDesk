@@ -109,7 +109,9 @@ PARITY_KEYS = ["N", "O", "E", "M", "S"]
 STOPBITS_KEYS = [1, 1.5, 2]
 FLOW_KEYS = ["none", "xonxoff", "rtscts"]
 HISTORY_MAX = 50
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
+from app.config import log_dir
+
+LOG_DIR = log_dir()   # U34: per-user (or portable) logs, not next to the bundle
 LOG_MAX_BYTES = 2 * 1024 * 1024
 LOG_MAX_SECONDS = 30 * 60
 MARK_RX = "<- "          # direction markers, ASCII so monospace stays aligned (U26)
@@ -141,6 +143,10 @@ class MainWindow(QMainWindow):
         self.worker.opened.connect(self.on_opened_changed)
         self.worker.error.connect(self._on_worker_error)
         self.worker.send_error.connect(self._on_send_error)
+        self.worker.reconnecting.connect(
+            lambda n: self._notify(tr("conn.reconnecting", n=n), "warn"))   # T14
+        self.worker.reconnected.connect(lambda: self._notify(tr("conn.reconnected"), "info"))
+        self.worker.disconnected.connect(lambda _r: self._notify(tr("conn.lost"), "error"))
 
         self.rx_bytes = 0
         self.tx_bytes = 0
@@ -205,6 +211,9 @@ class MainWindow(QMainWindow):
         theme.apply_theme(QApplication.instance())
         self._recolor_status_light()
         theme.apply_native_dark(self, bool(theme.resolved_dark()))
+
+        self.worker.set_auto_reconnect(
+            bool(load_config().get("auto_reconnect", False)))    # T14
 
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self.refresh_ports)
@@ -288,6 +297,12 @@ class MainWindow(QMainWindow):
 
         # U44: about box (version is otherwise invisible in the UI)
         self._settings_menu.addSeparator()
+        self._reconnect_act = QAction(tr("conn.auto"), self, checkable=True)
+        self._reconnect_act.setToolTip(tr("conn.auto.tip"))
+        self._reconnect_act.setChecked(bool(load_config().get("auto_reconnect", False)))
+        self._reconnect_act.toggled.connect(self._on_reconnect_toggled)
+        self._settings_menu.addAction(self._reconnect_act)
+
         self._portset_act = QAction(tr("portset.menu"), self)
         self._portset_act.triggered.connect(self._show_port_settings)
         self._settings_menu.addAction(self._portset_act)
@@ -341,6 +356,14 @@ class MainWindow(QMainWindow):
             ("Esc", self._esc_action),
         ):
             QShortcut(QKeySequence(seq), self).activated.connect(handler)
+
+    def _on_reconnect_toggled(self, checked: bool) -> None:
+        """Persist and apply the auto-reconnect preference (T14)."""
+        self.worker.set_auto_reconnect(checked)
+        config = load_config()
+        config["auto_reconnect"] = bool(checked)
+        save_config(config)
+        self._notify(tr("conn.auto.on") if checked else tr("conn.auto.off"), "info", ms=3000)
 
     def _show_port_settings(self) -> None:
         """Show the port-settings dialog (U35-P3)."""
@@ -451,6 +474,8 @@ class MainWindow(QMainWindow):
         self.autoscroll_check.setText(tr("rx.autoscroll"))
         self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
+        self._reconnect_act.setText(tr("conn.auto"))
+        self._reconnect_act.setToolTip(tr("conn.auto.tip"))
         self._port_set_btn.setText(tr("portset.open"))
         self._port_set_btn.setToolTip(tr("portset.tip"))
         self.params_summary.setToolTip(tr("portset.summary.tip"))

@@ -27,6 +27,7 @@ READ_TIMEOUT = 0.1          # seconds
 SIGNAL_POLL_INTERVAL = 0.2  # seconds between modem-status reads
 MAX_TX_QUEUE = 64           # frames; protects memory if the port stops draining
 MAX_TX_PER_TICK = 2         # frames written per loop turn (keeps RX alive, U64)
+MAX_RECONNECT_ATTEMPTS = 60  # give up after ~2 minutes of retries (T14)
 
 
 def list_serial_ports() -> list:
@@ -46,6 +47,9 @@ class SerialWorker(QThread):
     opened = Signal(bool)             # True when opened, False when closed/error
     error = Signal(str)               # user-facing open/IO failure text (U37)
     send_error = Signal(str, str)     # (kind, detail) - kind: timeout/closed/queue/io (U52)
+    disconnected = Signal(str)        # unexpected loss, no reconnect possible (T14)
+    reconnecting = Signal(int)        # attempt number (T14)
+    reconnected = Signal()            # came back on its own (T14)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,6 +62,9 @@ class SerialWorker(QThread):
         self._sig_lock = threading.Lock()
         self._rtscts = False        # hardware flow control enabled? (U65)
         self._tx_degraded = False   # a write timed out: refuse more sends until reopen (U65)
+        self._auto_reconnect = False   # T14
+        self._user_closed = True       # True = the user closed it; never auto-reopen
+        self._device, self._baud, self._open_kwargs = "", 115200, {}
 
     # -- control (UI thread; never blocks on serial I/O) ---------------------
 
@@ -81,6 +88,8 @@ class SerialWorker(QThread):
             return False
         self._rtscts = bool(kwargs.get("rtscts", False))
         self._tx_degraded = False          # a fresh open clears the degraded state (U65)
+        self._device, self._baud, self._open_kwargs = device, baudrate, dict(kwargs)
+        self._user_closed = False          # T14: an open is a user action
         self._running = True
         if not self.isRunning():
             self.start()
@@ -91,6 +100,7 @@ class SerialWorker(QThread):
     def close_port(self):
         """Ask the worker to stop. Never touches the port from this thread (U64)."""
         self._running = False
+        self._user_closed = True           # T14: stop any reconnect loop
         with self._tx_lock:
             self._tx_queue.clear()
         # The worker owns the handle: if it is not running we may close directly,
@@ -118,6 +128,10 @@ class SerialWorker(QThread):
                 return False
             self._tx_queue.append(bytes(data))
         return True
+
+    def set_auto_reconnect(self, enabled: bool) -> None:
+        """Enable/disable automatic reopening after an unexpected loss (T14)."""
+        self._auto_reconnect = bool(enabled)
 
     def queued_frames(self) -> int:
         """Number of frames waiting to be written (diagnostics, U52)."""
@@ -223,6 +237,57 @@ class SerialWorker(QThread):
             self.log.emit(f"send failed: {exc}")
             self.send_error.emit("io", str(exc))
 
+    # -- reconnect (T14) -------------------------------------------------------
+
+    def _try_reopen(self) -> bool:
+        """Re-create the port with the original settings (worker thread only)."""
+        if not self._device:
+            return False
+        try:
+            self._port = serial.Serial(
+                port=self._device,
+                baudrate=self._baud,
+                bytesize=self._open_kwargs.get("bytesize", serial.EIGHTBITS),
+                parity=self._open_kwargs.get("parity", serial.PARITY_NONE),
+                stopbits=self._open_kwargs.get("stopbits", serial.STOPBITS_ONE),
+                rtscts=self._open_kwargs.get("rtscts", False),
+                xonxoff=self._open_kwargs.get("xonxoff", False),
+                timeout=READ_TIMEOUT,
+                write_timeout=WRITE_TIMEOUT,
+            )
+        except Exception as exc:  # noqa: BLE001 - device still away
+            self.log.emit(f"reconnect failed: {exc}")
+            return False
+        self._tx_degraded = False
+        self.log.emit(f"reconnected {self._device} @ {self._baud}")
+        return True
+
+    def _handle_disconnect(self, reason: str) -> None:
+        """Lost the port: report it, then reconnect if the user asked for it (T14)."""
+        with self._tx_lock:
+            self._tx_queue.clear()
+        self._close_port_safely()
+        with self._sig_lock:
+            self._sig_cache = {"open": False, "cts": False, "dsr": False,
+                               "dcd": False, "ri": False}
+        self.log.emit(f"disconnected: {reason}")
+        self.opened.emit(False)
+        if self._user_closed or not self._auto_reconnect:
+            self.disconnected.emit(reason)
+            return
+        attempt = 0
+        while self._running and not self._user_closed and attempt < MAX_RECONNECT_ATTEMPTS:
+            attempt += 1
+            self.reconnecting.emit(attempt)
+            time.sleep(min(5.0, 0.5 * attempt))     # bounded backoff
+            if not self._running or self._user_closed:
+                return
+            if self._try_reopen():
+                self.reconnected.emit()
+                self.opened.emit(True)
+                return
+        self.disconnected.emit(reason)
+
     # -- thread body ----------------------------------------------------------
 
     def run(self):
@@ -230,6 +295,9 @@ class SerialWorker(QThread):
         while self._running:
             if self._port is None or not self._port.is_open:
                 time.sleep(0.05)
+                continue
+            if not self._port.is_open:     # silently dropped (USB unplugged)
+                self._handle_disconnect("port closed")
                 continue
             try:
                 self._drain_tx()
@@ -246,8 +314,8 @@ class SerialWorker(QThread):
                     time.sleep(0.001)
             except Exception as exc:  # noqa: BLE001
                 self.log.emit(f"read error: {exc}")
-                self.opened.emit(False)
-                break
+                self._handle_disconnect(str(exc))    # T14: try to come back
+                continue
         # the worker closes its own handle on the way out (U64)
         self._close_port_safely()
         with self._sig_lock:

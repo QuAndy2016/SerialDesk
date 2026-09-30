@@ -51,7 +51,36 @@ jobs:
       - name: Build EXE with PyInstaller (onedir)
         run: |
           $exe = "SerialDesk_v${{ steps.ver.outputs.version }}"
-          pyinstaller --noconfirm --clean --windowed --onedir --name $exe --icon assets/icon.ico --add-data "assets;assets" main.py
+          pyinstaller --noconfirm --clean --windowed --onedir --name $exe --icon assets/icon.ico `
+            --add-data "assets;assets" `
+            --exclude-module tkinter --exclude-module unittest --exclude-module pydoc `
+            --exclude-module doctest --exclude-module pytest --exclude-module setuptools `
+            --exclude-module pip --exclude-module PySide6.QtQml --exclude-module PySide6.QtQuick `
+            --exclude-module PySide6.QtPdf `
+            main.py
+
+      # U34: the PySide6 runtime ships pieces this app never touches; dropping them
+      # cuts the download roughly in half (QML/Quick/PDF engines, the software
+      # OpenGL fallback and Qt's own translations).
+      - name: Slim the bundle (U34)
+        shell: pwsh
+        run: |
+          $dir = "dist\SerialDesk_v${{ steps.ver.outputs.version }}"
+          $before = [math]::Round((Get-ChildItem $dir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 1)
+          foreach ($f in @(
+              "_internal\PySide6\opengl32sw.dll",
+              "_internal\PySide6\Qt6Qml.dll",
+              "_internal\PySide6\Qt6Quick.dll",
+              "_internal\PySide6\Qt6Pdf.dll")) {
+            $p = Join-Path $dir $f
+            if (Test-Path $p) { Remove-Item $p -Force; Write-Host "removed $f" }
+          }
+          foreach ($d in @("_internal\PySide6\qml", "_internal\PySide6\translations")) {
+            $p = Join-Path $dir $d
+            if (Test-Path $p) { Remove-Item $p -Recurse -Force; Write-Host "removed $d" }
+          }
+          $after = [math]::Round((Get-ChildItem $dir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 1)
+          Write-Host "bundle size: $before MB -> $after MB"
 
       - name: Package release zip
         shell: pwsh
@@ -74,6 +103,10 @@ jobs:
             "  - Edge 下载被拦：下载面板 → 该文件右侧 ... → 保留",
             "  - 若提示文件被锁定：右键 exe → 属性 → 勾选「解除锁定」→ 确定",
             "",
+            "配置与日志 / Settings and logs",
+            "  配置(config.json)与日志保存在 %APPDATA%\SerialDesk；若在同目录放一个空的",
+            "  portable.txt，则改为保存在程序所在目录（便携模式）。",
+            "",
             "校验 / Checksum",
             "  同目录的 .sha256 文件是本压缩包的 SHA256，可用 certutil -hashfile 校验。",
             "",
@@ -87,6 +120,19 @@ jobs:
           "$hash  $name-win64.zip" | Set-Content -Path "dist\$name-win64.zip.sha256" -Encoding ASCII
           Write-Host "Packaged dist\$name-win64.zip"
 
+      - name: Build the Windows installer (Inno Setup, U34)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y | Out-Null
+          $ver = "${{ steps.ver.outputs.version }}"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyVersion=$ver" "installer\SerialDesk.iss"
+          $setup = "dist\SerialDesk_v$ver-win64-setup.exe"
+          if (-not (Test-Path $setup)) { Write-Error "installer was not produced"; exit 1 }
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash
+          "$hash  SerialDesk_v$ver-win64-setup.exe" | Set-Content -Path "$setup.sha256" -Encoding ASCII
+          Get-Item $setup | Select-Object Name, Length
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +140,9 @@ jobs:
           path: |
             dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip
             dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip.sha256
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64-setup.exe
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64-setup.exe.sha256
+          if-no-files-found: ignore
           retention-days: 30
 
       - name: Show build output
@@ -109,5 +158,7 @@ jobs:
           files: |
             dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip
             dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip.sha256
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64-setup.exe
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64-setup.exe.sha256
           fail_on_unmatched_files: true
           generate_release_notes: true

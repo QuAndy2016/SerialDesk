@@ -29,6 +29,16 @@ STRINGS: dict[str, dict[str, str]] = {
     "cfg.import_fail": {"zh": "导入配置失败: {e}", "en": "Import failed: {e}"},
     "cfg.import_bad": {"zh": "文件格式不正确（不是 SerialDesk 配置）", "en": "Unsupported file (not a SerialDesk config)"},
     "menu.view": {"zh": "视图", "en": "View"},
+    "conn.auto": {"zh": "断线自动重连", "en": "Auto-reconnect"},
+    "conn.auto.tip": {
+        "zh": "串口意外断开（拔线、驱动异常）时按 0.5~5 秒退避自动重连；手动关闭串口不会触发",
+        "en": "Re-open automatically after an unexpected loss (unplug, driver error) with 0.5-5 s backoff; a manual close never triggers it",
+    },
+    "conn.auto.on": {"zh": "已开启断线自动重连", "en": "Auto-reconnect enabled"},
+    "conn.auto.off": {"zh": "已关闭断线自动重连", "en": "Auto-reconnect disabled"},
+    "conn.reconnecting": {"zh": "连接中断，正在重连（第 {n} 次）…", "en": "Connection lost - reconnecting (attempt {n})…"},
+    "conn.reconnected": {"zh": "已自动重新连接", "en": "Reconnected automatically"},
+    "conn.lost": {"zh": "连接已断开", "en": "Connection lost"},
     "portset.title": {"zh": "串口设置", "en": "Port settings"},
     "portset.open": {"zh": "串口设置…", "en": "Port settings…"},
     "portset.tip": {

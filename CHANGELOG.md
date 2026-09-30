@@ -1,5 +1,26 @@
 # Changelog
 
+## [v0.6.0] - 2026-10-01
+
+### Added
+
+- **Auto-reconnect after an unexpected loss (T14)**: with the new "Auto-reconnect" switch in Settings, an
+  unplugged or wedged adapter is re-opened automatically with a 0.5-5 s backoff (up to 60 attempts, then it
+  gives up and says so). A manual close never triggers it, the choice is persisted, and the status bar
+  reports every attempt ("Connection lost - reconnecting (attempt n)...") and the outcome.
+- **Windows installer (U34)**: every tagged release now also ships
+  `SerialDesk_vX.Y.Z-win64-setup.exe`, built with Inno Setup in CI - next / next / finish, no more unzipping a
+  folder by hand. It installs per-user by default, creates Start-menu and optional desktop shortcuts, and the
+  portable zip remains available for people who prefer it.
+
+### Changed
+
+- **Config and logs moved out of the program folder (U34)**: they now live in `%APPDATA%\SerialDesk` (or the
+  platform equivalent), so a frozen build never writes into `%TEMP%` or into Program Files. Dropping an empty
+  `portable.txt` next to the executable switches back to portable mode (everything stays beside the exe).
+- **The download is roughly half the size (U34)**: the bundle no longer carries the QML/Quick/PDF engines, the
+  software-OpenGL fallback or Qt's own translation files - pieces this application never uses.
+
 ## [v0.5.1] - 2026-10-01
 
 ### Changed
