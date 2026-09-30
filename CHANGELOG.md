@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.6.12] - 2026-10-01
+
+### Fixed
+
+- **Controls overlapped once the window was narrowed (U78)**: a row-by-row audit (minimum width required vs width
+  available, at several window sizes) showed the connection row needed 1124 px and the merged receive control row
+  1121 px while the window minimum was only 980 px - so shrinking the window overlapped and clipped controls.
+  - The receive controls are two rows again (parameters 618 px, actions 503 px), which is what the space actually
+    needs;
+  - the connection row was trimmed (port 220 -> 170 px, baud 124 -> 112 px, the parameter summary is capped at
+    120 px and elides), bringing its worst case to 1059 px;
+  - the minimum window size is now 1060x600, derived from that measurement, so no row can overlap at the smallest
+    allowed size. Verified at 1060 / 1100 / 1280 / 1600 px wide: every row fits.
+
 ## [v0.6.11] - 2026-10-01
 
 ### Added

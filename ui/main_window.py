@@ -151,7 +151,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"SerialDesk v{__version__}")
         self.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
         self.resize(1180, 680)
-        self.setMinimumSize(980, 600)   # U55: below this the zones stop being usable
+        self.setMinimumSize(1060, 600)  # U55/U78: the widest control row measures 1059 px
 
         self.worker = SerialWorker(self)
         self.worker.received.connect(self.on_received)
@@ -508,7 +508,10 @@ class MainWindow(QMainWindow):
         stop = self.stopbits_combo.currentText()
         flow = self.flow_combo.currentText()
         enc = self.encoding_combo.currentText()
-        self.params_summary.setText(f"{data}{parity}{stop} · {flow} · {enc}")
+        text = f"{data}{parity}{stop} · {flow} · {enc}"
+        if len(text) > 16:                      # U78: elide instead of widening the row
+            text = text[:15] + "…"
+        self.params_summary.setText(text)
 
     def _show_about(self) -> None:
         """About box: version, runtime versions and the project link (U44)."""
@@ -700,7 +703,7 @@ class MainWindow(QMainWindow):
         bar = QHBoxLayout()
         bar.addWidget(QLabel("Port:"))
         self.port_combo = QComboBox()
-        self.port_combo.setMinimumWidth(220)
+        self.port_combo.setMinimumWidth(170)   # U78: keep the whole row under 1040 px
         bar.addWidget(self.port_combo)
 
         self.refresh_btn = QPushButton(tr("port.refresh"))
@@ -713,7 +716,7 @@ class MainWindow(QMainWindow):
         self.baud_combo.setEditable(True)
         self.baud_combo.setCurrentText("115200")
         self.baud_combo.setToolTip(tr("baud.tip"))
-        self.baud_combo.setMinimumWidth(124)          # U49: 1000000/3000000 must fit
+        self.baud_combo.setMinimumWidth(112)          # U49/U78: 1000000/3000000 still fit
         self.baud_combo.setMinimumContentsLength(7)
         self.baud_combo.lineEdit().textChanged.connect(self._check_baud)
         bar.addWidget(self.baud_combo)
@@ -734,6 +737,7 @@ class MainWindow(QMainWindow):
 
         bar.addSpacing(12)
         self.params_summary = QLabel("")
+        self.params_summary.setMaximumWidth(120)   # U78: never pushes the row wider
         self.params_summary.setToolTip(tr("portset.summary.tip"))
         bar.addWidget(self.params_summary)
         self.port_set_btn = QPushButton(tr("portset.open"))
@@ -818,9 +822,10 @@ class MainWindow(QMainWindow):
         rx_opts.addWidget(self.ts_combo)
 
         rx_opts.addStretch(1)
-        # U35-P2: the log/toolbar buttons share this row (was a second row) - the
-        # button cluster is right-aligned so the two groups never fight for width.
-        toolbar = rx_opts
+        # U78: the action buttons go back to their own row. The single combined row
+        # needed ~1120 px, so narrowing the window overlapped the controls.
+        rx_layout.addWidget(_fixed_row(rx_opts))
+        toolbar = QHBoxLayout()
         self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
         self.save_log_btn.setToolTip(tr("log.quick.tip"))
         self.save_log_btn.clicked.connect(self.on_save_log_quick)
@@ -851,7 +856,8 @@ class MainWindow(QMainWindow):
         self.clear_btn.setToolTip(tr("sc.clear.tip"))
         toolbar.addWidget(self.clear_btn)
 
-        rx_layout.addWidget(_fixed_row(rx_opts))   # U70: pinned to the top
+        toolbar.addStretch(1)
+        rx_layout.addWidget(_fixed_row(toolbar))   # U78: second control row
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
