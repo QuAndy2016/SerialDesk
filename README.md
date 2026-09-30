@@ -6,10 +6,11 @@
 
 **串口台 —— 让串口调试回归它本该有的样子：插上、打开、收发、存档，不折腾。**
 
-**SerialDesk (串口台) — serial debugging the way it should be: plug in, open, send, receive, done. A clean, capable, cross-platform serial debugging tool that keeps growing.**
+***SerialDesk (串口台) — serial debugging the way it should be: plug in, open, send, receive, done. A clean, capable, cross-platform serial debugging tool that keeps growing.***
 
 基于 **PySide6 + PySerial**，面向嵌入式 / 电机控制 / 工业控制工程师。
-Built on **PySide6 + PySerial**, for embedded, motor-control and industrial-control engineers.
+
+*Built on **PySide6 + PySerial**, for embedded, motor-control and industrial-control engineers.*
 
 > **Language:** This page is in Chinese by default — the English version is in the collapsible section at the bottom: click **English version — click to expand**.
 
