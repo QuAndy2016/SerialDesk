@@ -648,6 +648,8 @@ class MainWindow(QMainWindow):
         self._theme_dark.setText(tr("theme.dark"))
         self._theme_light.setText(tr("theme.light"))
         self._lang_system.setText(tr("lang.system"))
+        self._port_lbl.setText(tr("port.label"))
+        self._baud_lbl.setText(tr("baud.label"))
         self.refresh_btn.setText(tr("port.refresh"))
         self.baud_combo.setToolTip(tr("baud.tip"))
         self.open_btn.setText(tr("port.close") if self.worker.is_open() else tr("port.open"))
@@ -780,7 +782,8 @@ class MainWindow(QMainWindow):
 
         # --- connection bar -------------------------------------------------
         bar = QHBoxLayout()
-        bar.addWidget(QLabel("Port:"))
+        self._port_lbl = QLabel(tr("port.label"))     # U100: these two were English-only
+        bar.addWidget(self._port_lbl)
         self.port_combo = QComboBox()
         self.port_combo.setMinimumWidth(170)   # U78: keep the whole row under 1040 px
         bar.addWidget(self.port_combo)
@@ -789,7 +792,8 @@ class MainWindow(QMainWindow):
         self.refresh_btn.clicked.connect(self.refresh_ports)
         bar.addWidget(self.refresh_btn)
 
-        bar.addWidget(QLabel("Baud:"))
+        self._baud_lbl = QLabel(tr("baud.label"))
+        bar.addWidget(self._baud_lbl)
         self.baud_combo = QComboBox()
         self.baud_combo.addItems([str(b) for b in BAUDRATES])
         self.baud_combo.setEditable(True)

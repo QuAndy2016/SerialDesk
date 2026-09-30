@@ -110,6 +110,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "lang.zh": {"zh": "中文", "en": "中文"},
     "lang.en": {"zh": "English", "en": "English"},
     # ---- connection bar ----
+    "port.label": {"zh": "端口:", "en": "Port:"},
+    "baud.label": {"zh": "波特率:", "en": "Baud:"},
     "port.refresh": {"zh": "刷新", "en": "Refresh"},
     "port.open": {"zh": "打开", "en": "Open"},
     "port.close": {"zh": "关闭", "en": "Close"},

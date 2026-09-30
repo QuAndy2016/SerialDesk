@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.13.1] - 2026-10-01
+
+### Fixed
+
+- **The connection bar stayed English in the Chinese UI (U100)**: "Port:" and "Baud:" were hard-coded labels rather than
+  translation lookups, so switching to Chinese left English sitting in front of the two boxes. They now read 端口: and
+  波特率: and follow the language switch like every other label.
+
 ## [v0.13.0] - 2026-10-01
 
 ### Changed
