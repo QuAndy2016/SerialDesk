@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import os
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -79,6 +80,11 @@ class QuickSendPanel(QWidget):
         self.seq_label = QLabel("")
         seq_row.addWidget(self.seq_label)
         seq_row.addStretch(1)
+        self.del_btn = QPushButton(tr("qs.del_selected"))   # U68 plan A
+        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+        self.del_btn.setEnabled(False)
+        self.del_btn.clicked.connect(self.delete_selected)
+        seq_row.addWidget(self.del_btn)
         layout.addLayout(seq_row)
 
         scroll = QScrollArea()
@@ -104,7 +110,12 @@ class QuickSendPanel(QWidget):
         if len(self._rows) >= MAX_ENTRIES:
             self.log.emit(tr("qs.max", n=MAX_ENTRIES))
             return
-        row = QWidget()
+        row = QFrame()                     # U68 plan A: a frame paints the selection
+        row.setObjectName("qsRow")
+        row.setProperty("selected", False)
+        row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        row.setToolTip(tr("qs.row.tip"))
+        row.installEventFilter(self)
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)
 
@@ -140,21 +151,49 @@ class QuickSendPanel(QWidget):
         send.clicked.connect(lambda: self._send_row(row))
         h.addWidget(send)
 
-        h.addSpacing(16)   # U58: keep the destructive action away from "send"
-        dele = QPushButton("\u00d7")
-        dele.setObjectName("qsDel")           # styled by theme.py (dim -> red on hover)
-        dele.setFixedWidth(28)
-        dele.setStyleSheet("padding: 0px; background: transparent; border: none;")
-        dele.setToolTip(tr("qs.delete.tip"))
-        dele.clicked.connect(lambda: self._delete_row(row))
-        h.addWidget(dele)
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
+        edit.installEventFilter(self)      # clicking into the text selects the row
         self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send,
-                           "del": dele, "delay": delay, "sel": sel, "ord": ord_lbl})
+                           "delay": delay, "sel": sel, "ord": ord_lbl})
         sel.setChecked(bool(selected))
         self._renumber_selection()
         self._update_count()
+
+    # -- row selection + deletion (U68 plan A) -------------------------------
+
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+        """Click selects a row; Delete removes the selection (3 s undo stays)."""
+        if event.type() == QEvent.Type.MouseButtonPress:
+            for entry in self._rows:
+                if entry["widget"] is obj or entry["edit"] is obj:
+                    self._select_row(entry)
+                    break
+        elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Delete:
+            self.delete_selected()
+            return True
+        return super().eventFilter(obj, event)
+
+    def _select_row(self, entry: dict) -> None:
+        """Highlight one row so the toolbar delete knows its target."""
+        for other in self._rows:
+            want = other is entry
+            if bool(other["widget"].property("selected")) != want:
+                other["widget"].setProperty("selected", want)
+                other["widget"].style().unpolish(other["widget"])
+                other["widget"].style().polish(other["widget"])
+        self.del_btn.setEnabled(True)
+
+    def selected_entry(self) -> dict | None:
+        return next((e for e in self._rows if e["widget"].property("selected")), None)
+
+    def delete_selected(self) -> None:
+        """Delete the highlighted row; main window offers a 3 s undo (U68)."""
+        entry = self.selected_entry()
+        if entry is None:
+            return
+        self._delete_row(entry["widget"])
+        self.del_btn.setEnabled(False)
 
     def _renumber_selection(self) -> None:
         """Show 1..n on the ticked rows so the run order is obvious (U66)."""
@@ -281,6 +320,7 @@ class QuickSendPanel(QWidget):
         self._rows.remove(entry)
         row.setParent(None)
         row.deleteLater()
+        self.del_btn.setEnabled(False)
         self._update_count()
         self.deleted.emit(payload)
         self.save()
@@ -323,6 +363,8 @@ class QuickSendPanel(QWidget):
     def retranslate(self):
         """Re-apply translated strings after a language change."""
         self._title_lbl.setText(tr("qs.title"))
+        self.del_btn.setText(tr("qs.del_selected"))
+        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
         self.add_btn.setText(tr("qs.add"))
         self.add_btn.setToolTip(tr("qs.add.tip", n=MAX_ENTRIES))
         self.seq_check.setText(tr("qs.seq"))
@@ -332,7 +374,7 @@ class QuickSendPanel(QWidget):
         for entry in self._rows:
             entry["edit"].setPlaceholderText(tr("qs.placeholder"))
             entry["send"].setText(tr("qs.send"))
-            entry["del"].setToolTip(tr("qs.delete.tip"))
+            entry["widget"].setToolTip(tr("qs.row.tip"))
             entry["delay"].setToolTip(tr("qs.delay.tip"))
             if entry.get("sel") is not None:
                 entry["sel"].setToolTip(tr("qs.sel.tip"))

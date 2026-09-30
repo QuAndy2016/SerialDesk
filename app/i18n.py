@@ -337,6 +337,12 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.max": {"zh": "最多支持 {n} 条指令", "en": "Up to {n} commands supported"},
     "qs.placeholder": {"zh": "指令内容", "en": "Command"},
     "qs.send": {"zh": "发送", "en": "Send"},
+    "qs.del_selected": {"zh": "删除选中", "en": "Delete selected"},
+    "qs.del_selected.tip": {
+        "zh": "删除选中的指令（也可以按 Delete 键）；删除后 3 秒内可撤销",
+        "en": "Delete the selected command (or press Delete); undo is available for 3 seconds",
+    },
+    "qs.row.tip": {"zh": "单击选中这一行（左侧高亮），再用「删除选中」删除", "en": "Click to select this row, then use Delete selected"},
     "qs.sel.tip": {
         "zh": "勾选后点「运行」只按顺序发送勾选的指令；一个都不勾则发送全部",
         "en": "Tick to include this row when running the sequence; with nothing ticked every row runs",

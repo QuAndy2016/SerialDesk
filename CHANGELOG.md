@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.6.3] - 2026-10-01
+
+### Changed
+
+- **Quick-send deletion was redesigned (U68, plan A)**: the per-row "x" button is gone. Click any row to
+  highlight it (the row frame gets an accent tint), then use the new **Delete selected** button in the panel
+  header - or just press Delete while a row is focused. The 3 s undo stays, so a mistake is one click away from
+  being undone. Rows are roomier without the button, and there is no longer a destructive control sitting next
+  to "Send".
+
 ## [v0.6.2] - 2026-10-01
 
 ### Fixed
