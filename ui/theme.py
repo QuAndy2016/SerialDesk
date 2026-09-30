@@ -102,7 +102,7 @@ QScrollBar::handle:horizontal { background: #4a4a5c; min-width: 30px; border-rad
 QScrollBar::handle:horizontal:hover { background: #6a6a80; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: #8be9fd; font-size: 11px; font-weight: bold; min-width: 12px; }
+QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.16); border: 1px solid rgba(139, 233, 253, 0.16); }
 """
@@ -200,7 +200,7 @@ QScrollBar::handle:horizontal { background: #b8b8c4; min-width: 30px; border-rad
 QScrollBar::handle:horizontal:hover { background: #9090a0; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: #1e5aa8; font-size: 11px; font-weight: bold; min-width: 12px; }
+QLabel#seqOrd { color: #1e5aa8; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(30, 90, 168, 0.14); border: 1px solid rgba(30, 90, 168, 0.14); }
 """

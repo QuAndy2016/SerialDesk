@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -124,11 +124,13 @@ class QuickSendPanel(QWidget):
         sel.setToolTip(tr("qs.sel.tip"))
         sel.toggled.connect(self._renumber_selection)
         h.addWidget(sel)
-        ord_lbl = QLabel("")
+        # U80: the sequence number is a tiny label pinned to the checkbox corner.
+        # It stays out of the layout so it neither widens the row nor eats stretch.
+        ord_lbl = QLabel("", row)
         ord_lbl.setObjectName("seqOrd")
         ord_lbl.setToolTip(tr("qs.sel.order.tip"))
+        ord_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         ord_lbl.hide()
-        h.addWidget(ord_lbl)
 
         edit = QLineEdit(text)
         edit.setPlaceholderText(tr("qs.placeholder"))
@@ -141,7 +143,9 @@ class QuickSendPanel(QWidget):
 
         delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
         delay.setValidator(QIntValidator(0, 60000, self))
-        delay.setMaximumWidth(76)   # the 3-digit value needs far less room
+        delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        delay.setStyleSheet("padding: 3px 4px;")   # U80: no room to waste in a tight row
+        delay.setFixedWidth(self._delay_width())   # U80: just wide enough for 60000
         delay.setToolTip(tr("qs.delay.tip"))
         h.addWidget(delay)
 
@@ -169,6 +173,9 @@ class QuickSendPanel(QWidget):
                 if entry["widget"] is obj or entry["edit"] is obj:
                     self._select_row(entry)
                     break
+        elif event.type() == QEvent.Type.Resize and any(
+                entry["widget"] is obj for entry in self._rows):
+            self._place_order_badges()
         elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Delete:
             self.delete_selected()
             return True
@@ -209,6 +216,7 @@ class QuickSendPanel(QWidget):
             else:
                 widget.setText("")
                 widget.hide()
+        self._place_order_badges()
 
     def _sequence_targets(self) -> list:
         """Rows the sequence should run: the ticked ones, or all filled rows (U66)."""
@@ -278,6 +286,21 @@ class QuickSendPanel(QWidget):
             return
         self._seq_index += 1
         self._seq_timer.start(self._row_delay(entry))
+
+    def _delay_width(self) -> int:
+        """Width that just fits the longest delay value (U80)."""
+        return max(34, self.fontMetrics().horizontalAdvance("60000") + 12)
+
+    def _place_order_badges(self) -> None:
+        """Pin each sequence number to the top-right corner of its checkbox (U80)."""
+        for entry in self._rows:
+            badge = entry["ord"]
+            if not badge.isVisible():
+                continue
+            box, row = entry["sel"], entry["widget"]
+            corner = box.mapTo(row, QPoint(box.width(), 0))
+            badge.adjustSize()
+            badge.move(max(0, corner.x() - badge.width() + 4), max(0, corner.y() - 4))
 
     def _row_delay(self, entry: dict) -> int:
         """Parse a row's delay in ms (0-60000), defaulting to 500."""

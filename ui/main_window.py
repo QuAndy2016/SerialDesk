@@ -828,6 +828,10 @@ class MainWindow(QMainWindow):
         self.ts_combo = QComboBox()
         self.ts_combo.addItems([tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
         self.ts_combo.setCurrentIndex(TS_HMS_MS)
+        # U80: do not size the box to the longest format ("yyyy-MM-dd HH:MM:SS.mmm"
+        # made it 235 px wide) - the dropdown still lists every format in full.
+        self.ts_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.ts_combo.setMinimumContentsLength(12)
         self.ts_combo.setToolTip(tr("ts.tip"))
         rx_opts.addWidget(self.ts_combo)
 

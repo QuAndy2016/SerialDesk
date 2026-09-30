@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.14] - 2026-10-01
+
+### Changed
+
+- **Smaller boxes where they were oversized (U80)**: the per-row delay box in the quick-send panel is now sized to its
+  content (76 -> 50 px, right-aligned, tight padding) and the timestamp-format selector in the receive row no longer
+  stretches to fit its longest entry (235 -> 171 px; the dropdown still lists every format in full) - which also hands
+  roughly 64 px back to the narrowest control row.
+- **The sequence number is a corner badge (U80)**: in sequence mode the order of a ticked row is drawn as a small
+  number (9 px) pinned to the top-right corner of its checkbox instead of an 11 px bold label sitting in the row, so
+  it no longer looks like a heavyweight element or pushes the row wider.
+
 ## [v0.6.13] - 2026-10-01
 
 ### Changed
