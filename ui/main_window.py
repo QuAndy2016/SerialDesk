@@ -203,12 +203,25 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         # U33: one "Settings" button in the top-right corner holds theme/language/config
         self._settings_btn = QToolButton()
+        self._settings_btn.setObjectName("settingsBtn")
         self._settings_btn.setText(tr("menu.settings"))
         self._settings_btn.setToolTip(tr("menu.settings"))
+        self._fit_settings_btn()
+        self._settings_btn.setToolTip(tr("menu.settings"))
         self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._settings_btn.setMinimumHeight(26)
         self._settings_menu = QMenu(self._settings_btn)
         self._settings_btn.setMenu(self._settings_menu)
-        self.menuBar().setCornerWidget(self._settings_btn, Qt.Corner.TopRightCorner)
+        self._fit_settings_btn()
+        # U60: keep the button off the window edge (keep a Python reference: the
+        # corner widget must not be garbage collected)
+        self._settings_holder = QWidget(self.menuBar())
+        holder_layout = QHBoxLayout(self._settings_holder)
+        holder_layout.setContentsMargins(0, 0, 14, 0)
+        holder_layout.setSpacing(0)
+        holder_layout.addWidget(self._settings_btn)
+        self.menuBar().setCornerWidget(self._settings_holder, Qt.Corner.TopRightCorner)
         view_menu = self._settings_menu
         self._theme_menu = view_menu.addMenu(tr("theme.menu"))
         view_menu = self._theme_menu
@@ -744,6 +757,12 @@ class MainWindow(QMainWindow):
             except (TypeError, ValueError):
                 return list(default)
         return list(default)
+
+    def _fit_settings_btn(self) -> None:
+        """Size the Settings button to its label plus padding (U60: "Settings" must fit)."""
+        text = self._settings_btn.text()
+        width = self._settings_btn.fontMetrics().horizontalAdvance(text) + 46
+        self._settings_btn.setMinimumWidth(max(92, width))
 
     def _setup_tab_order(self) -> None:
         """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""

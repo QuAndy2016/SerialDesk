@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.4.11] - 2026-09-30
+
+### Fixed
+
+- **The Settings button was cramped and pushed against the window edge (U60)**: the top-right button is now
+  sized from its own label (minimum 92 px, so the English "Settings" fits with room to spare instead of being
+  clipped), sits 14 px away from the right edge inside a small holder widget, keeps a 26 px minimum height,
+  and gets a hover background + border in both themes. It is re-measured whenever the UI language changes.
+
 ## [v0.4.10] - 2026-09-30
 
 ### Fixed
