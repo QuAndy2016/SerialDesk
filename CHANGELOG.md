@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.4.10] - 2026-09-30
+
+### Fixed
+
+- **HEX lines ran together in the "Off" and "By header" split modes (U59)**: with frame splitting off (or
+  in header mode) a received group was appended to whatever was already on the line, so two 10-byte frames
+  whose edge digits met collapsed into `... 39 3031 32 ...`, and an RX group could also glue itself onto a
+  TX echo line. The receive pane now tracks which direction owns the current line: an RX group following a
+  TX line always opens a fresh timestamped line, and a HEX group continuing the current RX line is separated
+  by a single space. ASCII mode still runs on without a separator, which is the point of "Off". Header mode
+  goes through the same emitter, so its frames - and the leading fragment that continues a frame across
+  reads - are separated correctly as well.
+
 ## [v0.4.9] - 2026-09-30
 
 ### Changed

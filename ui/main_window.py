@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
 
         self.rx_bytes = 0
         self.tx_bytes = 0
+        self._line_is_tx = False   # U59: is the current display line a TX echo?
         self._last_ts: float | None = None
         self._clock_offset = time.time() - time.monotonic()
 
@@ -1204,6 +1205,30 @@ class MainWindow(QMainWindow):
         cursor.insertText(text, fmt)
         self._log_append(text)
 
+    def _rx_separator(self) -> str:
+        """Separator used when a HEX group continues an existing line (U59)."""
+        return "" if self.rx_fmt_combo.currentIndex() == RX_ASCII else " "
+
+    def _append_rx_group(self, text: str, ts: float, new_line: bool) -> None:
+        """Emit one RX group without gluing it onto the previous text (U59).
+
+        - new line requested, or the current line belongs to a TX echo -> open a
+          fresh, timestamped line;
+        - otherwise append to the running RX line, with a separator in HEX modes
+          (previously '39 30' + '31 32' collapsed into '39 3031 32').
+        """
+        has_text = self.rx_view.document().characterCount() > 1
+        if new_line or self._line_is_tx:
+            if has_text:
+                self._emit_rx_text("\n")
+            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
+        elif has_text:
+            separator = self._rx_separator()
+            if separator:
+                self._emit_rx_text(separator)
+        self._emit_rx_text(text)
+        self._line_is_tx = False
+
     def _echo_tx(self, data: bytes) -> None:
         """Mirror sent bytes into the receive pane as a '->' line (U26)."""
         if not self.echo_tx_check.isChecked() or self._file_timer.isActive():
@@ -1212,6 +1237,7 @@ class MainWindow(QMainWindow):
             self._emit_rx_text("\n", tx=True)
         self._emit_rx_text(self._ts_prefix(time.monotonic()) + MARK_TX, tx=True)
         self._emit_rx_text(self._format_rx(data), tx=True)
+        self._line_is_tx = True
         bar = self.rx_view.verticalScrollBar()
         bar.setValue(bar.maximum())
 
@@ -1465,12 +1491,7 @@ class MainWindow(QMainWindow):
             if got is None:
                 break
             new_line, ts, data = got
-            text = self._format_rx(data)
-            if new_line:
-                if self.rx_view.document().characterCount() > 1:
-                    self._emit_rx_text("\n")
-                self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
-            self._emit_rx_text(text)
+            self._append_rx_group(self._format_rx(data), ts, new_line)
         self._last_ts = now
         sb = self.rx_view.verticalScrollBar()
         sb.setValue(sb.maximum())
@@ -1489,16 +1510,13 @@ class MainWindow(QMainWindow):
         segs = data.split(header_b)
         for i, seg in enumerate(segs):
             if i == 0:
-                # bytes before the first header: continue current line
+                # bytes before the first header: continue the current frame (U59)
                 if seg:
-                    self._emit_rx_text(self._format_rx(seg))
+                    self._append_rx_group(self._format_rx(seg), ts, False)
                 continue
             if not seg:
                 continue  # adjacent headers, frame with empty body
-            if self.rx_view.document().characterCount() > 1:
-                self._emit_rx_text("\n")
-            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
-            self._emit_rx_text(self._format_rx(header_b + seg))
+            self._append_rx_group(self._format_rx(header_b + seg), ts, True)
 
         sb = self.rx_view.verticalScrollBar()
         sb.setValue(sb.maximum())
@@ -1512,6 +1530,7 @@ class MainWindow(QMainWindow):
         self._frames.reset()
         self._last_ts = None
         self.rx_view.clear()
+        self._line_is_tx = False
         self.rx_bytes = 0
         self.tx_bytes = 0
         self._sent_count = 0
