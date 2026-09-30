@@ -34,11 +34,18 @@
 
 本项目没有购买代码签名证书，新发布的 exe 首次运行时 Windows 会有提示，属正常现象，三步可解：
 
-1. **Edge 下载被拦**：打开下载面板（Ctrl+J）→ 该文件右侧「…」→ 保留
-2. **SmartScreen 提示「通常不会下载」**：点「更多信息」→「仍要运行」
+1. **Edge 下载被拦（最常见）**：点下载面板里「删除」**旁边的小箭头 ∨**，在弹出的菜单里选「**仍然保留**」。
+
+<p align="center">
+  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge 下载面板：点「删除」旁边的小箭头，选「仍然保留」">
+  <br>
+  <sub>关键：点「删除」旁边的小箭头 ∨ → 选「仍然保留」；千万不要点「删除」本身</sub>
+</p>
+
+2. **SmartScreen 提示「Windows 已保护你的电脑」／「通常不会下载」**：点「更多信息」→「仍要运行」
 3. **提示文件被锁定**：右键 exe → 属性 → 勾选「解除锁定」→ 确定
 
-打包方式已从单文件（onefile）改为目录模式（onedir），杀软误报概率明显降低；如仍遇到误报，欢迎提 Issue。
+**为什么会有这些提示**：exe 没有代码签名（证书按年付费），Windows 无法确认发布者，SmartScreen 就按「低信誉文件」处理——便携 zip 和安装器都一样。本项目已从单文件（onefile）改为目录模式（onedir）并做过体积裁剪，误报概率明显降低；如果仍然遇到误报，欢迎提 Issue。
 
 ## 功能
 
@@ -177,11 +184,18 @@ Please extract the whole folder and run it from there; the sibling folder holds 
 
 This project has no code-signing certificate, so Windows warns on the first run. That is expected — three steps fix it:
 
-1. **Edge blocks the download:** open the downloads panel (Ctrl+J) → "…" next to the file → Keep
-2. **SmartScreen says "isn't commonly downloaded":** click More info → Run anyway
+1. **Edge blocks the download (the usual one):** click the small arrow ∨ **next to** "Delete" and pick "**Keep anyway**".
+
+<p align="center">
+  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge download panel: use the arrow next to Delete, then Keep anyway">
+  <br>
+  <sub>Key: the arrow ∨ beside "Delete", then "Keep anyway" - do not click "Delete" itself</sub>
+</p>
+
+2. **SmartScreen says Windows protected your PC / "isn't commonly downloaded":** click More info → Run anyway
 3. **File appears locked:** right-click the exe → Properties → tick Unblock → OK
 
-Packaging has moved from onefile to onedir, which greatly reduces false positives. If your antivirus still flags it, please open an issue.
+Why the warnings: the exe is unsigned (certificates are a yearly paid service), so Windows cannot verify the publisher and SmartScreen treats it as a low-reputation file - the portable zip and the installer alike. Packaging moved from onefile to onedir and the bundle has been trimmed, which already cuts the false-positive rate; if your antivirus still flags it, please open an issue.
 
 ### Features
 
