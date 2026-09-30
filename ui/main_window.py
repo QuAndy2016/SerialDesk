@@ -92,6 +92,16 @@ def _fixed_row(layout) -> QWidget:
 
 
 RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
+# U79: by default the data pane gets the room - the send pane and the quick-send
+# column start at their minimum sizes instead of sharing space evenly.
+DATA_FIRST_V = [520, 190]
+DATA_FIRST_H = [880, 332]
+LEGACY_SPLIT_DEFAULTS = {
+    "v_split_sizes": ([420, 260], DATA_FIRST_V),
+    "split_sizes": ([820, 340], DATA_FIRST_H),
+}
+QUICK_PANEL_MIN_W = 332   # the quick-send rows need this (U69)
+TX_PANE_MIN_H = 190       # the send pane keeps its rows usable (U63)
 CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
 
 BAUDRATES = [
@@ -427,8 +437,8 @@ class MainWindow(QMainWindow):
         self.auto_reply_check.setChecked(False)
         self._sent_count = 0
         self.sent_lbl.setText(tr("tx.sent_count", n=0))
-        self._splitter.setSizes([820, 340])
-        self._v_splitter.setSizes([420, 260])
+        self._splitter.setSizes(list(DATA_FIRST_H))
+        self._v_splitter.setSizes(list(DATA_FIRST_V))
         self.quick_panel.reload_from_config()   # seeds the default rows when config is gone
         self._update_params_summary()
 
@@ -1015,7 +1025,12 @@ class MainWindow(QMainWindow):
         tx_group.setMinimumHeight(190)                          # U63
         self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
         self._v_splitter.setCollapsible(1, False)   #      the panes are added
-        self._v_splitter.setSizes(self._saved_sizes("v_split_sizes", [420, 260]))
+        _stored_v = load_config().get("v_split_sizes")
+        _stored_h = load_config().get("split_sizes")
+        self._custom_split_sizes = bool(
+            (isinstance(_stored_v, list) and _stored_v not in (DATA_FIRST_V, [420, 260]))
+            or (isinstance(_stored_h, list) and _stored_h not in (DATA_FIRST_H, [820, 340])))
+        self._v_splitter.setSizes(self._saved_sizes("v_split_sizes", DATA_FIRST_V))
         left_layout.addWidget(self._v_splitter, 1)
 
         splitter.addWidget(left)
@@ -1032,7 +1047,7 @@ class MainWindow(QMainWindow):
         self._splitter = splitter
         splitter.setChildrenCollapsible(False)                  # U63: no zero-width panes
         left.setMinimumWidth(360)
-        splitter.setSizes(self._saved_sizes("split_sizes", [820, 340]))
+        splitter.setSizes(self._saved_sizes("split_sizes", DATA_FIRST_H))
 
         root.addWidget(splitter, 1)
 
@@ -1066,14 +1081,36 @@ class MainWindow(QMainWindow):
         self._notify(tr("status.idle"))
         self.setCentralWidget(central)
 
+    def _give_data_area_the_room(self) -> None:
+        """First run: hand every spare pixel to the receive pane (U79).
+
+        The send pane and the quick-send column start at their minimum sizes, so
+        the data display area gets the maximum room by default. Once the user
+        drags a divider, their proportions are stored and honoured instead.
+        """
+        if self._custom_split_sizes:
+            return
+        h = self._v_splitter.height()
+        w = self._splitter.width()
+        if h > TX_PANE_MIN_H + 40:
+            self._v_splitter.setSizes([h - TX_PANE_MIN_H, TX_PANE_MIN_H])
+        if w > QUICK_PANEL_MIN_W + 80:
+            self._splitter.setSizes([w - QUICK_PANEL_MIN_W, QUICK_PANEL_MIN_W])
+
     def _saved_sizes(self, key: str, default: list) -> list:
         """Restore a persisted splitter size list, falling back to the default (U35)."""
         value = load_config().get(key)
+        legacy, upgraded = LEGACY_SPLIT_DEFAULTS.get(key, (None, default))
         if isinstance(value, list) and len(value) == len(default):
             try:
-                return [int(v) for v in value]
+                sizes = [int(v) for v in value]
             except (TypeError, ValueError):
                 return list(default)
+            # a stored list that is exactly the old default was never dragged by
+            # the user, so upgrading it to the new default is safe (U79)
+            if legacy is not None and sizes == list(legacy):
+                return list(upgraded)
+            return sizes
         return list(default)
 
     def _fit_settings_btn(self) -> None:
@@ -2056,6 +2093,9 @@ class MainWindow(QMainWindow):
     def showEvent(self, event):  # noqa: N802 - Qt naming
         super().showEvent(event)
         theme.apply_native_dark(self, bool(theme.resolved_dark()))   # U51 (frame exists now)
+        if not getattr(self, "_split_room_done", False):
+            self._split_room_done = True
+            QTimer.singleShot(0, self._give_data_area_the_room)      # U79
 
     def closeEvent(self, event):
         self._sig_timer.stop()

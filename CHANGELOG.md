@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.6.13] - 2026-10-01
+
+### Changed
+
+- **The data area gets the room by default (U79)**: the send pane and the quick-send column now start at their
+  minimum sizes (190 px tall / 332 px wide) and every spare pixel goes to the receive pane, which lands at roughly
+  68% of the vertical space and 69% of the width at the default window size (measured: 404/594 px and 807/1160 px,
+  with a 280 px tall log view). Drag a divider and your proportions are stored and honoured from then on; if the
+  stored numbers are exactly the old defaults (i.e. the divider was never dragged), they are upgraded to the new
+  data-first proportions on start.
+
 ## [v0.6.12] - 2026-10-01
 
 ### Fixed
