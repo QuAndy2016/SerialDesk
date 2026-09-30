@@ -81,9 +81,9 @@
 
 | 版本 | 内容 | 状态 |
 |------|------|------|
-| v0.1.0 | 基础收发 + HEX/ASCII + CRC16 | 已完成 |
-| v0.2.0 | 格式下拉 / 分包 / 毫秒时间戳 / 校验套件 / 快速发送 / 主题 | 已完成 |
-| v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | 已完成 |
+| v0.1.0 | 基础收发 + HEX/ASCII + CRC16 | ✅ 已完成 |
+| v0.2.0 | 格式下拉 / 分包 / 毫秒时间戳 / 校验套件 / 快速发送 / 主题 | ✅ 已完成 |
+| v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | ✅ 已完成 |
 | v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | ✅ 已完成 |
 | v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | ✅ 已完成 |
 | v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、断线重连 | 计划中（配置导入导出已于 v0.4.1、指令序列已于 v0.4.3 提前完成）|
@@ -224,9 +224,9 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 
 | Version | Content | Status |
 |---------|---------|--------|
-| v0.1.0 | Core TX/RX + HEX/ASCII + CRC16 | Done |
-| v0.2.0 | Format dropdowns / splitting / ms timestamps / checksums / quick send / themes | Done |
-| v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | Done |
+| v0.1.0 | Core TX/RX + HEX/ASCII + CRC16 | ✅ Done |
+| v0.2.0 | Format dropdowns / splitting / ms timestamps / checksums / quick send / themes | ✅ Done |
+| v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | ✅ Done |
 | v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | ✅ Done |
 | v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | ✅ Done |
 | v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, auto-reconnect | Planned (config import/export landed in v0.4.1, command sequences in v0.4.3) |
