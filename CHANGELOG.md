@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.15] - 2026-09-30
+
+### Fixed
+
+- **Dragging the pane divider could collapse or "swap" the receive and send areas (U63)**: the vertical
+  splitter allowed a child to be squeezed to zero height, so pulling the handle all the way down made the
+  send pane disappear (and the receive pane's contents look scrambled), and the horizontal splitter could do
+  the same to the quick-send column. Both splitters are now non-collapsible: the receive pane keeps at least
+  170 px, the send pane 190 px, the left column 360 px and the quick-send column 300 px, so dragging always
+  stops at a usable layout. (Saved proportions that fall outside those limits are clamped on restore.)
+
 ## [v0.4.14] - 2026-09-30
 
 ### Changed
