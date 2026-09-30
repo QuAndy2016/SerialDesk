@@ -168,7 +168,7 @@ Feature batch T6-T10.
 
 ## [v0.3.0] - 2026-09-30
 
-Feature batch T1-T5 (the "SSCOM main-feature parity" release).
+Feature batch T1-T5 (the "core serial feature set" release).
 
 ### Added
 
@@ -296,8 +296,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow 
 
 ### Fixed
 
-- Acknowledgements: all external links verified and written as Markdown hyperlinks inside parentheses
-  (no raw URLs in prose). SSCOM site (http://www.daxia.com) is http-only; LLCOM GitHub and VOFA+ verified
+- README: paragraph layout reworked (Chinese first, English in a collapsed section at the bottom) and
+  every external link checked for reachability before being written as a Markdown hyperlink in parentheses
 
 ## [v0.2.5] - 2026-09-30
 
@@ -345,7 +345,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow 
 
 ### Added
 
-- Baud rate: 26 presets (110 ~ 3000000, LLCOM-compatible) + editable custom input
+- Baud rate: 26 presets (110 ~ 3000000) + editable custom input
 - Receive format dropdown: ASCII / HEX / HEX+ASCII dual display
 - Send format dropdown: HEX / ASCII
 - Frame splitting by time gap: off / auto (3.5-char rule by baud rate, 5ms USB floor) / manual ms / by header
