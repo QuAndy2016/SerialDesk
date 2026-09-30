@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.12] - 2026-09-30
+
+### Fixed
+
+- **Sends were echoed and counted even when nothing was sent (U61)**: with the port closed, pressing Send (or
+  the repeat loop, or a quick-send row) still pushed a TX echo line into the receive pane and increased the
+  TX byte / sent counters, so the display claimed data had been sent while the status bar said the send had
+  failed. Send actions now check the port first and only echo and count a frame that was actually queued; the
+  repeat loop refuses to start without an open port, and a quick-send/sequence payload that cannot be sent
+  stops the sequence instead of continuing silently.
+
 ## [v0.4.11] - 2026-09-30
 
 ### Fixed

@@ -822,6 +822,13 @@ class MainWindow(QMainWindow):
         self._undo_payload = None
         self._undo_btn.hide()
 
+    def _ensure_port(self) -> bool:
+        """Guard send actions: nothing is sent, echoed or counted while closed (U61)."""
+        if self.worker.is_open():
+            return True
+        self._notify(tr("err.tx.closed"), "error")
+        return False
+
     def _on_send_error(self, kind: str, detail: str) -> None:
         """Report a write that failed on the worker thread (U52: GUI never blocks)."""
         if kind == "timeout":
@@ -1279,6 +1286,11 @@ class MainWindow(QMainWindow):
         self._schedule_history_save()
 
     def _on_repeat_toggled(self, checked: bool):
+        if checked and not self._ensure_port():
+            self.repeat_check.blockSignals(True)   # U61: no repeat loop without a port
+            self.repeat_check.setChecked(False)
+            self.repeat_check.blockSignals(False)
+            return
         if checked:
             self._sent_count = 0
             self.sent_lbl.setText(tr("tx.sent_count", n=0))
@@ -1468,10 +1480,13 @@ class MainWindow(QMainWindow):
         except ValueError as exc:
             self._notify(tr("log.send_error", e=exc), "error")
             return
+        if not self._ensure_port():
+            return
         payload = self._apply_checksum(payload)
         if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
             payload += b"\r\n"
-        self.worker.send(payload)
+        if not self.worker.send(payload):
+            return          # U61: never echo or count a frame that was not queued
         self._echo_tx(payload)
         self.tx_bytes += len(payload)
         self._sent_count += 1
@@ -1480,8 +1495,14 @@ class MainWindow(QMainWindow):
         self.update_counts()
 
     def on_quick_send(self, payload: bytes):
+        if not self.worker.is_open():     # U61: quick send / sequence obey the same rule
+            self.quick_panel.stop_sequence()
+            self._notify(tr("err.tx.closed"), "error")
+            return
         payload = self._apply_checksum(payload)
-        self.worker.send(payload)
+        if not self.worker.send(payload):
+            self.quick_panel.stop_sequence()
+            return
         self._echo_tx(payload)
         self.tx_bytes += len(payload)
         self.update_counts()

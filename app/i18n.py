@@ -243,6 +243,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "发送超时：设备没有读取数据（发送缓冲已满）。请检查设备是否在线、波特率与流控设置",
         "en": "Send timed out: the device is not draining its buffer. Check that it is online and that baud rate / flow control match",
     },
+    "tx.need_port": {"zh": "请先打开串口", "en": "Open the serial port first"},
     "err.tx.closed": {"zh": "发送失败：串口未打开", "en": "Send failed: port is not open"},
     "err.tx.queue": {
         "zh": "发送队列已满（{n} 帧待发），请降低发送频率或检查设备是否停止接收",
