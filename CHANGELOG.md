@@ -1,5 +1,23 @@
 # Changelog
 
+## [v0.13.0] - 2026-10-01
+
+### Changed
+
+- **The send area is two blocks instead of three (U99)**: the input row now carries the text box on the left and one
+  action column on the right - Send and History on the first line, the repeat controls right below them - so nothing
+  competes with the box for width.
+- **File sending moved up beside the checksum (U99)**: the Send file button, its progress bar and the file message
+  now sit on the options row, immediately right of the checksum dropdown.
+- **The payload hint moved to the top-right corner and is one size smaller (U99)**: "N bytes to send" is rendered at
+  12 px (via `QLabel#payloadHint`) at the right edge of the options row, where it reads as an aside instead of
+  competing with the controls.
+- **The text decorations (Append \r\n / Escapes) moved into the action column (U99)**: measured in English they
+  pushed the minimum window width up by about 100 px while they shared the options row, so they now form the third
+  line of the action column - the fallback recorded in the plan. They still disappear in HEX mode.
+- The send group's floor drops from 170 to 140 px now that one row is gone, and the English label "Parse escapes"
+  is shortened to "Escapes" (the tooltip keeps the full explanation).
+
 ## [v0.12.0] - 2026-10-01
 
 ### Changed

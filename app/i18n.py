@@ -260,7 +260,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "按当前格式、校验与换行设置计算的实际发送字节数",
         "en": "Actual bytes sent, with the current format, checksum and CRLF settings applied",
     },
-    "tx.escape": {"zh": "解析转义符", "en": "Parse escapes"},
+    "tx.escape": {"zh": "解析转义符", "en": "Escapes"},
     "tx.escape.tip": {
         "zh": "勾选时 \\r \\n \\t \\xNN 会被解释为控制字符；取消勾选则按字面发送",
         "en": "When checked \\r \\n \\t \\xNN become control bytes; unchecked sends them literally",

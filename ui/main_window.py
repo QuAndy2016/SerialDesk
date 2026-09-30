@@ -22,6 +22,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
+    QFont,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -1006,10 +1007,10 @@ class MainWindow(QMainWindow):
         self.checksum_combo.setToolTip(tr("crc.tip"))
         tx_fmt_row.addWidget(self.checksum_combo)
 
-        # U98: input group (format + checksum) first, then - after a clear gap - the
-        # text decorations, which only mean something for ASCII. In HEX mode the whole
-        # group disappears instead of sitting there greyed out (same rule as U50).
-        tx_fmt_row.addSpacing(18)
+        # U98: the text decorations only mean something for ASCII, so they live in one
+        # group that disappears in HEX mode (same rule as U50). U99: measured in English
+        # they pushed the minimum window width up, so they sit in the action column now
+        # instead of the option row - the fallback recorded in the U99 plan.
         self._tx_mod_group = QWidget()
         mod_row = QHBoxLayout(self._tx_mod_group)
         mod_row.setContentsMargins(0, 0, 0, 0)
@@ -1021,8 +1022,28 @@ class MainWindow(QMainWindow):
         self.escape_check.setChecked(True)
         self.escape_check.setToolTip(tr("tx.escape.tip"))
         mod_row.addWidget(self.escape_check)
-        tx_fmt_row.addWidget(self._tx_mod_group)
-        tx_fmt_row.addStretch(1)
+
+        # U99: file sending moved up beside the checksum box, so the row below only
+        # carries the input box and the actions.
+        tx_fmt_row.addSpacing(18)
+        self.send_file_btn = QPushButton(tr("btn.send_file"))
+        self.send_file_btn.setToolTip(tr("btn.send_file"))
+        self.send_file_btn.clicked.connect(self.on_send_file)
+        tx_fmt_row.addWidget(self.send_file_btn)
+        self.file_progress = QProgressBar()
+        self.file_progress.setRange(0, 100)
+        self.file_progress.setValue(0)
+        self.file_progress.setMaximumWidth(120)
+        tx_fmt_row.addWidget(self.file_progress)
+        self.file_info_lbl = QLabel("")
+        tx_fmt_row.addWidget(self.file_info_lbl, 1)
+        # U99: the payload hint lives in the top-right corner, one size smaller.
+        self.tx_size_lbl = QLabel("")
+        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        # the app stylesheet drives the widget font, so the smaller size is asked for
+        # by object name (QLabel#payloadHint) instead of a QFont that QSS would override
+        self.tx_size_lbl.setObjectName("payloadHint")
+        tx_fmt_row.addWidget(self.tx_size_lbl)
         tx_layout.addWidget(_fixed_row(tx_fmt_row))
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
         self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
@@ -1034,12 +1055,7 @@ class MainWindow(QMainWindow):
         self.tx_edit.setMinimumHeight(90)       # U98: the row merge pays for this
         self.tx_edit.textChanged.connect(self._check_hex_input)
         tx_row.addWidget(self.tx_edit, 1)
-        self.send_btn = QPushButton(tr("btn.send"))
-        self.send_btn.clicked.connect(self.on_send)
-        self.send_btn.setDefault(True)
-        self.send_btn.setMinimumWidth(104)
-        self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        self.send_btn.setToolTip(tr("sc.send.tip"))
+
         tx_row.addSpacing(10)
         tx_sep = QFrame()                        # U98: input area | action area
         tx_sep.setObjectName("vSep")
@@ -1047,7 +1063,25 @@ class MainWindow(QMainWindow):
         tx_sep.setFixedWidth(1)
         tx_row.addWidget(tx_sep)
         tx_row.addSpacing(10)
-        tx_row.addWidget(self.send_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        # U99: every action lives in the right-hand column - Send/History on the first
+        # line and the repeat controls right below them - so the left side of the row
+        # is nothing but the input box.
+        actions = QWidget()
+        act_col = QVBoxLayout(actions)
+        act_col.setContentsMargins(0, 0, 0, 0)
+        act_col.setSpacing(8)
+        act_col.addStretch(1)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+        self.send_btn = QPushButton(tr("btn.send"))
+        self.send_btn.clicked.connect(self.on_send)
+        self.send_btn.setDefault(True)
+        self.send_btn.setMinimumWidth(104)
+        self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.send_btn.setToolTip(tr("sc.send.tip"))
+        btn_row.addWidget(self.send_btn)
         # U87: the history is a popup now, so it costs one compact button beside the
         # primary action instead of a whole row of its own.
         self.history_btn = QPushButton(tr("tx.history.btn", n=0))
@@ -1057,10 +1091,12 @@ class MainWindow(QMainWindow):
         self.history_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.history_btn.setEnabled(False)
         self.history_btn.clicked.connect(self._show_history)
-        tx_row.addWidget(self.history_btn, 0, Qt.AlignmentFlag.AlignVCenter)
-        tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
+        btn_row.addWidget(self.history_btn)
+        btn_row.addStretch(1)
+        act_col.addLayout(btn_row)
 
         repeat_row = QHBoxLayout()
+        repeat_row.setSpacing(8)
         # U98: "Repeat send" starts and stops a process, so it is a toggle button that
         # reads "Stop repeat" while running - a checkbox stood in for an action before.
         self.repeat_btn = QPushButton(tr("tx.repeat"))
@@ -1076,36 +1112,20 @@ class MainWindow(QMainWindow):
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.repeat_ms.textChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
-        # U98: repeat and file sending share one action row - they are both "send
-        # something over time" actions and neither needs a row of its own, which hands
-        # ~33 px back to the input box.
-        action_row = repeat_row
-        action_row.addSpacing(18)
-        action_sep = QFrame()
-        action_sep.setObjectName("vSep")
-        action_sep.setFrameShape(QFrame.Shape.VLine)
-        action_sep.setFixedWidth(1)
-        action_row.addWidget(action_sep)
-        action_row.addSpacing(18)
-        self.send_file_btn = QPushButton(tr("btn.send_file"))
-        self.send_file_btn.setToolTip(tr("btn.send_file"))
-        self.send_file_btn.clicked.connect(self.on_send_file)
-        action_row.addWidget(self.send_file_btn)
-        self.file_progress = QProgressBar()
-        self.file_progress.setRange(0, 100)
-        self.file_progress.setValue(0)
-        self.file_progress.setMaximumWidth(220)
-        action_row.addWidget(self.file_progress)
-        self.file_info_lbl = QLabel("")
-        action_row.addWidget(self.file_info_lbl, 1)
-        self.tx_size_lbl = QLabel("")           # U74: bytes that will actually go out
-        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
-        action_row.addWidget(self.tx_size_lbl)
-        tx_layout.addWidget(_fixed_row(action_row))
+        repeat_row.addStretch(1)
+        act_col.addLayout(repeat_row)
+
+        mod_holder = QHBoxLayout()
+        mod_holder.addWidget(self._tx_mod_group)
+        mod_holder.addStretch(1)
+        act_col.addLayout(mod_holder)
+        act_col.addStretch(1)
+        tx_row.addWidget(actions)
+        tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
 
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 2)
-        tx_group.setMinimumHeight(170)                          # U63/U98
+        tx_group.setMinimumHeight(140)                          # U63/U98/U99
         self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
         self._v_splitter.setCollapsible(1, False)   #      the panes are added
         _stored_v = load_config().get("v_split_sizes")
