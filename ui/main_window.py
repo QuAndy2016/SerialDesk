@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -59,7 +60,7 @@ from app.protocol import (
     HexFormatError,
 )
 from app import __version__
-from app.config import load_config, save_config
+from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
@@ -311,6 +312,11 @@ class MainWindow(QMainWindow):
 
         # config import / export (T15)
         self._cfg_menu = self._settings_menu.addMenu(tr("cfg.menu"))
+        self._reset_act = QAction(tr("cfg.reset"), self)
+        self._reset_act.triggered.connect(self._reset_settings)
+        self._settings_menu.addAction(self._reset_act)
+        self._settings_menu.addSeparator()
+
         self._cfg_export_act = QAction(tr("cfg.export"), self)
         self._cfg_import_act = QAction(tr("cfg.import"), self)
         self._cfg_export_act.triggered.connect(self.on_export_config)
@@ -380,6 +386,51 @@ class MainWindow(QMainWindow):
             ("Esc", self._esc_action),
         ):
             QShortcut(QKeySequence(seq), self).activated.connect(handler)
+
+    def _reset_settings(self) -> None:
+        """Restore factory defaults after backing the current config up (U76)."""
+        box = QMessageBox(self)
+        box.setWindowTitle(tr("cfg.reset.title"))
+        box.setText(tr("cfg.reset.text"))
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        if box.exec() != QMessageBox.StandardButton.Yes:
+            return
+        backup = ""
+        try:
+            if os.path.exists(CONFIG_PATH):
+                backup = os.path.join(data_dir(), f"config.backup_{time.strftime('%Y%m%d_%H%M%S')}.json")
+                shutil.copyfile(CONFIG_PATH, backup)
+                os.remove(CONFIG_PATH)
+        except OSError as exc:
+            self._notify(tr("cfg.reset.fail", e=exc), "error")
+            return
+        self._apply_defaults()
+        save_config({"language": "system", "theme": "system"})
+        self._notify(tr("cfg.reset.done", path=backup or "-"), "info", ms=8000)
+
+    def _apply_defaults(self) -> None:
+        """Put every user-facing option back to its default value (U76)."""
+        self._set_theme_system()
+        self._set_language("system")
+        self._reconnect_act.setChecked(False)
+        self._log_dir = log_dir()
+        self._log_max_bytes = 2 * 1024 * 1024
+        self._log_max_seconds = 30 * 60
+        self._autosave_dlg.set_values(enabled=False, max_mb=2, max_minutes=30, folder=self._log_dir)
+        self._apply_autosave_settings()
+        self.autoscroll_check.setChecked(True)
+        self._send_history = []
+        self.history_combo.clear()
+        self._auto_rules = []
+        self.auto_reply_check.setChecked(False)
+        self._sent_count = 0
+        self.sent_lbl.setText(tr("tx.sent_count", n=0))
+        self._splitter.setSizes([820, 340])
+        self._v_splitter.setSizes([420, 260])
+        self.quick_panel.reload_from_config()   # seeds the default rows when config is gone
+        self._update_params_summary()
 
     def _apply_autosave_settings(self) -> None:
         """Apply the auto-save dialog values live and remember them (U75)."""
@@ -555,8 +606,8 @@ class MainWindow(QMainWindow):
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._reconnect_act.setText(tr("conn.auto"))
         self._reconnect_act.setToolTip(tr("conn.auto.tip"))
-        self._port_set_btn.setText(tr("portset.open"))
-        self._port_set_btn.setToolTip(tr("portset.tip"))
+        self.port_set_btn.setText(tr("portset.open"))
+        self.port_set_btn.setToolTip(tr("portset.tip"))
         self.params_summary.setToolTip(tr("portset.summary.tip"))
         self._port_dlg.retranslate()
         self._update_params_summary()
@@ -577,6 +628,7 @@ class MainWindow(QMainWindow):
         self._repeat_lbl.setText(tr("tx.interval.label"))
         self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
         self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        self._reset_act.setText(tr("cfg.reset"))
         self._autosave_act.setText(tr("as.menu"))
         self._autosave_act.setToolTip(tr("as.note"))
         self._autosave_dlg.retranslate()

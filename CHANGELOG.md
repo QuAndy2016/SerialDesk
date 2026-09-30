@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.6.10] - 2026-10-01
+
+### Added
+
+- **"Restore defaults" in the Settings menu (U76)**: a confirmation dialog spells out exactly what will be reset
+  (theme, language, auto-save, auto-reconnect, receive options, quick-send list, send history and auto-reply rules).
+  Once confirmed, the current `config.json` is backed up to `config.backup_<date>_<time>.json` in the data folder
+  before the defaults are applied, and the live window is put back to defaults immediately - no restart needed.
+
+### Fixed
+
+- **Switching the language could crash (regression from the Port settings work)**: the retranslate path referred to
+  `_port_set_btn` while the widget is named `port_set_btn`, so any language switch - and with it the new restore
+  action - raised an AttributeError. Caught by the reset test, fixed, and both paths are verified now.
+
 ## [v0.6.9] - 2026-10-01
 
 ### Added

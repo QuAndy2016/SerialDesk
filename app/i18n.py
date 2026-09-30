@@ -18,6 +18,14 @@ STRINGS: dict[str, dict[str, str]] = {
     # ---- menus / theme / language ----
     # ---- config import / export (T15) ----
     "cfg.menu": {"zh": "配置(&C)", "en": "&Config"},
+    "cfg.reset": {"zh": "恢复默认设置(&R)…", "en": "&Restore defaults…"},
+    "cfg.reset.title": {"zh": "恢复默认设置", "en": "Restore default settings"},
+    "cfg.reset.text": {
+        "zh": "将把主题、语言、自动保存、自动重连、接收区选项、快速发送列表、发送历史与自动应答规则全部恢复为默认值。\n\n当前配置会先自动备份到数据目录（config.backup_日期_时间.json），随时可以手工恢复。\n\n确定继续吗？",
+        "en": "This resets theme, language, auto-save, auto-reconnect, receive options, the quick-send list, send history and auto-reply rules to their defaults.\n\nYour current config is backed up first (config.backup_<date>_<time>.json in the data folder), so it can be restored by hand.\n\nContinue?",
+    },
+    "cfg.reset.done": {"zh": "已恢复默认设置；原配置备份在 {path}", "en": "Defaults restored; the previous config was backed up to {path}"},
+    "cfg.reset.fail": {"zh": "恢复默认设置失败：{e}", "en": "Could not restore defaults: {e}"},
     "cfg.export": {"zh": "导出配置(&E)…", "en": "&Export config…"},
     "cfg.import": {"zh": "导入配置(&I)…", "en": "&Import config…"},
     "cfg.export.title": {"zh": "导出配置", "en": "Export config"},

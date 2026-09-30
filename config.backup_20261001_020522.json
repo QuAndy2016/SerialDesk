@@ -1,0 +1,69 @@
+{
+  "theme": "system",
+  "language": "system",
+  "first_run_done": true,
+  "autoscroll": false,
+  "auto_reconnect": true,
+  "quick_send": [
+    {
+      "text": "ZZZ",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    },
+    {
+      "text": "",
+      "hex": true,
+      "delay": 500,
+      "sel": false
+    }
+  ]
+}
