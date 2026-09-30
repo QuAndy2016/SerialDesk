@@ -681,7 +681,6 @@ class MainWindow(QMainWindow):
         self._reload_combo(self.flow_combo, [tr("flow.none"), tr("flow.sw"), tr("flow.hw")])
         for combo in self._param_combos:
             combo.setToolTip(tr("params.tip"))
-        self._hist_lbl.setText(tr("tx.history"))
         self._update_history_button()
         self.repeat_check.setText(tr("tx.repeat"))
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))

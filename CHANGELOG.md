@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.7.1] - 2026-10-01
+
+### Fixed
+
+- **Restoring the defaults no longer aborts half-way (U91)**: v0.7.0 removed the history label from the window but
+  left one line referencing it in the translation routine, so switching language - and therefore "restore defaults",
+  which switches to the system language first - raised an error before it could clear the send history. The leftover
+  reference is gone: restore defaults now clears the history (list, button state and the saved config), and switching
+  between Chinese and English works again.
+
 ## [v0.7.0] - 2026-10-01
 
 ### Added
