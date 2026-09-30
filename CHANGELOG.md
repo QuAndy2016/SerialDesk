@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.9.0] - 2026-10-01
+
+### Changed
+
+- **The receive controls are grouped instead of being one flat line (U95)**: the first row now carries the stream
+  settings (Split, Timestamp) on the left and the two display switches (Echo sent data, Auto-scroll) on the right,
+  with the flexible space sitting *between* the groups rather than as a hole inside one of them; the second row
+  carries the log actions (Save log, Save as..., Auto-save) on the left and keeps Clear alone at the far right, so
+  the destructive action can no longer be hit while reaching for a switch. At full screen the rows no longer leave a
+  large empty area on the right-hand side.
+- **The split hint no longer repeats the dropdown (U89)**: the field beside Split used to show a plain-text copy of
+  the selected mode ("Auto (by baud)"), which read like stray wording and looked clickable. That field now appears
+  only for Manual and By-header mode, where it actually holds a value.
+
 ## [v0.8.0] - 2026-10-01
 
 ### Changed

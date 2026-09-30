@@ -885,10 +885,27 @@ class MainWindow(QMainWindow):
         self.ts_combo.setToolTip(tr("ts.tip"))
         rx_opts.addWidget(self.ts_combo)
 
+        # U95 (档 2): the row is grouped instead of being a flat line of controls -
+        # stream settings on the left, the two display switches on the right, and the
+        # stretch sitting between the groups rather than inside one of them.
         rx_opts.addStretch(1)
-        # U78: the action buttons go back to their own row. The single combined row
-        # needed ~1120 px, so narrowing the window overlapped the controls.
+        self.echo_tx_check = QCheckBox(tr("rx.echo_tx"))
+        self.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
+        self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
+        rx_opts.addWidget(self.echo_tx_check)
+        rx_opts.addSpacing(12)                       # U95: each switch gets its own space
+        self.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
+        self.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
+        self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
+        self.autoscroll_check.toggled.connect(self._on_autoscroll_toggled)
+        rx_opts.addWidget(self.autoscroll_check)
         rx_layout.addWidget(_fixed_row(rx_opts))
+        # U95: the slot only exists for manual/header mode; set that before the log view
+        # is created, so the initial state must not run the full change handler.
+        self.split_slot.setVisible(self.split_combo.currentIndex() in (SPLIT_MANUAL, SPLIT_HEADER))
+
+        # Row 2 (U95): the log actions on the left, and the destructive Clear kept
+        # alone at the far right so it can never be hit while reaching for a switch.
         toolbar = QHBoxLayout()
         self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
         self.save_log_btn.setToolTip(tr("log.quick.tip"))
@@ -904,24 +921,12 @@ class MainWindow(QMainWindow):
         self.autosave_check.toggled.connect(self._on_autosave_toggled)
         toolbar.addWidget(self.autosave_check)
 
-        self.echo_tx_check = QCheckBox(tr("rx.echo_tx"))
-        self.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
-        self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
-        toolbar.addWidget(self.echo_tx_check)
-
-        self.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
-        self.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
-        self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
-        self.autoscroll_check.toggled.connect(self._on_autoscroll_toggled)
-        toolbar.addWidget(self.autoscroll_check)
-
+        toolbar.addStretch(1)
         self.clear_btn = QPushButton(tr("btn.clear"))
         self.clear_btn.clicked.connect(self.on_clear)
         self.clear_btn.setToolTip(tr("sc.clear.tip"))
         toolbar.addWidget(self.clear_btn)
-
-        toolbar.addStretch(1)
-        rx_layout.addWidget(_fixed_row(toolbar))   # U78: second control row
+        rx_layout.addWidget(_fixed_row(toolbar))
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
@@ -1256,7 +1261,8 @@ class MainWindow(QMainWindow):
         """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
         names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
                  "split_combo", "split_ms_edit", "header_edit", "ts_combo",
-                 "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
+                 "echo_tx_check", "autoscroll_check",
+                 "save_log_btn", "save_log_as_btn", "autosave_check", "clear_btn", "rx_view",
                  "tx_fmt_combo", "escape_check", "crlf_check",
                  "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
                  "history_btn", "send_btn", "send_file_btn"]
@@ -1994,12 +2000,15 @@ class MainWindow(QMainWindow):
         self._flush_rx_frames()   # don't lose a half-collected frame (U57)
         if index == SPLIT_MANUAL:
             self.split_slot.setCurrentIndex(1)
+            self.split_slot.setVisible(True)
         elif index == SPLIT_HEADER:
             self.split_slot.setCurrentIndex(2)
+            self.split_slot.setVisible(True)
         else:
-            self.split_hint_lbl.setText(
-                tr("split.auto.hint") if index == SPLIT_AUTO else tr("split.off.hint"))
+            # U95: in auto/off mode the slot held a hint that repeated the combo's own
+            # label and read like stray text, so the slot simply goes away.
             self.split_slot.setCurrentIndex(0)
+            self.split_slot.setVisible(False)
 
     def _on_header_changed(self, text: str):
         # typing a frame header auto-switches to header-split mode
