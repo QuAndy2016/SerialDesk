@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.4.0] - 2026-09-30
+
+Feature batch T6-T10.
+
+### Added
+
+- **Send file (T6)**: pick a text / HEX / binary file and stream it in 4 KB chunks with a progress bar,
+  size + estimated duration and a cancel button; `.hex` files are parsed line by line.
+- **Encodings (T7)**: ASCII / UTF-8 / GBK / GB2312 for both received text and sent text
+  (`decode_text` / `encode_text` in app/protocol.py), so GBK Chinese frames stop garbling.
+- **Escape parsing toggle (T8)**: `\r` `\n` `\t` `\xNN` are interpreted by default; untick to send the
+  literal characters.
+- **DTR/RTS control and status lines (T9)**: DTR/RTS checkboxes plus a live CTS/DSR/DCD/RI indicator,
+  refreshed every 50 ms from the serial worker.
+- **Auto-reply rules (T10)**: a rule editor (match string -> reply string, HEX or ASCII, per-rule enable),
+  persisted in config.json; a matching frame triggers the reply automatically.
+
+### Changed
+
+- All new UI strings are bilingual and switch live with the language menu.
+- `SerialWorker` gained `set_dtr()` / `set_rts()` / `signals()`.
+
 ## [v0.3.0] - 2026-09-30
 
 Feature batch T1-T5 (the "SSCOM main-feature parity" release).

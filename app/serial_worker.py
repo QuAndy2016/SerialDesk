@@ -80,6 +80,39 @@ class SerialWorker(QThread):
     def is_open(self) -> bool:
         return self._port is not None and self._port.is_open
 
+    # -- modem control lines (T9) -------------------------------------------
+
+    def set_dtr(self, value: bool) -> None:
+        """Drive the DTR output line."""
+        if self._port is not None and self._port.is_open:
+            try:
+                self._port.dtr = bool(value)
+            except Exception as exc:  # noqa: BLE001
+                self.log.emit(f"dtr failed: {exc}")
+
+    def set_rts(self, value: bool) -> None:
+        """Drive the RTS output line."""
+        if self._port is not None and self._port.is_open:
+            try:
+                self._port.rts = bool(value)
+            except Exception as exc:  # noqa: BLE001
+                self.log.emit(f"rts failed: {exc}")
+
+    def signals(self) -> dict:
+        """Read the modem status lines: CTS / DSR / DCD / RI."""
+        port = self._port
+        if port is None or not port.is_open:
+            return {"open": False, "cts": False, "dsr": False, "dcd": False, "ri": False}
+
+        def read(name: str) -> bool:
+            try:
+                return bool(getattr(port, name))
+            except Exception:  # noqa: BLE001
+                return False
+
+        return {"open": True, "cts": read("cts"), "dsr": read("dsr"),
+                "dcd": read("cd"), "ri": read("ri")}
+
     # -- thread body ----------------------------------------------------------
 
     def run(self):

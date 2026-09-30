@@ -56,6 +56,11 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 - **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
 - **接收日志保存** —— 一键保存接收区；可开自动保存，写入 logs/ 目录（2 MB 或 30 分钟分段）
 - **发送历史** —— 最近 50 条自动记录、去重、持久化，下拉选中即回填
+- **发送文件** —— 文本 / HEX / 二进制文件按 4 KB 分块发送，带进度条与预计耗时，可中途取消
+- **多编码** —— 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码
+- **转义解析开关** —— \r \n \t \xNN 可解析为控制字符，也可按字面原样发送
+- **DTR/RTS 控制 + 信号线监视** —— 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新）
+- **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化
 - **背景 QThread 读取** —— UI 永不卡顿
 
 ### 界面预览
@@ -75,7 +80,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 | v0.2.0 | 格式下拉 / 分包 / 毫秒时间戳 / 校验套件 / 快速发送 / 主题 | 已完成 |
 | v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | 已完成 |
 | v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | ✅ 已完成 |
-| v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | 计划中 |
+| v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | ✅ 已完成 |
 | v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、指令序列、断线重连、配置导入导出 | 计划中 |
 
 ## 快速开始
@@ -191,6 +196,11 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 - **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
 - **Receive log to file** — one-click save, or auto-save into logs/ (segmented at 2 MB / 30 minutes)
 - **Send history** — the last 50 commands, deduplicated and persisted; pick one to refill
+- **File send** — text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel
+- **Encodings** — ASCII / UTF-8 / GBK / GB2312 for received and sent text, so GBK frames stop garbling
+- **Escape parsing toggle** — \r \n \t \xNN are interpreted by default, or sent literally
+- **DTR/RTS control + status lines** — drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms)
+- **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted
 - **Background QThread reading** — the UI never blocks
 
 ### Screenshots
@@ -210,7 +220,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 | v0.2.0 | Format dropdowns / splitting / ms timestamps / checksums / quick send / themes | Done |
 | v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | Done |
 | v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | ✅ Done |
-| v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | Planned |
+| v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | ✅ Done |
 | v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, command sequences, auto-reconnect, config import/export | Planned |
 
 ### Quick start

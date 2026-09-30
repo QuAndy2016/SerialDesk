@@ -41,6 +41,36 @@ def ascii_str_to_bytes(s: str) -> bytes:
     return s.encode("utf-8").decode("unicode_escape").encode("latin-1")
 
 
+# Text encodings offered for send/receive (T7). "ascii" keeps the legacy
+# byte-per-character view; the others decode/encode Chinese text properly.
+TEXT_ENCODINGS = ("ascii", "utf-8", "gbk", "gb2312")
+
+_ENCODING_ALIASES = {"ascii": "latin-1", "utf-8": "utf-8", "gbk": "gbk", "gb2312": "gb2312"}
+
+
+def decode_text(data: bytes, encoding: str = "ascii") -> str:
+    """Decode received bytes for display; non-printables become '.' in ascii mode."""
+    if encoding == "ascii":
+        return bytes_to_ascii_str(data)
+    try:
+        return data.decode(_ENCODING_ALIASES.get(encoding, encoding), errors="replace")
+    except LookupError:
+        return bytes_to_ascii_str(data)
+
+
+def encode_text(s: str, encoding: str = "ascii", escapes: bool = True) -> bytes:
+    """Encode typed text for sending.
+
+    escapes=True keeps the historical behaviour (control escapes are interpreted);
+    escapes=False sends the literal characters instead (T8).
+    """
+    text = s.encode("utf-8").decode("unicode_escape") if escapes else s
+    try:
+        return text.encode(_ENCODING_ALIASES.get(encoding, encoding))
+    except (UnicodeEncodeError, LookupError):
+        return text.encode("utf-8", errors="replace")
+
+
 # ---------------------------------------------------------------------------
 # Checksums: CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8
 # ---------------------------------------------------------------------------

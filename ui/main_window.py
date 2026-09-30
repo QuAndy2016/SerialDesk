@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QSpinBox,
     QSplitter,
@@ -29,16 +30,20 @@ from PySide6.QtWidgets import (
 )
 
 from app.protocol import (
+    TEXT_ENCODINGS,
     append_checksum,
     ascii_str_to_bytes,
     bytes_to_ascii_str,
     bytes_to_hex_str,
+    decode_text,
+    encode_text,
     hex_str_to_bytes,
 )
 from app import __version__
 from app.config import load_config, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
+from ui.auto_reply_dialog import AutoReplyDialog
 from ui.quick_send_panel import QuickSendPanel
 from app import i18n
 from app.i18n import tr
@@ -85,6 +90,17 @@ HISTORY_MAX = 50
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
 LOG_MAX_BYTES = 2 * 1024 * 1024
 LOG_MAX_SECONDS = 30 * 60
+FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
+FILE_CHUNK_MS = 20          # interval between chunks
+
+
+def _human_bytes(n: int) -> str:
+    """Format a byte count for humans (B / KB / MB)."""
+    if n < 1024:
+        return f"{n} B"
+    if n < 1024 * 1024:
+        return f"{n / 1024:.1f} KB"
+    return f"{n / (1024 * 1024):.2f} MB"
 
 
 class MainWindow(QMainWindow):
@@ -114,6 +130,14 @@ class MainWindow(QMainWindow):
         self._sent_count = 0
         self._repeat_timer = QTimer(self)
         self._repeat_timer.timeout.connect(self.on_send)
+        self._file_timer = QTimer(self)
+        self._file_timer.timeout.connect(self._send_file_chunk)
+        self._sig_timer = QTimer(self)
+        self._sig_timer.timeout.connect(self._poll_signals)
+        self._sig_timer.start(50)
+        self._file_data = b""
+        self._file_pos = 0
+        self._file_path = ""
 
         self._build_ui()
         self._build_menu()
@@ -122,6 +146,12 @@ class MainWindow(QMainWindow):
         self._send_history = [str(h) for h in load_config().get("send_history", [])
                               if str(h).strip()][:HISTORY_MAX]
         self.history_combo.addItems(self._send_history)
+
+        # auto-reply rules (T10) from config
+        cfg = load_config()
+        self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
+        self._reply_buf = b""
+        self.auto_reply_check.setChecked(bool(cfg.get("auto_reply_enabled", False)))
 
         # initial theme from config (default: follow system)
         choice = load_config().get("theme", "system")
@@ -227,6 +257,15 @@ class MainWindow(QMainWindow):
         self.ts_combo.setToolTip(tr("ts.tip"))
         self.clear_btn.setText(tr("btn.clear"))
         self.save_log_btn.setText(tr("btn.save_log"))
+        self.dtr_check.setToolTip(tr("sig.tip"))
+        self.rts_check.setToolTip(tr("sig.tip"))
+        self.sig_lbl.setToolTip(tr("sig.tip"))
+        self.auto_reply_check.setText(tr("rb.enable"))
+        self.auto_reply_check.setToolTip(tr("rb.enable.tip"))
+        self.rules_btn.setText(tr("rb.rules_btn"))
+        self.send_file_btn.setText(tr("btn.cancel_send") if self._file_timer.isActive()
+                                    else tr("btn.send_file"))
+        self.send_file_btn.setToolTip(tr("btn.send_file"))
         self.autosave_check.setText(tr("log.autosave"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._dbit_lbl.setText(tr("params.databits"))
@@ -244,6 +283,10 @@ class MainWindow(QMainWindow):
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
+        self._enc_lbl.setText(tr("params.encoding"))
+        self.encoding_combo.setToolTip(tr("params.encoding.tip"))
+        self.escape_check.setText(tr("tx.escape"))
+        self.escape_check.setToolTip(tr("tx.escape.tip"))
         self.crlf_check.setText(tr("tx.crlf"))
         self.crlf_check.setToolTip(tr("tx.crlf.tip"))
         self._tx_group.setTitle(tr("group.tx"))
@@ -352,6 +395,26 @@ class MainWindow(QMainWindow):
         self.flow_combo.addItems([tr("flow.none"), tr("flow.sw"), tr("flow.hw")])
         params.addWidget(self.flow_combo)
 
+        self._enc_lbl = QLabel(tr("params.encoding"))
+        params.addWidget(self._enc_lbl)
+        self.encoding_combo = QComboBox()
+        self.encoding_combo.addItems(["ASCII", "UTF-8", "GBK", "GB2312"])
+        self.encoding_combo.setToolTip(tr("params.encoding.tip"))
+        params.addWidget(self.encoding_combo)
+
+        params.addSpacing(12)
+        self.dtr_check = QCheckBox("DTR")
+        self.dtr_check.setToolTip(tr("sig.tip"))
+        self.dtr_check.toggled.connect(self.worker.set_dtr)
+        params.addWidget(self.dtr_check)
+        self.rts_check = QCheckBox("RTS")
+        self.rts_check.setToolTip(tr("sig.tip"))
+        self.rts_check.toggled.connect(self.worker.set_rts)
+        params.addWidget(self.rts_check)
+        self.sig_lbl = QLabel("CTS ○  DSR ○  DCD ○  RI ○")
+        self.sig_lbl.setToolTip(tr("sig.tip"))
+        params.addWidget(self.sig_lbl)
+
         self._param_combos = [self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo]
         for combo in self._param_combos:
             combo.setToolTip(tr("params.tip"))
@@ -455,6 +518,10 @@ class MainWindow(QMainWindow):
         self.crlf_check = QCheckBox(tr("tx.crlf"))
         self.crlf_check.setToolTip(tr("tx.crlf.tip"))
         tx_fmt_row.addWidget(self.crlf_check)
+        self.escape_check = QCheckBox(tr("tx.escape"))
+        self.escape_check.setChecked(True)
+        self.escape_check.setToolTip(tr("tx.escape.tip"))
+        tx_fmt_row.addWidget(self.escape_check)
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
         self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
         tx_col.addLayout(tx_fmt_row)
@@ -493,6 +560,28 @@ class MainWindow(QMainWindow):
         tx_col.addStretch(1)
         tx_row.addLayout(tx_col)
         tx_layout.addLayout(tx_row)
+
+        file_row = QHBoxLayout()
+        self.send_file_btn = QPushButton(tr("btn.send_file"))
+        self.send_file_btn.setToolTip(tr("btn.send_file"))
+        self.send_file_btn.clicked.connect(self.on_send_file)
+        file_row.addWidget(self.send_file_btn)
+        self.file_progress = QProgressBar()
+        self.file_progress.setRange(0, 100)
+        self.file_progress.setValue(0)
+        self.file_progress.setMaximumWidth(220)
+        file_row.addWidget(self.file_progress)
+        self.file_info_lbl = QLabel("")
+        file_row.addWidget(self.file_info_lbl, 1)
+
+        self.auto_reply_check = QCheckBox(tr("rb.enable"))
+        self.auto_reply_check.setToolTip(tr("rb.enable.tip"))
+        self.auto_reply_check.toggled.connect(self._on_auto_reply_toggled)
+        file_row.addWidget(self.auto_reply_check)
+        self.rules_btn = QPushButton(tr("rb.rules_btn"))
+        self.rules_btn.clicked.connect(self._edit_rules)
+        file_row.addWidget(self.rules_btn)
+        tx_layout.addLayout(file_row)
         left_layout.addWidget(tx_group, 1)
 
         splitter.addWidget(left)
@@ -514,6 +603,151 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
     # -- helpers ---------------------------------------------------------------
+
+    # -- auto reply (T10) ----------------------------------------------------
+
+    def _on_auto_reply_toggled(self, checked: bool) -> None:
+        config = load_config()
+        config["auto_reply_enabled"] = bool(checked)
+        save_config(config)
+        self._reply_buf = b""
+
+    def _edit_rules(self) -> None:
+        dlg = AutoReplyDialog(self._auto_rules, self)
+        if not dlg.exec():
+            return
+        self._auto_rules = dlg.rules()
+        config = load_config()
+        config["auto_reply"] = self._auto_rules
+        save_config(config)
+        self.statusBar().showMessage(tr("rb.saved", n=len(self._auto_rules)), 5000)
+
+    def _check_auto_reply(self, data: bytes) -> None:
+        """Send the configured reply when a match string shows up in the stream."""
+        if not self.auto_reply_check.isChecked() or not self._auto_rules:
+            return
+        self._reply_buf = (self._reply_buf + data)[-512:]
+        for rule in self._auto_rules:
+            if not rule.get("enabled", True):
+                continue
+            is_hex = bool(rule.get("hex", False))
+            try:
+                match = (hex_str_to_bytes(rule.get("match", "")) if is_hex
+                         else ascii_str_to_bytes(rule.get("match", "")))
+                reply = (hex_str_to_bytes(rule.get("reply", "")) if is_hex
+                         else ascii_str_to_bytes(rule.get("reply", "")))
+            except ValueError:
+                continue
+            if match and match in self._reply_buf:
+                if reply and self.worker.is_open():
+                    self.worker.send(reply)
+                    self.tx_bytes += len(reply)
+                    self.update_counts()
+                    self.statusBar().showMessage(tr("rb.sent", n=len(reply)), 3000)
+                self._reply_buf = b""
+                break
+
+    # -- modem status lines (T9) ---------------------------------------------
+
+    def _poll_signals(self) -> None:
+        """Refresh the CTS/DSR/DCD/RI indicators (50 ms timer)."""
+        sig = self.worker.signals()
+        if not sig.get("open"):
+            self.sig_lbl.setText("CTS ○  DSR ○  DCD ○  RI ○")
+            return
+        mark = lambda on: "●" if on else "○"
+        self.sig_lbl.setText(
+            f"CTS {mark(sig['cts'])}  DSR {mark(sig['dsr'])}  "
+            f"DCD {mark(sig['dcd'])}  RI {mark(sig['ri'])}")
+
+    # -- file send (T6) ------------------------------------------------------
+
+    def _baud_value(self) -> int:
+        try:
+            return int(self.baud_combo.currentText().strip())
+        except ValueError:
+            return 115200
+
+    def _load_file(self, path: str) -> bytes:
+        """Read a file to send: .hex parsed as hex text, .txt encoded, anything else raw."""
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".hex":
+            out = bytearray()
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    line = line.split("#", 1)[0]
+                    cleaned = "".join(line.split())
+                    if not cleaned:
+                        continue
+                    out += hex_str_to_bytes(cleaned)
+            return bytes(out)
+        if ext in (".txt", ".csv", ".log"):
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                return encode_text(fh.read(), self._encoding(), False)
+        with open(path, "rb") as fh:
+            return fh.read()
+
+    def on_send_file(self):
+        """Start (or cancel) sending a file in chunks with progress feedback."""
+        if self._file_timer.isActive():
+            self._abort_file_send()
+            return
+        if not self.worker.is_open():
+            self.statusBar().showMessage(tr("file.no_port"), 5000)
+            return
+        filters = ";;".join([tr("file.filter.all"), tr("file.filter.hex"),
+                             tr("file.filter.text"), tr("file.filter.bin")])
+        path, _ = QFileDialog.getOpenFileName(self, tr("file.dialog.title"), "", filters)
+        if not path:
+            return
+        try:
+            data = self._load_file(path)
+        except (OSError, ValueError) as exc:
+            self.on_log_line(tr("file.error", e=exc))
+            return
+        if not data:
+            return
+        self._file_data = data
+        self._file_pos = 0
+        self._file_path = path
+        baud = self._baud_value()
+        eta = max(1, int(len(data) / max(1.0, baud / 10.0)))
+        self.file_progress.setValue(0)
+        self.file_info_lbl.setText(tr("file.info", size=_human_bytes(len(data)), baud=baud, eta=eta))
+        self.send_file_btn.setText(tr("btn.cancel_send"))
+        self._file_timer.start(FILE_CHUNK_MS)
+
+    def _send_file_chunk(self):
+        if not self.worker.is_open():
+            self._abort_file_send()
+            return
+        chunk = self._file_data[self._file_pos:self._file_pos + FILE_CHUNK_BYTES]
+        if not chunk:
+            self._finish_file_send()
+            return
+        self.worker.send(chunk)
+        self._file_pos += len(chunk)
+        self.tx_bytes += len(chunk)
+        self.update_counts()
+        total = len(self._file_data)
+        pct = int(self._file_pos * 100 / total)
+        self.file_progress.setValue(pct)
+        self.file_info_lbl.setText(tr("file.progress", sent=_human_bytes(self._file_pos),
+                                      total=_human_bytes(total), pct=pct))
+
+    def _finish_file_send(self):
+        size = _human_bytes(len(self._file_data))
+        name = os.path.basename(self._file_path)
+        self._file_timer.stop()
+        self.send_file_btn.setText(tr("btn.send_file"))
+        self.file_progress.setValue(100)
+        self.statusBar().showMessage(tr("file.done", name=name, size=size), 5000)
+
+    def _abort_file_send(self):
+        self._file_timer.stop()
+        self.send_file_btn.setText(tr("btn.send_file"))
+        self.file_info_lbl.setText("")
+        self.file_progress.setValue(0)
 
     # -- receive log to file (T4) -------------------------------------------
 
@@ -670,15 +904,20 @@ class MainWindow(QMainWindow):
         char_ms = 10.0 / baud * 1000.0  # 8N1: one char = 10 bits
         return max(3.5 * char_ms, 2.0)
 
+    def _encoding(self) -> str:
+        """Currently selected text encoding (T7)."""
+        idx = self.encoding_combo.currentIndex()
+        return TEXT_ENCODINGS[idx] if 0 <= idx < len(TEXT_ENCODINGS) else "ascii"
+
     def _format_rx(self, data: bytes) -> str:
         mode = self.rx_fmt_combo.currentIndex()
         if mode == RX_HEX:
             return bytes_to_hex_str(data)
         if mode == RX_ASCII:
-            return bytes_to_ascii_str(data)
+            return decode_text(data, self._encoding())
         hex_s = bytes_to_hex_str(data)
-        ascii_s = bytes_to_ascii_str(data)
-        return f"{hex_s} | {ascii_s}"
+        text_s = decode_text(data, self._encoding())
+        return f"{hex_s} | {text_s}"
 
     def _ts_prefix(self, ts: float) -> str:
         mode = self.ts_combo.currentIndex()
@@ -740,6 +979,7 @@ class MainWindow(QMainWindow):
             self.status_light.setText(tr("status.disconnected"))
             self.status_light.setStyleSheet("color: #ff4136; font-weight: bold; padding-right: 8px;")
             self._stop_repeat()
+            self._abort_file_send()
             self.refresh_timer.start()
             for combo in self._param_combos:
                 combo.setEnabled(True)
@@ -767,7 +1007,7 @@ class MainWindow(QMainWindow):
             if self.tx_fmt_combo.currentIndex() == 0:
                 payload = hex_str_to_bytes(text)
             else:
-                payload = ascii_str_to_bytes(text)
+                payload = encode_text(text, self._encoding(), self.escape_check.isChecked())
         except ValueError as exc:
             self.on_log_line(tr("log.send_error", e=exc))
             return
@@ -788,6 +1028,7 @@ class MainWindow(QMainWindow):
         self.update_counts()
 
     def on_received(self, ts: float, data: bytes):
+        self._check_auto_reply(data)
         self.rx_bytes += len(data)
         self.update_counts()
 
@@ -860,6 +1101,7 @@ class MainWindow(QMainWindow):
         self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
 
     def closeEvent(self, event):
+        self._sig_timer.stop()
         self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()
