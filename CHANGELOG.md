@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.6.15] - 2026-10-01
+
+### Fixed
+
+- **The window minimum is now measured, not guessed (U81)**: the previous 1060 px floor was measured with one
+  font at one scale factor, so a different Windows DPI setting or a longer translation could still squeeze the
+  control rows and make them overlap. The minimum is now derived at start-up (and after a language switch) from
+  the widest control row at the *current* font and translation, plus the window chrome - 1067 px for Chinese and
+  1125 px for English here - and the window refuses to shrink below it.
+- Verified with a stricter audit than before: besides "does the row fit", every visible label, button, checkbox and
+  combo box must receive at least its content width and height. Checked at the computed minimum and at 1100 / 1200 /
+  1366 / 1024 / 900 px wide (the last three requests are clamped): no overflow, no clipped widget.
+
 ## [v0.6.14] - 2026-10-01
 
 ### Changed

@@ -563,6 +563,7 @@ class MainWindow(QMainWindow):
         combo.blockSignals(False)
 
     def retranslate(self):
+        QTimer.singleShot(0, self._fit_minimum_width)   # U81: labels change size
         """Re-apply every translated string (called after a language change)."""
         self._settings_btn.setText(tr("menu.settings"))
         self._theme_menu.setTitle(tr("theme.menu"))
@@ -1084,6 +1085,62 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self._undo_btn)
         self._notify(tr("status.idle"))
         self.setCentralWidget(central)
+
+    def _control_rows(self) -> list:
+        """Every horizontal control row whose width must fit (U81)."""
+        rows = []
+        central = self.centralWidget()
+        top = central.layout().itemAt(0)
+        if top is not None and top.layout() is not None:
+            rows.append(top.layout())
+        for group in (self._rx_group, self._tx_group):
+            lay = group.layout()
+            if lay is None:
+                continue
+            for i in range(lay.count()):
+                wid = lay.itemAt(i).widget()
+                if wid is not None and wid.layout() is not None:
+                    rows.append(wid.layout())
+        return rows
+
+    def _row_need(self, layout) -> int:
+        """Minimum width one row needs - items plus the spacing between them."""
+        total = 0
+        for i in range(layout.count()):
+            it = layout.itemAt(i)
+            wid = it.widget()
+            if wid is not None:
+                total += max(wid.minimumSizeHint().width(), wid.minimumWidth())
+            elif it.layout() is not None:
+                total += it.layout().minimumSize().width()
+            elif it.spacerItem() is not None:
+                total += it.spacerItem().sizeHint().width()
+        return total + layout.spacing() * max(0, layout.count() - 1)
+
+    def _widest_row(self) -> tuple:
+        """(need, row widget) of the widest control row (U81)."""
+        best = (0, None)
+        for lay in self._control_rows():
+            wid = lay.parentWidget()
+            need = self._row_need(lay)
+            if need > best[0]:
+                best = (need, wid)
+        return best
+
+    def _fit_minimum_width(self) -> None:
+        """Derive the window minimum from the widest row at the current font/DPI (U81).
+
+        A hard-coded pixel minimum is only correct for the font it was measured
+        with; on another Windows DPI scale the rows need more and start to
+        overlap. Measuring here keeps the two in step.
+        """
+        need, wid = self._widest_row()
+        if wid is None or need <= 0:
+            return
+        chrome = self.width() - wid.width()      # frame + group margins + quick panel
+        # assign (not only grow): the need depends on the current language, and the
+        # floor keeps the window usable even if a translation is unusually short
+        self.setMinimumWidth(max(980, need + max(0, chrome)))
 
     def _give_data_area_the_room(self) -> None:
         """First run: hand every spare pixel to the receive pane (U79).
@@ -2099,7 +2156,12 @@ class MainWindow(QMainWindow):
         theme.apply_native_dark(self, bool(theme.resolved_dark()))   # U51 (frame exists now)
         if not getattr(self, "_split_room_done", False):
             self._split_room_done = True
-            QTimer.singleShot(0, self._give_data_area_the_room)      # U79
+
+            def _first_layout() -> None:
+                self._give_data_area_the_room()   # U79
+                self._fit_minimum_width()         # U81
+
+            QTimer.singleShot(0, _first_layout)
 
     def closeEvent(self, event):
         self._sig_timer.stop()
