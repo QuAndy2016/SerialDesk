@@ -12,12 +12,15 @@ from PySide6.QtGui import QIcon
 
 from PySide6.QtGui import (
     QAction,
+    QKeySequence,
     QActionGroup,
     QColor,
     QIntValidator,
+    QShortcut,
     QTextFormat,
     QTextCharFormat,
     QTextCursor,
+    QTextDocument,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -29,6 +32,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QMenu,
     QPlainTextEdit,
     QProgressBar,
@@ -69,6 +73,9 @@ def resource_path(rel: str) -> str:
         base = os.path.dirname(base)
     return os.path.join(base, rel)
 
+
+RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
+CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
 
 BAUDRATES = [
     110, 330, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400,
@@ -137,6 +144,7 @@ class MainWindow(QMainWindow):
         self.rx_bytes = 0
         self.tx_bytes = 0
         self._line_is_tx = False   # U59: is the current display line a TX echo?
+        self._cap_warned = False   # U45: warn once when the display cap is reached
         self._last_ts: float | None = None
         self._clock_offset = time.time() - time.monotonic()
 
@@ -171,6 +179,8 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._build_menu()
         self._setup_tab_order()
+        self._setup_shortcuts()
+        self._first_run_hint()
 
         # send history (T5) from config
         self._send_history = [str(h) for h in load_config().get("send_history", [])
@@ -275,6 +285,80 @@ class MainWindow(QMainWindow):
         self._cfg_menu.addAction(self._cfg_export_act)
         self._cfg_menu.addAction(self._cfg_import_act)
 
+        # U44: about box (version is otherwise invisible in the UI)
+        self._settings_menu.addSeparator()
+        self._about_act = QAction(tr("about.menu"), self)
+        self._about_act.triggered.connect(self._show_about)
+        self._settings_menu.addAction(self._about_act)
+
+    def _toggle_find_bar(self, show: bool | None = None) -> None:
+        """Show/hide the receive find bar (U41)."""
+        visible = (not self._find_bar.isVisible()) if show is None else show
+        self._find_bar.setVisible(visible)
+        if visible:
+            self.find_edit.setFocus()
+            self.find_edit.selectAll()
+
+    def _find_next(self, forward: bool = True) -> None:
+        """Jump to the next/previous match in the receive pane (U41)."""
+        text = self.find_edit.text()
+        if not text:
+            return
+        flags = QTextDocument.FindFlag(0) if forward else QTextDocument.FindFlag.FindBackward
+        if not self.rx_view.find(text, flags):
+            cursor = self.rx_view.textCursor()
+            # wrap around: forward restarts at the top, backward at the bottom
+            cursor.movePosition(QTextCursor.MoveOperation.Start if forward
+                                else QTextCursor.MoveOperation.End)
+            self.rx_view.setTextCursor(cursor)
+            if not self.rx_view.find(text, flags):
+                self._notify(tr("find.none", text=text), "warn", ms=3000)
+                return
+        self.rx_view.setFocus()
+
+    def _esc_action(self) -> None:
+        """Esc: leave the find bar, else stop repeat/sequence (U39)."""
+        if self._find_bar.isVisible():
+            self._toggle_find_bar(False)
+            return
+        self._stop_repeat()
+        self.quick_panel.stop_sequence()
+
+    def _setup_shortcuts(self) -> None:
+        """Daily-flow keyboard shortcuts (U39)."""
+        for seq, handler in (
+            ("Ctrl+Return", self.on_send),
+            ("Ctrl+L", self.on_clear),
+            ("Ctrl+S", self.on_save_log_quick),
+            ("Ctrl+K", lambda: self.tx_edit.setFocus()),
+            ("F5", self.toggle_open),
+            ("Ctrl+F", lambda: self._toggle_find_bar(True)),
+            ("Esc", self._esc_action),
+        ):
+            QShortcut(QKeySequence(seq), self).activated.connect(handler)
+
+    def _show_about(self) -> None:
+        """About box: version, runtime versions and the project link (U44)."""
+        import PySide6
+        import serial as _serial
+
+        box = QMessageBox(self)
+        box.setWindowTitle(tr("about.title"))
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.setText(tr("about.text", version=__version__,
+                       pyside=PySide6.__version__, pyserial=_serial.__version__))
+        box.setIcon(QMessageBox.Icon.Information)
+        box.exec()
+
+    def _first_run_hint(self) -> None:
+        """One restrained hint on the very first launch (U48)."""
+        cfg = load_config()
+        if cfg.get("first_run_done"):
+            return
+        self._notify(tr("hint.first_run"), "info", ms=8000)
+        cfg["first_run_done"] = True
+        save_config(cfg)
+
     def _set_language(self, lang: str):
         """Switch UI language, persist the choice, rebuild every visible string."""
         i18n.set_language(lang)
@@ -323,7 +407,7 @@ class MainWindow(QMainWindow):
         self.ts_combo.setToolTip(tr("ts.tip"))
         self.clear_btn.setText(tr("btn.clear"))
         self.save_log_btn.setText(tr("btn.save_log_quick"))
-        self.save_log_btn.setToolTip(tr("log.quick.tip"))
+        self.save_log_btn.setToolTip(tr("sc.save.tip"))
         self.save_log_as_btn.setText(tr("btn.save_log_as"))
         self.dtr_check.setToolTip(tr("sig.tip"))
         self.rts_check.setToolTip(tr("sig.tip"))
@@ -344,6 +428,8 @@ class MainWindow(QMainWindow):
         self.autosave_check.setText(tr("log.autosave"))
         self.echo_tx_check.setText(tr("rx.echo_tx"))
         self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
+        self.autoscroll_check.setText(tr("rx.autoscroll"))
+        self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._dbit_lbl.setText(tr("params.databits"))
         self._parity_lbl.setText(tr("params.parity"))
@@ -445,6 +531,7 @@ class MainWindow(QMainWindow):
 
         self.open_btn = QPushButton(tr("port.open"))
         self.open_btn.clicked.connect(self.toggle_open)
+        self.open_btn.setToolTip(tr("sc.open.tip"))
         bar.addWidget(self.open_btn)
 
         bar.addSpacing(12)
@@ -598,8 +685,14 @@ class MainWindow(QMainWindow):
         self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
         toolbar.addWidget(self.echo_tx_check)
 
+        self.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
+        self.autoscroll_check.setChecked(True)
+        self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
+        toolbar.addWidget(self.autoscroll_check)
+
         self.clear_btn = QPushButton(tr("btn.clear"))
         self.clear_btn.clicked.connect(self.on_clear)
+        self.clear_btn.setToolTip(tr("sc.clear.tip"))
         toolbar.addWidget(self.clear_btn)
 
         rx_layout.addLayout(rx_opts)
@@ -608,9 +701,35 @@ class MainWindow(QMainWindow):
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
         self.statusBar().addPermanentWidget(self.rx_count_label)
 
+        # U41: find bar, hidden until Ctrl+F
+        self._find_bar = QWidget()
+        find_row = QHBoxLayout(self._find_bar)
+        find_row.setContentsMargins(0, 0, 0, 0)
+        self._find_lbl = QLabel(tr("find.label"))
+        find_row.addWidget(self._find_lbl)
+        self.find_edit = QLineEdit()
+        self.find_edit.setPlaceholderText(tr("find.placeholder"))
+        self.find_edit.returnPressed.connect(lambda: self._find_next(True))
+        find_row.addWidget(self.find_edit, 1)
+        self.find_prev_btn = QPushButton(tr("find.prev"))
+        self.find_prev_btn.clicked.connect(lambda: self._find_next(False))
+        find_row.addWidget(self.find_prev_btn)
+        self.find_next_btn = QPushButton(tr("find.next"))
+        self.find_next_btn.clicked.connect(lambda: self._find_next(True))
+        find_row.addWidget(self.find_next_btn)
+        self.find_close_btn = QPushButton("\u00d7")
+        self.find_close_btn.setObjectName("qsDel")
+        self.find_close_btn.setFixedWidth(28)
+        self.find_close_btn.setToolTip(tr("find.close.tip"))
+        self.find_close_btn.clicked.connect(lambda: self._toggle_find_bar(False))
+        find_row.addWidget(self.find_close_btn)
+        self._find_bar.hide()
+        rx_layout.addWidget(self._find_bar)
+
         self.rx_view = QPlainTextEdit()
         self.rx_view.setReadOnly(True)
-        self.rx_view.setMaximumBlockCount(20000)
+        self.rx_view.verticalScrollBar().actionTriggered.connect(self._pause_autoscroll)   # U43
+        self.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
         rx_layout.addWidget(self.rx_view)
         self._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
         self._v_splitter.setChildrenCollapsible(False)          # U63: never collapse a pane
@@ -687,6 +806,7 @@ class MainWindow(QMainWindow):
         self.send_btn.clicked.connect(self.on_send)
         self.send_btn.setDefault(True)
         self.send_btn.setMinimumWidth(96)
+        self.send_btn.setToolTip(tr("sc.send.tip"))
         repeat_row.addWidget(self.send_btn)
         tx_col.addLayout(repeat_row)
         tx_col.addStretch(1)
@@ -747,6 +867,9 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.status_light)
         # U58: 3 s undo affordance for a deleted quick-send row
         self._undo_payload: dict | None = None
+        self._undo_kind = ""
+        self._cleared_fragments: list | None = None
+        self._cleared_state = None
         self._undo_timer = QTimer(self)
         self._undo_timer.setSingleShot(True)
         self._undo_timer.timeout.connect(self._clear_undo)
@@ -813,23 +936,40 @@ class MainWindow(QMainWindow):
     def _on_row_deleted(self, payload: dict) -> None:
         """Offer a short undo window for a deleted quick-send row (U58)."""
         self._undo_payload = dict(payload)
+        self._undo_kind = "row"
+        self._undo_btn.setText(tr("undo.label"))
         self._undo_btn.show()
         self._undo_timer.start(3000)
         self._notify(tr("qs.deleted"), "warn", ms=3000)
 
     def _undo_delete(self) -> None:
-        """Restore the last deleted quick-send row (U58)."""
-        payload = self._undo_payload
-        if not payload:
-            return
+        """Undo the last destructive action: a deleted row or a cleared pane (U58/U42)."""
+        kind, payload = self._undo_kind, self._undo_payload
+        self._undo_kind = ""
         self._undo_payload = None
         self._undo_timer.stop()
         self._undo_btn.hide()
-        self.quick_panel.restore_row(payload)
-        self._notify(tr("qs.undo.done"), "info", ms=3000)
+        if kind == "clear" and self._cleared_fragments:
+            state = self._cleared_state or (False, 0, 0, 0)
+            fragments, self._cleared_fragments = self._cleared_fragments, None
+            self._line_is_tx, self.rx_bytes, self.tx_bytes, self._sent_count = state
+            for text, frag_kind in fragments:
+                self._emit_rx_text(text, tx=(frag_kind == 1),
+                                   meta=(frag_kind == 2), log=False)
+            self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
+            self.update_counts()
+            self._cleared_state = None
+            self._notify(tr("rx.undo.done"), "info", ms=3000)
+            return
+        if payload:
+            self.quick_panel.restore_row(payload)
+            self._notify(tr("qs.undo.done"), "info", ms=3000)
 
     def _clear_undo(self) -> None:
         self._undo_payload = None
+        self._undo_kind = ""
+        self._cleared_fragments = None
+        self._cleared_state = None
         self._undo_btn.hide()
 
     def _ensure_port(self) -> bool:
@@ -1249,7 +1389,8 @@ class MainWindow(QMainWindow):
 
     # -- quick helpers --------------------------------------------------------
 
-    def _emit_rx_text(self, text: str, tx: bool = False, meta: bool = False) -> None:
+    def _emit_rx_text(self, text: str, tx: bool = False, meta: bool = False,
+                      log: bool = True) -> None:
         """Insert text into the receive pane and mirror it to the log.
 
         kind: 0 = RX payload, 1 = TX payload, 2 = timestamp/marker (dimmed, U62).
@@ -1270,7 +1411,46 @@ class MainWindow(QMainWindow):
         except (AttributeError, TypeError):
             pass
         cursor.insertText(text, fmt)
-        self._log_append(text)
+        if log:
+            self._log_append(text)
+
+    def _snapshot_rx_fragments(self) -> list:
+        """Capture (text, kind) for every fragment so clearing can be undone (U42).
+
+        QPlainTextEdit refuses a cloned document (its layout class differs), so the
+        pane is rebuilt from the fragments with our own emitter instead.
+        """
+        out = []
+        block = self.rx_view.document().begin()
+        while block.isValid():
+            fallback_tx = "-> " in block.text()[:34]
+            it = block.begin()
+            while not it.atEnd():
+                frag = it.fragment()
+                if frag.isValid():
+                    try:
+                        kind = frag.charFormat().property(QTextFormat.Property.UserProperty)
+                    except (AttributeError, TypeError):
+                        kind = None
+                    if kind is None:
+                        kind = 1 if fallback_tx else 0
+                    out.append((frag.text(), int(kind)))
+                it += 1
+            if block.next().isValid():
+                out.append(("\n", 0))   # block separators are not fragments
+            block = block.next()
+        return out
+
+    def _scroll_rx_bottom(self) -> None:
+        """Follow the newest line unless the user paused auto-scroll (U43)."""
+        if self.autoscroll_check.isChecked():
+            bar = self.rx_view.verticalScrollBar()
+            bar.setValue(bar.maximum())
+
+    def _pause_autoscroll(self, _action: int = 0) -> None:
+        """Manual scrolling means the user is reading: stop following (U43)."""
+        if self.autoscroll_check.isChecked():
+            self.autoscroll_check.setChecked(False)
 
     def _rx_separator(self) -> str:
         """Separator used when a HEX group continues an existing line (U59)."""
@@ -1295,6 +1475,9 @@ class MainWindow(QMainWindow):
                 self._emit_rx_text(separator)
         self._emit_rx_text(text)
         self._line_is_tx = False
+        if not self._cap_warned and self.rx_view.blockCount() >= RECEIVE_MAX_LINES - 5:
+            self._cap_warned = True          # U45: one clear warning, not per line
+            self._notify(tr("rx.cap", n=RECEIVE_MAX_LINES), "warn", ms=8000)
 
     def _echo_tx(self, data: bytes) -> None:
         """Mirror sent bytes into the receive pane as a '->' line (U26)."""
@@ -1305,8 +1488,7 @@ class MainWindow(QMainWindow):
         self._emit_rx_text(self._ts_prefix(time.monotonic()) + MARK_TX, tx=True, meta=True)
         self._emit_rx_text(self._format_rx(data), tx=True)
         self._line_is_tx = True
-        bar = self.rx_view.verticalScrollBar()
-        bar.setValue(bar.maximum())
+        self._scroll_rx_bottom()          # U43
 
     def _on_history_pick(self, index: int):
         text = self.history_combo.itemText(index)
@@ -1574,8 +1756,7 @@ class MainWindow(QMainWindow):
             new_line, ts, data = got
             self._append_rx_group(self._format_rx(data), ts, new_line)
         self._last_ts = now
-        sb = self.rx_view.verticalScrollBar()
-        sb.setValue(sb.maximum())
+        self._scroll_rx_bottom()          # U43
         if self._frames.has_pending():
             self._frame_timer.start(int(self._frames.settle_ms))
     def _append_header_split(self, data: bytes, ts: float):
@@ -1599,24 +1780,36 @@ class MainWindow(QMainWindow):
                 continue  # adjacent headers, frame with empty body
             self._append_rx_group(self._format_rx(header_b + seg), ts, True)
 
-        sb = self.rx_view.verticalScrollBar()
-        sb.setValue(sb.maximum())
+        self._scroll_rx_bottom()          # U43
 
     def on_log_line(self, line: str):
         self._notify(line, ms=5000)
 
     def on_clear(self):
-        """Clear the display and the counters together (U56)."""
+        """Clear the display and the counters together, with an undo window (U56/U42)."""
+        has_text = self.rx_view.document().characterCount() > 1
+        offer_undo = has_text and self.rx_view.blockCount() <= CLEAR_UNDO_MAX_LINES
+        if offer_undo:
+            self._cleared_fragments = self._snapshot_rx_fragments()   # keeps colours
+            self._cleared_state = (self._line_is_tx, self.rx_bytes,
+                                   self.tx_bytes, self._sent_count)
+            self._undo_kind = "clear"
+            self._undo_btn.setText(tr("undo.label"))
+            self._undo_btn.show()
+            self._undo_timer.start(5000)
         self._frame_timer.stop()
         self._frames.reset()
         self._last_ts = None
         self.rx_view.clear()
         self._line_is_tx = False
+        self._cap_warned = False
         self.rx_bytes = 0
         self.tx_bytes = 0
         self._sent_count = 0
         self.sent_lbl.setText(tr("tx.sent_count", n=0))
         self.update_counts()
+        if offer_undo:
+            self._notify(tr("rx.cleared"), "warn", ms=5000)
     def update_counts(self):
         self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
 

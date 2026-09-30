@@ -1,5 +1,33 @@
 # Changelog
 
+## [v0.5.0] - 2026-10-01
+
+Batched usability release: the ten remaining "small" items from the task list, shipped together instead of
+one release per fix.
+
+### Added
+
+- **Keyboard shortcuts (U39)**: Ctrl+Enter sends, Ctrl+L clears (undoable), Ctrl+S quick-saves the log,
+  Ctrl+K focuses the send box, F5 opens/closes the port, Ctrl+F opens the find bar and Esc leaves it or
+  stops a repeat/sequence run.
+- **Find bar in the receive pane (U41)**: Ctrl+F shows a find row with next/previous and wrap-around search.
+- **About box (U44)**: Settings -> About shows the version, PySide6/pySerial versions, the licence and the
+  project link - the version was previously invisible in the UI.
+- **Auto-scroll toggle (U43)**: the receive pane follows new data by default; unticking the new checkbox
+  pauses it, and scrolling by hand pauses it automatically.
+- **Undoable clear (U42)**: clearing the pane (Ctrl+L) keeps a five-second undo that restores every line with
+  its colouring and the previous counters.
+- **First-run hint (U48)**: one restrained status-bar tip on the very first launch.
+- **Display-cap warning (U45)**: when the receive pane reaches its 20 000-line cap it says so once instead of
+  silently dropping the oldest lines.
+- **Menu access keys (U40)**: Settings, Theme, Language, Config and their entries now carry Alt-navigation
+  access keys in both languages.
+
+### Changed
+
+- **Tooltips state the defaults (U46)**: the repeat interval, per-row delay and manual split gap tooltips now
+  name their range and default value.
+
 ## [v0.4.18] - 2026-10-01
 
 ### Fixed
