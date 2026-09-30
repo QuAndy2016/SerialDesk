@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.4.2] - 2026-09-30
+
+### Changed
+
+- **Receive-area log buttons are easier to find (U25)**: the receive group now has its own toolbar row above
+  the text pane — [保存日志 / Save log] [另存为… / Save as…] [自动保存 / Auto-save] [清空 / Clear], with the
+  RX/TX counters moved to the right of that row. The parameter row above keeps only splitting / header /
+  timestamp controls.
+
+### Added
+
+- **One-click save (U25-D)**: "保存日志" now writes the receive pane straight into `logs/` with a timestamped
+  file name and reports the full path in the status bar; "另存为…" keeps the file dialog for choosing a location.
+
 ## [v0.4.1] - 2026-09-30
 
 ### Added

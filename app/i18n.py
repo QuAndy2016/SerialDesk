@@ -75,6 +75,12 @@ STRINGS: dict[str, dict[str, str]] = {
     "btn.clear": {"zh": "清空", "en": "Clear"},
     # ---- receive log to file (T4) ----
     "btn.save_log": {"zh": "保存日志", "en": "Save log"},
+    "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},
+    "btn.save_log_as": {"zh": "另存为…", "en": "Save as…"},
+    "log.quick.tip": {
+        "zh": "一键把接收区内容保存到 logs/ 目录（文件名带时间戳），状态栏会给出完整路径",
+        "en": "Save the receive pane into logs/ in one click (timestamped file name); the exact path is shown in the status bar",
+    },
     "log.autosave": {"zh": "自动保存", "en": "Auto-save"},
     "log.autosave.tip": {
         "zh": "勾选后接收数据自动写入 logs/ 目录，单个文件超过 2 MB 或每 30 分钟自动分段",

@@ -270,7 +270,9 @@ class MainWindow(QMainWindow):
             tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
         self.ts_combo.setToolTip(tr("ts.tip"))
         self.clear_btn.setText(tr("btn.clear"))
-        self.save_log_btn.setText(tr("btn.save_log"))
+        self.save_log_btn.setText(tr("btn.save_log_quick"))
+        self.save_log_btn.setToolTip(tr("log.quick.tip"))
+        self.save_log_as_btn.setText(tr("btn.save_log_as"))
         self.dtr_check.setToolTip(tr("sig.tip"))
         self.rts_check.setToolTip(tr("sig.tip"))
         self.sig_lbl.setToolTip(tr("sig.tip"))
@@ -479,21 +481,32 @@ class MainWindow(QMainWindow):
         rx_opts.addWidget(self.ts_combo)
 
         rx_opts.addStretch(1)
-        self.clear_btn = QPushButton(tr("btn.clear"))
-        self.clear_btn.clicked.connect(self.on_clear)
-        rx_opts.addWidget(self.clear_btn)
+        rx_layout.addLayout(rx_opts)
 
-        self.save_log_btn = QPushButton(tr("btn.save_log"))
-        self.save_log_btn.clicked.connect(self.on_save_log)
-        rx_opts.addWidget(self.save_log_btn)
+        # receive toolbar (U25): its own row so the log buttons are easy to spot
+        toolbar = QHBoxLayout()
+        self.save_log_btn = QPushButton(tr("btn.save_log_quick"))
+        self.save_log_btn.setToolTip(tr("log.quick.tip"))
+        self.save_log_btn.clicked.connect(self.on_save_log_quick)
+        toolbar.addWidget(self.save_log_btn)
+
+        self.save_log_as_btn = QPushButton(tr("btn.save_log_as"))
+        self.save_log_as_btn.clicked.connect(self.on_save_log_as)
+        toolbar.addWidget(self.save_log_as_btn)
 
         self.autosave_check = QCheckBox(tr("log.autosave"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self.autosave_check.toggled.connect(self._on_autosave_toggled)
-        rx_opts.addWidget(self.autosave_check)
+        toolbar.addWidget(self.autosave_check)
+
+        self.clear_btn = QPushButton(tr("btn.clear"))
+        self.clear_btn.clicked.connect(self.on_clear)
+        toolbar.addWidget(self.clear_btn)
+
+        toolbar.addStretch(1)
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
-        rx_opts.addWidget(self.rx_count_label)
-        rx_layout.addLayout(rx_opts)
+        toolbar.addWidget(self.rx_count_label)
+        rx_layout.addLayout(toolbar)
 
         self.rx_view = QPlainTextEdit()
         self.rx_view.setReadOnly(True)
@@ -890,8 +903,20 @@ class MainWindow(QMainWindow):
         else:
             self._log_close()
 
-    def on_save_log(self) -> None:
-        """Manually save everything currently shown in the receive pane."""
+    def on_save_log_quick(self) -> None:
+        """One-click save of the receive pane into logs/ (U25-D)."""
+        try:
+            os.makedirs(LOG_DIR, exist_ok=True)
+            path = os.path.join(LOG_DIR, time.strftime("serial_RX_%Y%m%d_%H%M%S.txt"))
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(self.rx_view.toPlainText())
+                fh.write("\n")
+            self.statusBar().showMessage(tr("log.saved", path=path), 5000)
+        except OSError as exc:
+            self.on_log_line(tr("log.save_fail", e=exc))
+
+    def on_save_log_as(self) -> None:
+        """Save the receive pane to a user-chosen path (U25-D)."""
         try:
             os.makedirs(LOG_DIR, exist_ok=True)
         except OSError:
