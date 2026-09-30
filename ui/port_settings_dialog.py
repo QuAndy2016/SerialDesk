@@ -35,6 +35,14 @@ class PortSettingsDialog(QDialog):
         self.setMinimumWidth(360)
 
         root = QVBoxLayout(self)
+
+        # U73: a port that is already open locks the wire-format settings - say so
+        # instead of leaving four controls looking broken.
+        self.hint_lbl = QLabel(tr("portset.free"))
+        self.hint_lbl.setWordWrap(True)
+        self.hint_lbl.setObjectName("portsetHint")
+        root.addWidget(self.hint_lbl)
+
         form = QFormLayout()
 
         self._dbit_lbl = QLabel(tr("params.databits"))
@@ -98,10 +106,19 @@ class PortSettingsDialog(QDialog):
         root.addWidget(buttons)
 
         self.setWindowTitle(tr("portset.title"))
+        self._port_open = False
+
+    def set_port_open(self, opened: bool) -> None:
+        """Lock the wire-format controls while the port is open, and explain why (U73)."""
+        self._port_open = bool(opened)
+        for combo in (self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo):
+            combo.setEnabled(not opened)
+        self.hint_lbl.setText(tr("portset.locked") if opened else tr("portset.free"))
 
     def retranslate(self) -> None:
         """Refresh every string (called by the main window's retranslate)."""
         self.setWindowTitle(tr("portset.title"))
+        self.hint_lbl.setText(tr("portset.locked") if self._port_open else tr("portset.free"))
         self._dbit_lbl.setText(tr("params.databits"))
         self._parity_lbl.setText(tr("params.parity"))
         self._stopbit_lbl.setText(tr("params.stopbits"))

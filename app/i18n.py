@@ -39,6 +39,14 @@ STRINGS: dict[str, dict[str, str]] = {
     "conn.reconnecting": {"zh": "连接中断，正在重连（第 {n} 次）…", "en": "Connection lost - reconnecting (attempt {n})…"},
     "conn.reconnected": {"zh": "已自动重新连接", "en": "Reconnected automatically"},
     "conn.lost": {"zh": "连接已断开", "en": "Connection lost"},
+    "portset.locked": {
+        "zh": "串口已打开：数据位 / 校验位 / 停止位 / 流控 需关闭串口后才能修改；编码与信号线可随时调整。",
+        "en": "Port is open: data bits / parity / stop bits / flow control can only change after closing it. Encoding and the signal lines stay available.",
+    },
+    "portset.free": {
+        "zh": "这些参数在「打开串口」时生效；信号线可随时控制。",
+        "en": "These settings apply when the port opens; the signal lines can be driven at any time.",
+    },
     "portset.title": {"zh": "串口设置", "en": "Port settings"},
     "portset.open": {"zh": "串口设置…", "en": "Port settings…"},
     "portset.tip": {

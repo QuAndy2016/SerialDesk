@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.7] - 2026-10-01
+
+### Fixed
+
+- **The Port settings dialog looked broken while a port was open (U73)**: data bits, parity, stop bits and flow
+  control are applied when the port opens, so they are intentionally disabled while it is connected - but nothing
+  said so, and only the encoding dropdown (which only affects decoding) appeared to work. The dialog now carries a
+  hint that changes with the state: "Port is open: data bits / parity / stop bits / flow control can only change
+  after closing it. Encoding and the signal lines stay available." / "These settings apply when the port opens; the
+  signal lines can be driven at any time." The lock state is refreshed when the dialog opens and whenever the port
+  is opened or closed.
+
 ## [v0.6.6] - 2026-10-01
 
 ### Changed

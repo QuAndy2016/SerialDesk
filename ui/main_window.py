@@ -371,7 +371,8 @@ class MainWindow(QMainWindow):
         self._notify(tr("conn.auto.on") if checked else tr("conn.auto.off"), "info", ms=3000)
 
     def _show_port_settings(self) -> None:
-        """Show the port-settings dialog (U35-P3)."""
+        """Show the port-settings dialog (U35-P3), reflecting the current lock state."""
+        self._port_dlg.set_port_open(self.worker.is_open())   # U73
         self._port_dlg.show()
         self._port_dlg.raise_()
         self._port_dlg.activateWindow()
@@ -1688,6 +1689,7 @@ class MainWindow(QMainWindow):
             self._notify(tr("status.opened"))
             for combo in self._param_combos:
                 combo.setEnabled(False)
+            self._port_dlg.set_port_open(True)     # U73: explain the lock
         else:
             self.open_btn.setText(tr("port.open"))
             self.status_light.setText(tr("status.disconnected"))
@@ -1700,6 +1702,7 @@ class MainWindow(QMainWindow):
             self.refresh_timer.start()
             for combo in self._param_combos:
                 combo.setEnabled(True)
+            self._port_dlg.set_port_open(False)    # U73
             if not self.worker.is_open():
                 self._notify(tr("status.closed"))
 
