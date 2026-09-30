@@ -81,6 +81,8 @@ QMenu::item { padding: 5px 24px 5px 28px; border-radius: 4px; }
 QMenu::item:selected { background: #4a6a9a; color: #ffffff; }
 QMenu::separator { height: 1px; background: #4a4a5a; margin: 4px 8px; }
 QSplitter::handle { background: #3a3a4a; }
+QPushButton#qsDel { color: #8a8a8a; background: transparent; border: none; font-size: 15px; }
+QPushButton#qsDel:hover { color: #ff7b72; background: #3a3a4a; border-radius: 4px; }
 """
 
 LIGHT_QSS = """
@@ -155,6 +157,8 @@ QMenu::item { padding: 5px 24px 5px 28px; border-radius: 4px; }
 QMenu::item:selected { background: #cfe0f5; color: #111111; }
 QMenu::separator { height: 1px; background: #d0d0d8; margin: 4px 8px; }
 QSplitter::handle { background: #d0d0d8; }
+QPushButton#qsDel { color: #9a9a9a; background: transparent; border: none; font-size: 15px; }
+QPushButton#qsDel:hover { color: #c62828; background: #ececf2; border-radius: 4px; }
 """
 
 

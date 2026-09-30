@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.framing import DEFAULT_SETTLE_MS, FrameAssembler
 from app.protocol import (
     TEXT_ENCODINGS,
     append_checksum,
@@ -150,6 +151,12 @@ class MainWindow(QMainWindow):
         self._sig_timer.timeout.connect(self._poll_signals)
         self._sig_timer.start(50)
         self._cfg_save_timer = QTimer(self)     # U52: debounced config persistence
+        # U57: merge USB-fragmented chunks before deciding a line break
+        _settle = float(load_config().get("rx_settle_ms", DEFAULT_SETTLE_MS) or DEFAULT_SETTLE_MS)
+        self._frames = FrameAssembler(settle_ms=_settle)
+        self._frame_timer = QTimer(self)
+        self._frame_timer.setSingleShot(True)
+        self._frame_timer.timeout.connect(self._flush_rx_frames)
         self._cfg_save_timer.setSingleShot(True)
         self._cfg_save_timer.timeout.connect(self._flush_history_save)
         self._file_data = b""
@@ -326,6 +333,8 @@ class MainWindow(QMainWindow):
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self._repeat_lbl.setText(tr("tx.interval.label"))
+        self._undo_btn.setText(tr("qs.undo"))
+        self._undo_btn.setToolTip(tr("qs.deleted"))
         self.split_hint_lbl.setText(
             tr("split.auto.hint") if self.split_combo.currentIndex() == SPLIT_AUTO else tr("split.off.hint"))
         self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
@@ -683,6 +692,7 @@ class MainWindow(QMainWindow):
         self.quick_panel.send_payload.connect(self.on_quick_send)
         self.quick_panel.log.connect(self.on_log_line)
         self.quick_panel.error.connect(lambda m: self._notify(m, "error"))
+        self.quick_panel.deleted.connect(self._on_row_deleted)
         splitter.addWidget(self.quick_panel)
         splitter.setSizes([820, 340])
 
@@ -693,6 +703,16 @@ class MainWindow(QMainWindow):
         self.status_light.setStyleSheet(
             f"color: {theme.status_colors()['idle']}; font-weight: bold; padding-right: 8px;")
         self.statusBar().addPermanentWidget(self.status_light)
+        # U58: 3 s undo affordance for a deleted quick-send row
+        self._undo_payload: dict | None = None
+        self._undo_timer = QTimer(self)
+        self._undo_timer.setSingleShot(True)
+        self._undo_timer.timeout.connect(self._clear_undo)
+        self._undo_btn = QPushButton(tr("qs.undo"))
+        self._undo_btn.setToolTip(tr("qs.deleted"))
+        self._undo_btn.hide()
+        self._undo_btn.clicked.connect(self._undo_delete)
+        self.statusBar().addPermanentWidget(self._undo_btn)
         self._notify(tr("status.idle"))
         self.setCentralWidget(central)
 
@@ -719,6 +739,28 @@ class MainWindow(QMainWindow):
         key = "ok" if self.worker.is_open() else ("idle" if self.port_combo.count() == 0 else "err")
         self.status_light.setStyleSheet(
             f"color: {cols[key]}; font-weight: bold; padding-right: 8px;")
+
+    def _on_row_deleted(self, payload: dict) -> None:
+        """Offer a short undo window for a deleted quick-send row (U58)."""
+        self._undo_payload = dict(payload)
+        self._undo_btn.show()
+        self._undo_timer.start(3000)
+        self._notify(tr("qs.deleted"), "warn", ms=3000)
+
+    def _undo_delete(self) -> None:
+        """Restore the last deleted quick-send row (U58)."""
+        payload = self._undo_payload
+        if not payload:
+            return
+        self._undo_payload = None
+        self._undo_timer.stop()
+        self._undo_btn.hide()
+        self.quick_panel.restore_row(payload)
+        self._notify(tr("qs.undo.done"), "info", ms=3000)
+
+    def _clear_undo(self) -> None:
+        self._undo_payload = None
+        self._undo_btn.hide()
 
     def _on_send_error(self, kind: str, detail: str) -> None:
         """Report a write that failed on the worker thread (U52: GUI never blocks)."""
@@ -1193,6 +1235,7 @@ class MainWindow(QMainWindow):
         self.crlf_check.setEnabled(index == 1)
 
     def _on_split_mode_changed(self, index: int):
+        self._flush_rx_frames()   # don't lose a half-collected frame (U57)
         if index == SPLIT_MANUAL:
             self.split_slot.setCurrentIndex(1)
         elif index == SPLIT_HEADER:
@@ -1223,7 +1266,8 @@ class MainWindow(QMainWindow):
         except ValueError:
             return None
         char_ms = 10.0 / baud * 1000.0  # 8N1: one char = 10 bits
-        return max(3.5 * char_ms, 2.0)
+        # 10 ms floor: below that, USB chunk delivery (not the wire) decides (U57)
+        return max(3.5 * char_ms, 10.0)
 
     def _encoding(self) -> str:
         """Currently selected text encoding (T7)."""
@@ -1304,6 +1348,7 @@ class MainWindow(QMainWindow):
             self._stop_repeat()
             self._abort_file_send()
             self.quick_panel.stop_sequence()
+            self._flush_rx_frames()   # flush the tail frame on close (U57)
             self.refresh_timer.start()
             for combo in self._param_combos:
                 combo.setEnabled(True)
@@ -1361,34 +1406,36 @@ class MainWindow(QMainWindow):
         self.rx_bytes += len(data)
         self.update_counts()
 
-        mode = self.split_combo.currentIndex()
-
-        if mode == SPLIT_HEADER:
+        if self.split_combo.currentIndex() == SPLIT_HEADER:
             self._append_header_split(data, ts)
             self._last_ts = ts
             return
 
-        text = self._format_rx(data)
+        # U57: collect chunks first; the line break is decided when the group settles
+        self._frames.set_threshold(self._split_threshold_ms())
+        self._frames.feed(ts, data)
+        if not self._frame_timer.isActive():
+            self._frame_timer.start(int(self._frames.settle_ms))
 
-        threshold = self._split_threshold_ms()
-        new_line = False
-        if self._last_ts is None:
-            new_line = True
-        elif threshold is not None:
-            gap_ms = (ts - self._last_ts) * 1000.0
-            new_line = gap_ms > threshold
-        self._last_ts = ts
-
-        has_text = self.rx_view.document().characterCount() > 1
-        if new_line:
-            if has_text:
-                self._emit_rx_text("\n")
-            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
-        self._emit_rx_text(text)
-
+    def _flush_rx_frames(self) -> None:
+        """Emit assembled frames: USB fragments merged, real gaps split (U57)."""
+        now = time.monotonic()
+        while True:
+            got = self._frames.take(now)
+            if got is None:
+                break
+            new_line, ts, data = got
+            text = self._format_rx(data)
+            if new_line:
+                if self.rx_view.document().characterCount() > 1:
+                    self._emit_rx_text("\n")
+                self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
+            self._emit_rx_text(text)
+        self._last_ts = now
         sb = self.rx_view.verticalScrollBar()
         sb.setValue(sb.maximum())
-
+        if self._frames.has_pending():
+            self._frame_timer.start(int(self._frames.settle_ms))
     def _append_header_split(self, data: bytes, ts: float):
         """Split raw bytes by frame header (e.g. 'fw:'), one line per frame.
 
@@ -1420,10 +1467,16 @@ class MainWindow(QMainWindow):
         self._notify(line, ms=5000)
 
     def on_clear(self):
+        """Clear the display and the counters together (U56)."""
+        self._frame_timer.stop()
+        self._frames.reset()
+        self._last_ts = None
         self.rx_view.clear()
         self.rx_bytes = 0
+        self.tx_bytes = 0
+        self._sent_count = 0
+        self.sent_lbl.setText(tr("tx.sent_count", n=0))
         self.update_counts()
-
     def update_counts(self):
         self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
 

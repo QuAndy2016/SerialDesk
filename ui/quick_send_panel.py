@@ -36,6 +36,7 @@ class QuickSendPanel(QWidget):
 
     send_payload = Signal(bytes)   # parsed payload, no checksum applied yet
     error = Signal(str)            # user-facing format error text (U36)
+    deleted = Signal(dict)         # removed row payload + index (U58: undo)
     log = Signal(str)
 
     def __init__(self, parent=None):
@@ -128,9 +129,11 @@ class QuickSendPanel(QWidget):
         send.clicked.connect(lambda: self._send_row(row))
         h.addWidget(send)
 
-        dele = QPushButton("×")
+        h.addSpacing(16)   # U58: keep the destructive action away from "send"
+        dele = QPushButton("\u00d7")
+        dele.setObjectName("qsDel")           # styled by theme.py (dim -> red on hover)
         dele.setFixedWidth(28)
-        dele.setStyleSheet("padding: 0px;")  # key fix: global padding 5px 14px ate the 28px width
+        dele.setStyleSheet("padding: 0px; background: transparent; border: none;")
         dele.setToolTip(tr("qs.delete.tip"))
         dele.clicked.connect(lambda: self._delete_row(row))
         h.addWidget(dele)
@@ -233,12 +236,37 @@ class QuickSendPanel(QWidget):
         self._seq_queue = []
 
     def _delete_row(self, row: QWidget):
-        entry = self._find(row)
+        """Remove a row, but report enough context to undo it (U58)."""
+        entry = next((e for e in self._rows if e["widget"] is row), None)
         if entry is None:
             return
-        self._row_layout.removeWidget(row)
-        row.deleteLater()
+        index = self._rows.index(entry)
+        payload = {"text": entry["edit"].text(), "hex": entry["fmt"].currentIndex() == 0,
+                   "delay": self._row_delay(entry), "index": index}
         self._rows.remove(entry)
+        row.setParent(None)
+        row.deleteLater()
+        self._update_count()
+        self.deleted.emit(payload)
+        self.save()
+
+    def restore_row(self, payload: dict) -> None:
+        """Re-insert a row removed by _delete_row (U58 undo)."""
+        index = int(payload.get("index", len(self._rows)))
+        before = len(self._rows)
+        self.add_row(str(payload.get("text", "")), bool(payload.get("hex", True)),
+                     int(payload.get("delay", 500) or 0))
+        if len(self._rows) > before and index < len(self._rows) - 1:
+            entry = self._rows.pop()
+            self._rows.insert(max(0, index), entry)
+            self._reorder_rows()
+        self.save()
+
+    def _reorder_rows(self) -> None:
+        """Re-apply the row order in the layout (U58 undo keeps the position)."""
+        for i, entry in enumerate(self._rows):
+            self._row_layout.insertWidget(i, entry["widget"])
+
 
     def _find(self, row: QWidget) -> dict | None:
         for e in self._rows:

@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.4.8] - 2026-09-30
+
+### Fixed
+
+- **Received frames were occasionally split in the middle (U57)**: USB-serial adapters hand a frame over in
+  several chunks (1-16 ms apart), while the old rule opened a new line as soon as two chunks were more
+  than 2 ms apart - below typical USB jitter, so a 5-byte frame could end up on two lines. Chunks are now
+  collected by a new `FrameAssembler` (`app/framing.py`) and emitted only after a 10 ms settle window
+  (`rx_settle_ms` in config.json), with the line break decided between *flushes*; genuine inter-frame gaps
+  (e.g. 130 ms) still produce separate lines. The automatic threshold floor is now 10 ms, and pending data
+  is flushed on mode change, clear and port close so the tail frame is never lost.
+- **Clear only reset the RX side (U56)**: the clear button emptied the display and zeroed the RX counter
+  but left the TX byte count and the sent counter untouched. It now resets display, RX, TX and sent count
+  together.
+
+### Changed
+
+- **Quick-send delete is much harder to trigger by accident (U58)**: the destructive button is separated
+  from "Send" by fixed spacing, uses a dim style that only turns red on hover (new `#qsDel` rule in both
+  themes), and every deletion now offers a 3 s **Undo delete** button in the status bar that restores the
+  row with its content, format, delay and original position.
+
 ## [v0.4.7] - 2026-09-30
 
 ### Fixed

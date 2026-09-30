@@ -272,6 +272,12 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.max": {"zh": "最多支持 {n} 条指令", "en": "Up to {n} commands supported"},
     "qs.placeholder": {"zh": "指令内容", "en": "Command"},
     "qs.send": {"zh": "发送", "en": "Send"},
+    "qs.deleted": {
+        "zh": "已删除该指令（3 秒内可撤销）",
+        "en": "Command deleted (undo within 3 s)",
+    },
+    "qs.undo.done": {"zh": "已恢复该指令", "en": "Command restored"},
+    "qs.undo": {"zh": "撤销删除", "en": "Undo delete"},
     "qs.delete.tip": {"zh": "删除此条", "en": "Delete this row"},
     "qs.empty": {"zh": "指令内容为空", "en": "Command is empty"},
     "hex.empty": {
