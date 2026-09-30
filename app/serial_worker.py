@@ -56,6 +56,8 @@ class SerialWorker(QThread):
         self._sig_cache = {"open": False, "cts": False, "dsr": False,
                            "dcd": False, "ri": False}
         self._sig_lock = threading.Lock()
+        self._rtscts = False        # hardware flow control enabled? (U65)
+        self._tx_degraded = False   # a write timed out: refuse more sends until reopen (U65)
 
     # -- control (UI thread; never blocks on serial I/O) ---------------------
 
@@ -77,6 +79,8 @@ class SerialWorker(QThread):
             self.error.emit(str(exc))
             self.opened.emit(False)
             return False
+        self._rtscts = bool(kwargs.get("rtscts", False))
+        self._tx_degraded = False          # a fresh open clears the degraded state (U65)
         self._running = True
         if not self.isRunning():
             self.start()
@@ -103,6 +107,10 @@ class SerialWorker(QThread):
         """Enqueue a frame for the worker thread (returns False when dropped)."""
         if self._port is None or not self._port.is_open:
             self.send_error.emit("closed", "")
+            return False
+        if self._tx_degraded:
+            # U65: a write already timed out - do not walk back into the driver
+            self.send_error.emit("degraded", "")
             return False
         with self._tx_lock:
             if len(self._tx_queue) >= MAX_TX_QUEUE:
@@ -189,6 +197,18 @@ class SerialWorker(QThread):
         if port is None or not port.is_open:
             self.send_error.emit("closed", "")
             return
+        if self._rtscts:
+            # U65: with hardware flow control, a low CTS means the driver would
+            # block inside WriteFile until the peer raises it - drop instead.
+            try:
+                if not port.cts:
+                    self.log.emit("send skipped: CTS not asserted")
+                    self.send_error.emit("cts", "")
+                    return
+            except Exception:  # noqa: BLE001 - a wedged driver reports nothing
+                self.log.emit("send skipped: CTS unreadable")
+                self.send_error.emit("cts", "")
+                return
         try:
             port.write(data)
             self.log.emit(f"TX {len(data)} bytes")
@@ -196,6 +216,7 @@ class SerialWorker(QThread):
             # driver never accepted the bytes (buffer full / CTS never asserted)
             with self._tx_lock:
                 self._tx_queue.clear()      # U64: drop the stale backlog
+            self._tx_degraded = True        # U65: stop feeding a stuck driver
             self.log.emit(f"send timeout: {exc}")
             self.send_error.emit("timeout", str(exc))
         except Exception as exc:  # noqa: BLE001

@@ -245,6 +245,14 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "tx.need_port": {"zh": "请先打开串口", "en": "Open the serial port first"},
     "err.tx.closed": {"zh": "发送失败：串口未打开", "en": "Send failed: port is not open"},
+    "err.tx.cts": {
+        "zh": "设备 CTS 未就绪（硬件流控），该帧已丢弃。若设备不支持硬件流控，请把「流控」改为「无」",
+        "en": "Peer CTS is not asserted (hardware flow control) - the frame was dropped. If the device does not drive CTS, set Flow to None",
+    },
+    "err.tx.degraded": {
+        "zh": "发送已暂停：设备无响应。请重新打开串口后继续（必要时拔插一次 USB 转串口）",
+        "en": "Sending paused: the device stopped responding. Re-open the port to continue (re-plug the USB adapter if needed)",
+    },
     "err.tx.queue": {
         "zh": "发送队列已满（{n} 帧待发），请降低发送频率或检查设备是否停止接收",
         "en": "Send queue is full ({n} frames pending). Slow down or check whether the device stopped receiving",

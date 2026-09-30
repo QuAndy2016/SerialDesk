@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.4.18] - 2026-10-01
+
+### Fixed
+
+- **A device that stopped honouring hardware flow control could still wedge the process (U65)**: with RTS/CTS
+  enabled and a peer that never asserts CTS, Windows can leave the process inside a serial driver call that
+  never returns - the window stops responding and even Task Manager cannot close it.
+  - With hardware flow control on, a frame is now dropped when CTS is not asserted (or cannot be read)
+    instead of calling `write()`, so the app never enters the driver's blocking path. The status bar explains
+    it: "Peer CTS is not asserted - the frame was dropped. If the device does not drive CTS, set Flow to None".
+  - After a write timeout the port is marked degraded and further sends are refused ("Sending paused: the
+    device stopped responding. Re-open the port to continue") instead of walking back into the stuck driver.
+  - Re-opening the port clears the degraded state; the repeat loop stops on either condition.
+
 ## [v0.4.17] - 2026-10-01
 
 ### Fixed

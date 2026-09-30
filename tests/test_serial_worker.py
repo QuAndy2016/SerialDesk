@@ -94,3 +94,76 @@ class TestCloseNeverBlocks:
         assert port.is_open is True            # the GUI thread did not close it inline
         assert w.wait(3000)
         assert port.is_open is False           # the worker closed it on the way out
+
+
+class TestFlowControlGuard:
+    """U65: never walk into a driver write that can block on CTS."""
+
+    def test_write_skipped_when_cts_is_low(self):
+        w = SerialWorker()
+        port = FakePort()
+        port.cts = False
+        w._port = port
+        w._rtscts = True
+        errors = []
+        w.send_error.connect(lambda kind, detail: errors.append(kind))
+        w.send(b"\x07")                   # queued frame
+        w._drain_tx()
+        assert port.writes == []          # the driver was never entered
+        assert errors == ["cts"]
+        assert w.queued_frames() == 0     # the frame was dropped, not retried
+
+    def test_write_proceeds_when_cts_is_high(self):
+        w = SerialWorker()
+        port = FakePort()
+        port.cts = True
+        w._port = port
+        w._rtscts = True
+        w.send(b"\x01")
+        w._drain_tx()
+        assert port.writes == [b"\x01"]
+
+    def test_no_cts_check_without_hardware_flow_control(self):
+        w = SerialWorker()
+        port = FakePort()
+        port.cts = False                  # ignored when rtscts is off
+        w._port = port
+        w._rtscts = False
+        w.send(b"\x02")
+        w._drain_tx()
+        assert port.writes == [b"\x02"]
+
+    def test_timeout_degrades_the_port(self):
+        w = SerialWorker()
+        w._port = FakePort(timeout=True)
+        errors = []
+        w.send_error.connect(lambda kind, detail: errors.append(kind))
+        w.send(b"\x03")
+        w._drain_tx()
+        assert errors[0] == "timeout"
+        assert w._tx_degraded is True
+        errors.clear()
+        assert w.send(b"\x04") is False    # no more writes into a stuck driver
+        assert errors == ["degraded"]
+
+    def test_reopening_clears_the_degraded_state(self):
+        import app.serial_worker as sw
+
+        class StubSerial(FakePort):
+            def __init__(self, **kwargs):
+                super().__init__()
+
+        real = sw.serial.Serial
+        sw.serial.Serial = StubSerial
+        try:
+            w = SerialWorker()
+            w._port = FakePort(timeout=True)
+            w.send(b"\x05")
+            w._drain_tx()
+            assert w._tx_degraded is True
+            assert w.open_port("COM_TEST", 115200) is True
+            assert w._tx_degraded is False
+            w.close_port()                 # never leave a QThread running at exit
+            w.wait(2000)
+        finally:
+            sw.serial.Serial = real

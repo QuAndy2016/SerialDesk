@@ -841,7 +841,7 @@ class MainWindow(QMainWindow):
 
     def _on_send_error(self, kind: str, detail: str) -> None:
         """Report a write that failed on the worker thread (U52: GUI never blocks)."""
-        if kind in ("timeout", "queue"):
+        if kind in ("timeout", "queue", "cts", "degraded"):
             self._stop_repeat()      # U64: stop the loop instead of hammering a stuck device
         if kind == "timeout":
             self._notify(tr("err.tx.timeout"), "error")
@@ -849,6 +849,10 @@ class MainWindow(QMainWindow):
             self._notify(tr("err.tx.queue", n=detail), "error")
         elif kind == "closed":
             self._notify(tr("err.tx.closed"), "error")
+        elif kind == "cts":
+            self._notify(tr("err.tx.cts"), "warn")     # U65: dropped, not fatal
+        elif kind == "degraded":
+            self._notify(tr("err.tx.degraded"), "error")
         else:
             self._notify(tr("err.tx.io", e=detail), "error")
 
