@@ -83,6 +83,8 @@ QMenu::separator { height: 1px; background: #4a4a5a; margin: 4px 8px; }
 QSplitter::handle { background: #3a3a4a; }
 QPushButton#qsDel { color: #8a8a8a; background: transparent; border: none; font-size: 15px; }
 QPushButton#qsDel:hover { color: #ff7b72; background: #3a3a4a; border-radius: 4px; }
+QToolButton#paramsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 8px; }
+QToolButton#paramsBtn:hover { border-color: #8be9fd; }
 QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
 QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #4a4a5a; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
@@ -181,6 +183,8 @@ QMenu::separator { height: 1px; background: #d0d0d8; margin: 4px 8px; }
 QSplitter::handle { background: #d0d0d8; }
 QPushButton#qsDel { color: #9a9a9a; background: transparent; border: none; font-size: 15px; }
 QPushButton#qsDel:hover { color: #c62828; background: #ececf2; border-radius: 4px; }
+QToolButton#paramsBtn { color: #1f1f1f; background: transparent; border: 1px solid #c8c8d0; border-radius: 4px; padding: 3px 8px; }
+QToolButton#paramsBtn:hover { border-color: #1e5aa8; }
 QToolButton#settingsBtn { color: #1f1f1f; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
 QToolButton#settingsBtn:hover { background: #e0e0e8; border-color: #c8c8d0; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }

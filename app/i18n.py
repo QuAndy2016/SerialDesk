@@ -59,8 +59,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "portset.title": {"zh": "串口设置", "en": "Port settings"},
     "portset.open": {"zh": "串口设置…", "en": "Port settings…"},
     "portset.tip": {
-        "zh": "数据位 / 校验位 / 停止位 / 流控 / 编码 与信号线（低频设置，独立窗口）",
-        "en": "Data bits, parity, stop bits, flow control, encoding and the signal lines",
+        "zh": "串口参数：数据位 / 校验位 / 停止位 / 流控 / 编码\n点击这里修改（等价于「串口设置」）",
+        "en": "Serial parameters: data bits / parity / stop bits / flow control / encoding\nClick to change them",
     },
     "portset.summary.tip": {
         "zh": "当前串口参数；点右侧「串口设置…」修改",

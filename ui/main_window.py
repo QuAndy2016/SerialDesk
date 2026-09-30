@@ -545,6 +545,13 @@ class MainWindow(QMainWindow):
             payload += b"\r\n"
         self.tx_size_lbl.setText(tr("tx.payload", n=len(payload)))
 
+    def _update_port_tooltip(self) -> None:
+        """Full device description of the selected port, in the tooltip (U83)."""
+        idx = self.port_combo.currentIndex()
+        full = self.port_combo.itemData(idx, Qt.ItemDataRole.ToolTipRole) if idx >= 0 else None
+        if full:
+            self.port_combo.setToolTip(str(full))
+
     def _update_params_summary(self) -> None:
         """One-line summary of the low-frequency settings (U35-P3)."""
         parity = ["N", "O", "E", "M", "S"][max(0, min(4, self.parity_combo.currentIndex()))]
@@ -555,7 +562,7 @@ class MainWindow(QMainWindow):
         text = f"{data}{parity}{stop} · {flow} · {enc}"
         if len(text) > 16:                      # U78: elide instead of widening the row
             text = text[:15] + "…"
-        self.params_summary.setText(text)
+        self.params_summary.setText(text + " ▾")
 
     def _show_about(self) -> None:
         """About box: version, runtime versions and the project link (U44)."""
@@ -655,9 +662,8 @@ class MainWindow(QMainWindow):
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._reconnect_act.setText(tr("conn.auto"))
         self._reconnect_act.setToolTip(tr("conn.auto.tip"))
-        self.port_set_btn.setText(tr("portset.open"))
-        self.port_set_btn.setToolTip(tr("portset.tip"))
-        self.params_summary.setToolTip(tr("portset.summary.tip"))
+        self.params_summary.setToolTip(tr("portset.tip"))
+        self._update_params_summary()
         self._port_dlg.retranslate()
         self._update_params_summary()
         self._dbit_lbl.setText(tr("params.databits"))
@@ -782,14 +788,15 @@ class MainWindow(QMainWindow):
         bar.addWidget(self.rx_fmt_combo)
 
         bar.addSpacing(12)
-        self.params_summary = QLabel("")
-        self.params_summary.setMaximumWidth(120)   # U78: never pushes the row wider
-        self.params_summary.setToolTip(tr("portset.summary.tip"))
+        # U84 (revised): the wire-format summary and its dialog opener are one compact
+        # control - label plus button cost ~245 px and no label needed shortening.
+        self.params_summary = QToolButton()
+        self.params_summary.setObjectName("paramsBtn")
+        self.params_summary.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.params_summary.setToolTip(tr("portset.tip"))
+        self.params_summary.clicked.connect(self._show_port_settings)
+        self.port_set_btn = self.params_summary   # the open/close lock hint uses this
         bar.addWidget(self.params_summary)
-        self.port_set_btn = QPushButton(tr("portset.open"))
-        self.port_set_btn.setToolTip(tr("portset.tip"))
-        self.port_set_btn.clicked.connect(self._show_port_settings)
-        bar.addWidget(self.port_set_btn)
 
         bar.addSpacing(10)
         bar.addWidget(self._settings_btn)   # U72: same line as Port / Baud / Open
@@ -2030,12 +2037,20 @@ class MainWindow(QMainWindow):
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
         for dev, desc in list_serial_ports():
-            self.port_combo.addItem(f"{dev}  [{desc}]" if desc else dev, dev)
+            # U83: the name alone keeps the row narrow and is never truncated; the full
+            # description stays reachable from the tooltips and the dropdown entries.
+            self.port_combo.addItem(dev, dev)
+            if desc:
+                self.port_combo.setItemData(self.port_combo.count() - 1,
+                                            f"{dev} — {desc}", Qt.ItemDataRole.ToolTipRole)
         if current:
-            idx = self.port_combo.findText(current)
+            idx = self.port_combo.findData(current)
+            if idx < 0:
+                idx = self.port_combo.findText(str(current))
             if idx >= 0:
                 self.port_combo.setCurrentIndex(idx)
         self.port_combo.blockSignals(False)
+        self._update_port_tooltip()
 
     def toggle_open(self):
         if self.worker.is_open():
