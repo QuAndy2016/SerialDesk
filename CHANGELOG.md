@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.6.8] - 2026-10-01
+
+### Changed
+
+- **The send area was rebuilt (U74)**: the input used to be squeezed into a 134 px column beside a control column that
+  ate ~83% of the width, with its height hard-capped at 90 px - a toy box inside a large empty panel. Now:
+  - format, checksum, append-CRLF and escape parsing share one row *above* the input;
+  - the input owns the rest (630 px wide at the default size, and it grows with the splitter: 235 -> 354 px in
+    testing) with the primary **Send** button beside it at the same height;
+  - the repeat controls sit *below* the input and carry a live payload readout ("4 bytes to send", "6 bytes to send"
+    with CRC16-Modbus, "invalid input" when the text does not parse);
+  - the box has a placeholder that explains the HEX syntax, and the file / auto-reply row no longer hosts Send.
+
 ## [v0.6.7] - 2026-10-01
 
 ### Fixed

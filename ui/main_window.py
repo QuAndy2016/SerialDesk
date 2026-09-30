@@ -377,6 +377,25 @@ class MainWindow(QMainWindow):
         self._port_dlg.raise_()
         self._port_dlg.activateWindow()
 
+    def _update_payload_size(self) -> None:
+        """Show how many bytes the current input would send (U74)."""
+        text = self.tx_edit.toPlainText().strip()
+        if not text:
+            self.tx_size_lbl.setText("")
+            return
+        try:
+            if self.tx_fmt_combo.currentIndex() == 0:
+                payload = hex_str_to_bytes(text)
+            else:
+                payload = encode_text(text, self._encoding(), self.escape_check.isChecked())
+        except ValueError:
+            self.tx_size_lbl.setText(tr("tx.payload.bad"))
+            return
+        payload = self._apply_checksum(payload)
+        if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
+            payload += b"\r\n"
+        self.tx_size_lbl.setText(tr("tx.payload", n=len(payload)))
+
     def _update_params_summary(self) -> None:
         """One-line summary of the low-frequency settings (U35-P3)."""
         parity = ["N", "O", "E", "M", "S"][max(0, min(4, self.parity_combo.currentIndex()))]
@@ -502,6 +521,9 @@ class MainWindow(QMainWindow):
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self._repeat_lbl.setText(tr("tx.interval.label"))
+        self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
+        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        self._update_payload_size()
         self._undo_btn.setText(tr("qs.undo"))
         self._undo_btn.setToolTip(tr("qs.deleted"))
         self.split_hint_lbl.setText(
@@ -780,12 +802,10 @@ class MainWindow(QMainWindow):
         hist_row.addWidget(self.history_combo, 1)
         tx_layout.addWidget(_fixed_row(hist_row))   # U70
 
-        tx_row = QHBoxLayout()
-        self.tx_edit = QPlainTextEdit()
-        self.tx_edit.setMaximumHeight(90)
-        tx_row.addWidget(self.tx_edit, 1)
-
-        tx_col = QVBoxLayout()
+        # U74: payload options above, the input owning the middle with the primary
+        # Send button beside it, then the repeat controls and the file row. The old
+        # layout squeezed the input to ~134 px (a control column ate ~83% of the
+        # width) and capped its height at 90 px, so the send area looked like a toy.
         tx_fmt_row = QHBoxLayout()
         self._tx_fmt_lbl = QLabel(tr("txfmt.label"))
         tx_fmt_row.addWidget(self._tx_fmt_lbl)
@@ -800,18 +820,33 @@ class MainWindow(QMainWindow):
         self.escape_check.setChecked(True)
         self.escape_check.setToolTip(tr("tx.escape.tip"))
         tx_fmt_row.addWidget(self.escape_check)
-        self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
-        self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
-        self.tx_edit.textChanged.connect(self._check_hex_input)
-        self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
-        # U35-P1: checksum shares the format row (one row instead of two)
         self._crc_lbl = QLabel(tr("crc.label"))
         tx_fmt_row.addWidget(self._crc_lbl)
         self.checksum_combo = QComboBox()
         self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
         self.checksum_combo.setToolTip(tr("crc.tip"))
         tx_fmt_row.addWidget(self.checksum_combo)
-        tx_col.addWidget(_fixed_row(tx_fmt_row))   # U70
+        tx_fmt_row.addStretch(1)
+        tx_layout.addWidget(_fixed_row(tx_fmt_row))
+        self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
+        self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
+        self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
+
+        tx_row = QHBoxLayout()
+        self.tx_edit = QPlainTextEdit()
+        self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
+        self.tx_edit.setMinimumHeight(60)
+        self.tx_edit.textChanged.connect(self._check_hex_input)
+        tx_row.addWidget(self.tx_edit, 1)
+        self.send_btn = QPushButton(tr("btn.send"))
+        self.send_btn.clicked.connect(self.on_send)
+        self.send_btn.setDefault(True)
+        self.send_btn.setMinimumWidth(110)
+        self.send_btn.setMinimumHeight(60)
+        self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.send_btn.setToolTip(tr("sc.send.tip"))
+        tx_row.addWidget(self.send_btn)
+        tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
 
         repeat_row = QHBoxLayout()
         self.repeat_check = QCheckBox(tr("tx.repeat"))
@@ -829,20 +864,12 @@ class MainWindow(QMainWindow):
         self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
         repeat_row.addWidget(self.sent_lbl)
         repeat_row.addStretch(1)
-        tx_col.addWidget(_fixed_row(repeat_row))   # U70
-        tx_col.addStretch(1)
-        tx_row.addLayout(tx_col)
-        tx_layout.addLayout(tx_row)
+        self.tx_size_lbl = QLabel("")           # U74: bytes that will actually go out
+        self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        repeat_row.addWidget(self.tx_size_lbl)
+        tx_layout.addWidget(_fixed_row(repeat_row))
 
         file_row = QHBoxLayout()
-        # U69: the primary action leads the bottom row - it used to trail a crowded
-        # row, so a narrow window could clip it away entirely.
-        self.send_btn = QPushButton(tr("btn.send"))
-        self.send_btn.clicked.connect(self.on_send)
-        self.send_btn.setDefault(True)
-        self.send_btn.setMinimumWidth(110)
-        self.send_btn.setToolTip(tr("sc.send.tip"))
-        file_row.addWidget(self.send_btn)
         self.send_file_btn = QPushButton(tr("btn.send_file"))
         self.send_file_btn.setToolTip(tr("btn.send_file"))
         self.send_file_btn.clicked.connect(self.on_send_file)
@@ -862,7 +889,7 @@ class MainWindow(QMainWindow):
         self.rules_btn = QPushButton(tr("rb.rules_btn"))
         self.rules_btn.clicked.connect(self._edit_rules)
         file_row.addWidget(self.rules_btn)
-        tx_layout.addWidget(_fixed_row(file_row))   # U70
+        tx_layout.addWidget(_fixed_row(file_row))
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 2)
         tx_group.setMinimumHeight(190)                          # U63
@@ -890,6 +917,15 @@ class MainWindow(QMainWindow):
         root.addWidget(splitter, 1)
 
         # status bar with connection indicator -------------------------------
+        for _sig in (self.tx_edit.textChanged,
+                     self.tx_fmt_combo.currentIndexChanged,
+                     self.checksum_combo.currentIndexChanged,
+                     self.crlf_check.toggled,
+                     self.escape_check.toggled,
+                     self.encoding_combo.currentIndexChanged):
+            _sig.connect(self._update_payload_size)      # U74: live payload size
+        self._update_payload_size()
+
         self.status_light = QLabel(tr("status.disconnected"))
         self.status_light.setStyleSheet(
             f"color: {theme.status_colors()['idle']}; font-weight: bold; padding-right: 8px;")

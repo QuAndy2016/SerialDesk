@@ -226,6 +226,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "十六进制格式：可空格分隔，也支持 0x 前缀与逗号/短横线分隔",
         "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
+    "tx.placeholder": {
+        "zh": "在此输入要发送的内容；HEX 模式如 01 03 00 00（支持 0x 前缀与逗号）",
+        "en": "Type what to send; in HEX mode e.g. 01 03 00 00 (0x prefixes and commas are fine)",
+    },
+    "tx.payload": {"zh": "将发送 {n} 字节", "en": "{n} bytes to send"},
+    "tx.payload.bad": {"zh": "内容格式有误", "en": "invalid input"},
+    "tx.payload.tip": {
+        "zh": "按当前格式、校验与换行设置计算的实际发送字节数",
+        "en": "Actual bytes sent, with the current format, checksum and CRLF settings applied",
+    },
     "tx.escape": {"zh": "解析转义符", "en": "Parse escapes"},
     "tx.escape.tip": {
         "zh": "勾选时 \\r \\n \\t \\xNN 会被解释为控制字符；取消勾选则按字面发送",
