@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.4.16] - 2026-09-30
+
+### Fixed
+
+- **The non-collapsible flags added in v0.4.15 were set too early (U63)**: `setCollapsible()` was called
+  before the panes were added, so Qt ignored it ("index out of range") and the splitters still reported their
+  children as collapsible. The flags now go on after both panes exist, and the guard is asserted in testing:
+  no matter how far a divider is dragged, the receive pane keeps >= 170 px, the send pane >= 190 px, the left
+  column >= 360 px and the quick-send column >= 300 px, so a pane can never vanish or look "swapped".
+
 ## [v0.4.15] - 2026-09-30
 
 ### Fixed

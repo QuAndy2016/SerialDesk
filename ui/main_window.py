@@ -614,8 +614,6 @@ class MainWindow(QMainWindow):
         rx_layout.addWidget(self.rx_view)
         self._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
         self._v_splitter.setChildrenCollapsible(False)          # U63: never collapse a pane
-        self._v_splitter.setCollapsible(0, False)
-        self._v_splitter.setCollapsible(1, False)
         self._v_splitter.addWidget(rx_group)
         self._v_splitter.setStretchFactor(0, 3)
         rx_group.setMinimumHeight(170)                          # U63: keep both panes usable
@@ -719,6 +717,8 @@ class MainWindow(QMainWindow):
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 2)
         tx_group.setMinimumHeight(190)                          # U63
+        self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
+        self._v_splitter.setCollapsible(1, False)   #      the panes are added
         self._v_splitter.setSizes(self._saved_sizes("v_split_sizes", [420, 260]))
         left_layout.addWidget(self._v_splitter, 1)
 
@@ -731,10 +731,10 @@ class MainWindow(QMainWindow):
         self.quick_panel.error.connect(lambda m: self._notify(m, "error"))
         self.quick_panel.deleted.connect(self._on_row_deleted)
         splitter.addWidget(self.quick_panel)
+        splitter.setCollapsible(0, False)           # U63: same, after the panes exist
+        splitter.setCollapsible(1, False)
         self._splitter = splitter
         splitter.setChildrenCollapsible(False)                  # U63: no zero-width panes
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
         left.setMinimumWidth(360)
         splitter.setSizes(self._saved_sizes("split_sizes", [820, 340]))
 
