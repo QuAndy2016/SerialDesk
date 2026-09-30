@@ -83,7 +83,7 @@ class QuickSendPanel(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setMinimumWidth(300)   # U47: let the splitter decide the width
+        scroll.setMinimumWidth(332)   # U69: rows need ~318px or the buttons clip
         self._container = QWidget()
         self._row_layout = QVBoxLayout(self._container)
         self._row_layout.setContentsMargins(0, 0, 0, 0)

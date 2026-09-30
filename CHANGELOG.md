@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.6.2] - 2026-10-01
+
+### Fixed
+
+- **The Send button could disappear (U69)**: it trailed the crowded repeat-send row, so a narrow left column
+  (splitter dragged, smaller window) could clip it out of view entirely - the button was there but pushed past
+  the visible edge. The primary Send button now leads the bottom row (Send | Send file | progress | auto-reply |
+  rules), is 110 px wide, and is verified visible even with the left column squeezed to 520 px. The send-history
+  dropdown minimum dropped from 200 to 130 px, and the quick-send column now asks for at least 332 px, so its
+  per-row buttons cannot be clipped either.
+
 ## [v0.6.1] - 2026-10-01
 
 ### Added
