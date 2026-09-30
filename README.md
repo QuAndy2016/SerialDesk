@@ -119,6 +119,16 @@ assets/                  # logo, donation QR, arrow icons
 tests/                   # unit tests
 ```
 
+## 致谢
+
+这个项目站在开源社区的肩膀上：
+
+- **PySide6 / Qt** —— 跨平台界面框架
+- **pySerial** —— 串口通信底座
+- **PyInstaller** —— Windows 打包
+
+也要感谢互联网上公开分享串口调试经验、界面设计规范与踩坑记录的人：这些公开的指南、文档与讨论，塑造了这个工具的功能取舍与交互细节。
+
 ## 参与贡献
 
 Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issue 描述你的场景即可。
@@ -236,6 +246,16 @@ Run tests:
 ```bash
 pytest tests/ -v
 ```
+
+### Acknowledgements
+
+This project stands on the shoulders of the open-source community:
+
+- **PySide6 / Qt** - cross-platform UI framework
+- **pySerial** - the serial communication layer
+- **PyInstaller** - Windows packaging
+
+And thanks to everyone who shares serial-debugging experience, interface design guidelines and lessons learned openly on the internet: those public guides, docs and discussions shaped how this tool behaves.
 
 ### Contributing
 
