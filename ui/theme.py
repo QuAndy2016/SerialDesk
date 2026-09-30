@@ -187,6 +187,16 @@ def apply_theme(app: QApplication, dark: bool | None = None) -> bool:
     return dark
 
 
+def text_color() -> str:
+    """Default text colour of the receive pane for the effective theme."""
+    return "#e0e0e0" if resolved_dark() else "#111111"
+
+
+def tx_color() -> str:
+    """Colour used to highlight echoed TX lines (blue/cyan, never red)."""
+    return "#8be9fd" if resolved_dark() else "#1e5aa8"
+
+
 def watch_system_theme(app: QApplication, callback) -> None:
     """Notify callback(dark: bool) when OS theme changes, unless overridden.
 

@@ -73,6 +73,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Timestamp format at the start of each line\nHH:MM:SS.mmm is handy for shell debugging",
     },
     "btn.clear": {"zh": "清空", "en": "Clear"},
+    "rx.echo_tx": {"zh": "显示发送", "en": "Echo TX"},
+    "rx.echo_tx.tip": {
+        "zh": "在接收区回显发送的数据：TX 行以 -> 标记并染色，RX 行以 <- 标记，两者等宽不会打乱 HEX 对齐；取消勾选则只显示接收数据",
+        "en": "Echo sent data into the receive pane: TX lines are marked with -> and coloured, RX lines with <-; equal-width markers keep HEX columns aligned. Untick to show received data only",
+    },
     # ---- receive log to file (T4) ----
     "btn.save_log": {"zh": "保存日志", "en": "Save log"},
     "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},

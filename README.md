@@ -54,6 +54,7 @@ SerialDesk (串口台) — a clean, capable, cross-platform serial debugging too
 - **完整串口参数** —— 数据位 5~8 / 停止位 1·1.5·2 / 校验 无·奇·偶·Mark·Space / 流控 无·软件·硬件（打开端口时生效）
 - **定时循环发送** —— 10~60000 ms 间隔自动重复，带已发送计数，关串口自动停
 - **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
+- **收发同屏** —— 接收区回显发送数据：TX 行 `->` 标记并染色、RX 行 `<-` 标记，等宽标记不打乱 HEX 对齐，可一键关闭
 - **接收日志保存** —— 接收区上方独立工具条：一键存到 logs/（状态栏给出路径）、另存为…、自动保存（2 MB 或 30 分钟分段）
 - **发送历史** —— 最近 50 条自动记录、去重、持久化，下拉选中即回填
 - **发送文件** —— 文本 / HEX / 二进制文件按 4 KB 分块发送，带进度条与预计耗时，可中途取消
@@ -196,6 +197,7 @@ Packaging has moved from onefile to onedir, which greatly reduces false positive
 - **Full serial parameters** — data bits 5-8 / stop bits 1, 1.5, 2 / parity none-odd-even-mark-space / flow none, XON/XOFF, RTS/CTS (applied when the port opens)
 - **Repeat send** — auto-repeat at 10-60000 ms with a sent counter, stops when the port closes
 - **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
+- **TX echo** — sent data mirrored into the receive pane: TX lines marked `->` and coloured, RX lines `<-`, equal-width markers keep HEX columns aligned, one click to turn off
 - **Receive log to file** — its own toolbar above the pane: one-click save into logs/ (path shown in the status bar), Save as…, and auto-save (segmented at 2 MB / 30 minutes)
 - **Send history** — the last 50 commands, deduplicated and persisted; pick one to refill
 - **File send** — text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel

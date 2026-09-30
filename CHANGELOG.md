@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.4] - 2026-09-30
+
+### Added
+
+- **TX echo in the receive pane (U26)**: sent data is now mirrored into the receive pane so RX and TX
+  share one timeline. Direction is shown twice over — a colour (TX blue in light theme, cyan in dark,
+  never red) and an equal-width ASCII marker placed *after* the timestamp (`<- ` for RX, `-> ` for TX),
+  which keeps HEX columns aligned and does not touch the data itself. Controlled by a "显示发送 / Echo TX"
+  checkbox in the receive toolbar (on by default); file transfers and auto-replies do not echo so the log
+  cannot be flooded, and echoed lines are still written to the auto-save log.
+
 ## [v0.4.3] - 2026-09-30
 
 ### Added

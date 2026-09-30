@@ -10,7 +10,7 @@ import time
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtGui import QAction, QActionGroup, QColor, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -91,6 +91,8 @@ HISTORY_MAX = 50
 LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
 LOG_MAX_BYTES = 2 * 1024 * 1024
 LOG_MAX_SECONDS = 30 * 60
+MARK_RX = "<- "          # direction markers, ASCII so monospace stays aligned (U26)
+MARK_TX = "-> "
 FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
 FILE_CHUNK_MS = 20          # interval between chunks
 
@@ -283,6 +285,8 @@ class MainWindow(QMainWindow):
                                     else tr("btn.send_file"))
         self.send_file_btn.setToolTip(tr("btn.send_file"))
         self.autosave_check.setText(tr("log.autosave"))
+        self.echo_tx_check.setText(tr("rx.echo_tx"))
+        self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self._dbit_lbl.setText(tr("params.databits"))
         self._parity_lbl.setText(tr("params.parity"))
@@ -498,6 +502,11 @@ class MainWindow(QMainWindow):
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
         self.autosave_check.toggled.connect(self._on_autosave_toggled)
         toolbar.addWidget(self.autosave_check)
+
+        self.echo_tx_check = QCheckBox(tr("rx.echo_tx"))
+        self.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
+        self.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
+        toolbar.addWidget(self.echo_tx_check)
 
         self.clear_btn = QPushButton(tr("btn.clear"))
         self.clear_btn.clicked.connect(self.on_clear)
@@ -935,10 +944,25 @@ class MainWindow(QMainWindow):
 
     # -- quick helpers --------------------------------------------------------
 
-    def _emit_rx_text(self, text: str) -> None:
-        """Insert text into the receive pane and mirror it to the auto-save log."""
-        self.rx_view.insertPlainText(text)
+    def _emit_rx_text(self, text: str, tx: bool = False) -> None:
+        """Insert text into the receive pane (coloured by direction) and mirror it to the log."""
+        cursor = self.rx_view.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        fmt = QTextCharFormat()
+        fmt.setForeground(QColor(theme.tx_color() if tx else theme.text_color()))
+        cursor.insertText(text, fmt)
         self._log_append(text)
+
+    def _echo_tx(self, data: bytes) -> None:
+        """Mirror sent bytes into the receive pane as a '->' line (U26)."""
+        if not self.echo_tx_check.isChecked() or self._file_timer.isActive():
+            return
+        if self.rx_view.document().characterCount() > 1:
+            self._emit_rx_text("\n", tx=True)
+        self._emit_rx_text(self._ts_prefix(time.monotonic()) + MARK_TX, tx=True)
+        self._emit_rx_text(self._format_rx(data), tx=True)
+        bar = self.rx_view.verticalScrollBar()
+        bar.setValue(bar.maximum())
 
     def _on_history_pick(self, index: int):
         text = self.history_combo.itemText(index)
@@ -1132,6 +1156,7 @@ class MainWindow(QMainWindow):
         if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
             payload += b"\r\n"
         self.worker.send(payload)
+        self._echo_tx(payload)
         self.tx_bytes += len(payload)
         self._sent_count += 1
         self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
@@ -1141,6 +1166,7 @@ class MainWindow(QMainWindow):
     def on_quick_send(self, payload: bytes):
         payload = self._apply_checksum(payload)
         self.worker.send(payload)
+        self._echo_tx(payload)
         self.tx_bytes += len(payload)
         self.update_counts()
 
@@ -1169,11 +1195,9 @@ class MainWindow(QMainWindow):
 
         has_text = self.rx_view.document().characterCount() > 1
         if new_line:
-            prefix = self._ts_prefix(ts)
             if has_text:
                 self._emit_rx_text("\n")
-            if prefix:
-                self._emit_rx_text(prefix)
+            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
         self._emit_rx_text(text)
 
         sb = self.rx_view.verticalScrollBar()
@@ -1200,7 +1224,7 @@ class MainWindow(QMainWindow):
                 continue  # adjacent headers, frame with empty body
             if self.rx_view.document().characterCount() > 1:
                 self._emit_rx_text("\n")
-            self._emit_rx_text(self._ts_prefix(ts))
+            self._emit_rx_text(self._ts_prefix(ts) + MARK_RX)
             self._emit_rx_text(self._format_rx(header_b + seg))
 
         sb = self.rx_view.verticalScrollBar()
