@@ -418,7 +418,10 @@ class MainWindow(QMainWindow):
             return
         self._apply_defaults()
         save_config({"language": "system", "theme": "system"})
-        self._notify(tr("cfg.reset.done", path=backup or "-"), "info", ms=8000)
+        # the full path is long enough to crowd the status bar, so it lives in the
+        # tooltip while the message stays short (U82)
+        self.statusBar().setToolTip(tr("cfg.reset.done.tip", path=backup or "-"))
+        self._notify(tr("cfg.reset.done"), "info", ms=8000)
 
     def _apply_defaults(self) -> None:
         """Put every user-facing option back to its default value (U76)."""
@@ -437,8 +440,11 @@ class MainWindow(QMainWindow):
         self.auto_reply_check.setChecked(False)
         self._sent_count = 0
         self.sent_lbl.setText(tr("tx.sent_count", n=0))
-        self._splitter.setSizes(list(DATA_FIRST_H))
-        self._v_splitter.setSizes(list(DATA_FIRST_V))
+        # U82: restoring defaults must also restore the data-first proportions, and
+        # they are re-measured so a maximised window gives the log every spare pixel
+        self._custom_split_sizes = False
+        self._split_room_done = True
+        QTimer.singleShot(0, self._give_data_area_the_room)
         self.quick_panel.reload_from_config()   # seeds the default rows when config is gone
         self._update_params_summary()
 

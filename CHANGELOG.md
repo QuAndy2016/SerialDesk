@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.6.16] - 2026-10-01
+
+### Fixed
+
+- **Restoring the defaults restores the data-first layout too (U82)**: "restore defaults" used to write fixed splitter
+  numbers, so on a maximised window the proportions were scaled up instead of being re-measured - the log pane ended
+  up far smaller than it needed to be. It now re-applies the data-first rule at the current window size: at 1920x1040
+  the receive pane takes 79% of the height (a 617 px tall log view) and the left column 81% of the width, with the
+  quick-send column back at its minimum width.
+- **The restore message no longer crowds the status bar**: it reads "Defaults restored (the previous config was
+  backed up)" and the full backup path moved into the status bar tooltip, so a long Windows path cannot push the
+  RX/TX counters around at small window widths.
+
 ## [v0.6.15] - 2026-10-01
 
 ### Fixed
