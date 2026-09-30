@@ -329,16 +329,19 @@ class MainWindow(QMainWindow):
     def _set_theme_system(self):
         theme.set_override(None)
         theme.apply_theme(QApplication.instance())
+        self._recolor_rx_view()
         self._persist_theme("system")
 
     def _set_theme_dark(self):
         theme.set_override(True)
         theme.apply_theme(QApplication.instance())
+        self._recolor_rx_view()
         self._persist_theme("dark")
 
     def _set_theme_light(self):
         theme.set_override(False)
         theme.apply_theme(QApplication.instance())
+        self._recolor_rx_view()
         self._persist_theme("light")
 
     def _persist_theme(self, choice: str):
@@ -581,7 +584,7 @@ class MainWindow(QMainWindow):
         self.repeat_ms.setValue(1000)
         self.repeat_ms.setSingleStep(100)
         self.repeat_ms.setSuffix(" ms")
-        self.repeat_ms.setMaximumWidth(96)
+        self.repeat_ms.setMaximumWidth(112)
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.repeat_ms.valueChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
@@ -701,6 +704,7 @@ class MainWindow(QMainWindow):
         else:
             theme.set_override(None)
         theme.apply_theme(QApplication.instance())
+        self._recolor_rx_view()
         {"dark": self._theme_dark, "light": self._theme_light}.get(
             choice, self._theme_system).setChecked(True)
 
@@ -759,6 +763,30 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage(tr("rb.sent", n=len(reply)), 3000)
                 self._reply_buf = b""
                 break
+
+    def _recolor_rx_view(self) -> None:
+        """Re-apply theme colours to already-displayed lines (U27).
+
+        Text inserted under one theme keeps the colour it was given, which turns
+        black-on-dark (or worse) after a theme switch, so re-colour the document.
+        """
+        doc = self.rx_view.document()
+        cursor = QTextCursor(doc)
+        block = doc.begin()
+        while block.isValid():
+            is_tx = "-> " in block.text()[:34]        # our TX marker, inside the prefix
+            it = block.begin()
+            while not it.atEnd():
+                frag = it.fragment()
+                if frag.isValid():
+                    fmt = frag.charFormat()
+                    fmt.setForeground(QColor(theme.tx_color() if is_tx else theme.text_color()))
+                    cursor.setPosition(frag.position())
+                    cursor.setPosition(frag.position() + frag.length(),
+                                       QTextCursor.MoveMode.KeepAnchor)
+                    cursor.setCharFormat(fmt)
+                it += 1
+            block = block.next()
 
     # -- modem status lines (T9) ---------------------------------------------
 

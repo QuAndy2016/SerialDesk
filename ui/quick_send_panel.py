@@ -120,7 +120,7 @@ class QuickSendPanel(QWidget):
         delay.setValue(max(0, int(delay_ms)))
         delay.setSingleStep(100)
         delay.setSuffix(" ms")
-        delay.setMaximumWidth(84)
+        delay.setMaximumWidth(104)
         delay.setToolTip(tr("qs.delay.tip"))
         h.addWidget(delay)
 

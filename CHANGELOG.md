@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.4.5] - 2026-09-30
+
+### Fixed
+
+- **Theme switch left old text in the previous theme's colours (U27)**: lines inserted while the light
+  theme was active kept near-black / dark-blue colours, so after switching to dark the RX lines became
+  almost invisible and the TX lines were washed out. The receive pane is now re-coloured whenever the
+  theme changes (per-line, TX lines detected by their `-> ` marker).
+- **Spin boxes were unstyled (U28)**: the sequence delay and repeat-interval `QSpinBox` widgets fell back
+  to the system palette (pale grey with grey text in the dark theme). Both themes now style `QSpinBox`
+  (background, border, hover) and ship their own up/down arrow icons; the boxes were also widened so the
+  " ms" suffix is no longer clipped.
+
 ## [v0.4.4] - 2026-09-30
 
 ### Added
