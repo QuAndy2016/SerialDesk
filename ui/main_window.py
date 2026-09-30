@@ -37,6 +37,8 @@ from app.config import load_config, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.quick_send_panel import QuickSendPanel
+from app import i18n
+from app.i18n import tr
 
 def resource_path(rel: str) -> str:
     """Resolve resource path; works in source and PyInstaller bundle."""
@@ -89,6 +91,9 @@ class MainWindow(QMainWindow):
         self._last_ts: float | None = None
         self._clock_offset = time.time() - time.monotonic()
 
+        # initial language from config (default: follow system)
+        i18n.set_language(str(load_config().get("language", "system")))
+
         self._build_ui()
         self._build_menu()
 
@@ -109,15 +114,16 @@ class MainWindow(QMainWindow):
     # -- UI -----------------------------------------------------------------
 
     def _build_menu(self):
-        view_menu = self.menuBar().addMenu("视图")
+        self._view_menu = self.menuBar().addMenu(tr("menu.view"))
+        view_menu = self._view_menu
         self._theme_group = QActionGroup(self)
         self._theme_group.setExclusive(True)
 
         choice = load_config().get("theme", "system")
 
-        self._theme_system = QAction("跟随系统", self, checkable=True)
-        self._theme_dark = QAction("深色", self, checkable=True)
-        self._theme_light = QAction("浅色", self, checkable=True)
+        self._theme_system = QAction(tr("theme.system"), self, checkable=True)
+        self._theme_dark = QAction(tr("theme.dark"), self, checkable=True)
+        self._theme_light = QAction(tr("theme.light"), self, checkable=True)
 
         for act in (self._theme_system, self._theme_dark, self._theme_light):
             self._theme_group.addAction(act)
@@ -133,6 +139,83 @@ class MainWindow(QMainWindow):
         self._theme_system.triggered.connect(self._set_theme_system)
         self._theme_dark.triggered.connect(self._set_theme_dark)
         self._theme_light.triggered.connect(self._set_theme_light)
+
+        # language submenu (U19)
+        view_menu.addSeparator()
+        self._lang_menu = view_menu.addMenu(tr("menu.language"))
+        self._lang_group = QActionGroup(self)
+        self._lang_group.setExclusive(True)
+        self._lang_system = QAction(tr("lang.system"), self, checkable=True)
+        self._lang_zh = QAction(tr("lang.zh"), self, checkable=True)
+        self._lang_en = QAction(tr("lang.en"), self, checkable=True)
+        for act in (self._lang_system, self._lang_zh, self._lang_en):
+            self._lang_group.addAction(act)
+            self._lang_menu.addAction(act)
+        lang_now = i18n.get_language()
+        {"zh": self._lang_zh, "en": self._lang_en}.get(lang_now, self._lang_system).setChecked(True)
+        self._lang_system.triggered.connect(lambda: self._set_language("system"))
+        self._lang_zh.triggered.connect(lambda: self._set_language("zh"))
+        self._lang_en.triggered.connect(lambda: self._set_language("en"))
+
+    def _set_language(self, lang: str):
+        """Switch UI language, persist the choice, rebuild every visible string."""
+        i18n.set_language(lang)
+        config = load_config()
+        config["language"] = lang
+        save_config(config)
+        self.retranslate()
+
+    def _reload_combo(self, combo, items):
+        """Repopulate a combo box while keeping the current selection."""
+        idx = combo.currentIndex()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItems(items)
+        combo.setCurrentIndex(min(max(idx, 0), len(items) - 1))
+        combo.blockSignals(False)
+
+    def retranslate(self):
+        """Re-apply every translated string (called after a language change)."""
+        self._view_menu.setTitle(tr("menu.view"))
+        self._lang_menu.setTitle(tr("menu.language"))
+        self._theme_system.setText(tr("theme.system"))
+        self._theme_dark.setText(tr("theme.dark"))
+        self._theme_light.setText(tr("theme.light"))
+        self._lang_system.setText(tr("lang.system"))
+        self.refresh_btn.setText(tr("port.refresh"))
+        self.baud_combo.setToolTip(tr("baud.tip"))
+        self.open_btn.setText(tr("port.close") if self.worker.is_open() else tr("port.open"))
+        self._rx_fmt_lbl.setText(tr("rxfmt.label"))
+        self.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
+        self._rx_group.setTitle(tr("group.rx"))
+        self._split_lbl.setText(tr("split.label"))
+        self._reload_combo(self.split_combo, [
+            tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header")])
+        self.split_combo.setToolTip(tr("split.tip"))
+        self.split_ms_edit.setToolTip(tr("split.ms.tip"))
+        self.header_edit.setPlaceholderText(tr("header.placeholder"))
+        self.header_edit.setToolTip(tr("header.tip"))
+        self._ts_lbl.setText(tr("ts.label"))
+        self._reload_combo(self.ts_combo, [
+            tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
+        self.ts_combo.setToolTip(tr("ts.tip"))
+        self.clear_btn.setText(tr("btn.clear"))
+        self._tx_group.setTitle(tr("group.tx"))
+        self._tx_fmt_lbl.setText(tr("txfmt.label"))
+        self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
+        self._crc_lbl.setText(tr("crc.label"))
+        self._reload_combo(self.checksum_combo, [
+            tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
+        self.checksum_combo.setToolTip(tr("crc.tip"))
+        self.send_btn.setText(tr("btn.send"))
+        self.quick_panel.retranslate()
+        self.statusBar().showMessage(tr("status.opened") if self.worker.is_open() else tr("status.idle"))
+        if self.worker.is_open():
+            port = self.port_combo.currentData() or ""
+            baud = self.baud_combo.currentText().strip()
+            self.status_light.setText(tr("status.connected", port=port, baud=baud))
+        else:
+            self.status_light.setText(tr("status.disconnected"))
 
     def _set_theme_system(self):
         theme.set_override(None)
@@ -165,7 +248,7 @@ class MainWindow(QMainWindow):
         self.port_combo.setMinimumWidth(220)
         bar.addWidget(self.port_combo)
 
-        self.refresh_btn = QPushButton("刷新")
+        self.refresh_btn = QPushButton(tr("port.refresh"))
         self.refresh_btn.clicked.connect(self.refresh_ports)
         bar.addWidget(self.refresh_btn)
 
@@ -174,20 +257,21 @@ class MainWindow(QMainWindow):
         self.baud_combo.addItems([str(b) for b in BAUDRATES])
         self.baud_combo.setEditable(True)
         self.baud_combo.setCurrentText("115200")
-        self.baud_combo.setToolTip("可直接输入自定义波特率（如 1000000），或点右侧箭头选择 26 档预设")
+        self.baud_combo.setToolTip(tr("baud.tip"))
         self.baud_combo.lineEdit().textChanged.connect(self._check_baud)
         bar.addWidget(self.baud_combo)
 
-        self.open_btn = QPushButton("打开")
+        self.open_btn = QPushButton(tr("port.open"))
         self.open_btn.clicked.connect(self.toggle_open)
         bar.addWidget(self.open_btn)
 
         bar.addSpacing(12)
-        bar.addWidget(QLabel("接收格式:"))
+        self._rx_fmt_lbl = QLabel(tr("rxfmt.label"))
+        bar.addWidget(self._rx_fmt_lbl)
         self.rx_fmt_combo = QComboBox()
         self.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII"])
         self.rx_fmt_combo.setCurrentIndex(RX_HEX)
-        self.rx_fmt_combo.setToolTip("接收显示格式\nASCII：字符显示\nHEX：十六进制显示\nHEX+ASCII：两者对照")
+        self.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
         bar.addWidget(self.rx_fmt_combo)
 
         bar.addStretch(1)
@@ -200,41 +284,44 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left)
 
         # receive group -----------------------------------------------------
-        rx_group = QGroupBox("接收")
+        self._rx_group = QGroupBox(tr("group.rx"))
+        rx_group = self._rx_group
         rx_layout = QVBoxLayout(rx_group)
 
         rx_opts = QHBoxLayout()
-        rx_opts.addWidget(QLabel("分包:"))
+        self._split_lbl = QLabel(tr("split.label"))
+        rx_opts.addWidget(self._split_lbl)
         self.split_combo = QComboBox()
-        self.split_combo.addItems(["不分包", "自动(按波特率)", "手动(ms)", "按帧头"])
+        self.split_combo.addItems([tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header")])
         self.split_combo.setCurrentIndex(SPLIT_AUTO)
-        self.split_combo.setToolTip("分包分行方式\n自动：按波特率 3.5 字符时间\n手动：指定毫秒间隔\n按帧头：识别帧头字符串分行")
+        self.split_combo.setToolTip(tr("split.tip"))
         self.split_combo.currentIndexChanged.connect(self._on_split_mode_changed)
         rx_opts.addWidget(self.split_combo)
 
         self.split_ms_edit = QLineEdit("10")
         self.split_ms_edit.setMaximumWidth(52)
-        self.split_ms_edit.setToolTip("手动分包间隔（毫秒）")
+        self.split_ms_edit.setToolTip(tr("split.ms.tip"))
         self.split_ms_edit.setEnabled(False)
         rx_opts.addWidget(self.split_ms_edit)
 
         self.header_edit = QLineEdit("fw:")
         self.header_edit.setMaximumWidth(90)
-        self.header_edit.setPlaceholderText("帧头如 fw:")
-        self.header_edit.setToolTip("按帧头分包的帧头字符串\n填写后自动切换为按帧头模式")
+        self.header_edit.setPlaceholderText(tr("header.placeholder"))
+        self.header_edit.setToolTip(tr("header.tip"))
         self.header_edit.setEnabled(False)
         self.header_edit.textChanged.connect(self._on_header_changed)
         rx_opts.addWidget(self.header_edit)
 
-        rx_opts.addWidget(QLabel("时间戳:"))
+        self._ts_lbl = QLabel(tr("ts.label"))
+        rx_opts.addWidget(self._ts_lbl)
         self.ts_combo = QComboBox()
-        self.ts_combo.addItems(["不显示", "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
+        self.ts_combo.addItems([tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
         self.ts_combo.setCurrentIndex(TS_HMS_MS)
-        self.ts_combo.setToolTip("行首时间戳格式\n建议 SHELL 调试用 HH:MM:SS.mmm")
+        self.ts_combo.setToolTip(tr("ts.tip"))
         rx_opts.addWidget(self.ts_combo)
 
         rx_opts.addStretch(1)
-        self.clear_btn = QPushButton("清空")
+        self.clear_btn = QPushButton(tr("btn.clear"))
         self.clear_btn.clicked.connect(self.on_clear)
         rx_opts.addWidget(self.clear_btn)
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
@@ -248,7 +335,8 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(rx_group, 3)
 
         # send group ----------------------------------------------------------
-        tx_group = QGroupBox("发送")
+        self._tx_group = QGroupBox(tr("group.tx"))
+        tx_group = self._tx_group
         tx_layout = QVBoxLayout(tx_group)
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
@@ -257,22 +345,24 @@ class MainWindow(QMainWindow):
 
         tx_col = QVBoxLayout()
         tx_fmt_row = QHBoxLayout()
-        tx_fmt_row.addWidget(QLabel("格式:"))
+        self._tx_fmt_lbl = QLabel(tr("txfmt.label"))
+        tx_fmt_row.addWidget(self._tx_fmt_lbl)
         self.tx_fmt_combo = QComboBox()
         self.tx_fmt_combo.addItems(["HEX", "ASCII"])
-        self.tx_fmt_combo.setToolTip("发送格式\nHEX：十六进制数据\nASCII：文本（支持 \r\n 转义）")
+        self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
         tx_fmt_row.addWidget(self.tx_fmt_combo)
         tx_col.addLayout(tx_fmt_row)
 
         crc_row = QHBoxLayout()
-        crc_row.addWidget(QLabel("校验:"))
+        self._crc_lbl = QLabel(tr("crc.label"))
+        crc_row.addWidget(self._crc_lbl)
         self.checksum_combo = QComboBox()
-        self.checksum_combo.addItems(["无", "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
-        self.checksum_combo.setToolTip("发送时自动追加的校验\nCRC16-Modbus：低字节在前（Modbus RTU）\nCRC16-CCITT：高字节在前\nCRC32：4 字节大端\nSUM8：单字节累加和")
+        self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
+        self.checksum_combo.setToolTip(tr("crc.tip"))
         crc_row.addWidget(self.checksum_combo)
         tx_col.addLayout(crc_row)
 
-        self.send_btn = QPushButton("发送")
+        self.send_btn = QPushButton(tr("btn.send"))
         self.send_btn.clicked.connect(self.on_send)
         self.send_btn.setDefault(True)
         tx_col.addWidget(self.send_btn)
@@ -293,10 +383,10 @@ class MainWindow(QMainWindow):
         root.addWidget(splitter, 1)
 
         # status bar with connection indicator -------------------------------
-        self.status_light = QLabel("● 未连接")
+        self.status_light = QLabel(tr("status.disconnected"))
         self.status_light.setStyleSheet("color: #999999; font-weight: bold; padding-right: 8px;")
         self.statusBar().addPermanentWidget(self.status_light)
-        self.statusBar().showMessage("未打开串口")
+        self.statusBar().showMessage(tr("status.idle"))
         self.setCentralWidget(central)
 
     # -- helpers ---------------------------------------------------------------
@@ -368,16 +458,16 @@ class MainWindow(QMainWindow):
     def toggle_open(self):
         if self.worker.is_open():
             self.worker.close_port()
-            self.open_btn.setText("打开")
+            self.open_btn.setText(tr("port.open"))
         else:
             if self.port_combo.count() == 0:
-                self.statusBar().showMessage("未发现串口")
+                self.statusBar().showMessage(tr("status.no_port"))
                 return
             device = self.port_combo.currentData()
             try:
                 baud = int(self.baud_combo.currentText().strip())
             except ValueError:
-                self.statusBar().showMessage("波特率格式错误", 5000)
+                self.statusBar().showMessage(tr("status.bad_baud"), 5000)
                 return
             ok = self.worker.open_port(device, baud)
             if ok:
@@ -385,19 +475,19 @@ class MainWindow(QMainWindow):
 
     def on_opened_changed(self, opened: bool):
         if opened:
-            self.open_btn.setText("关闭")
+            self.open_btn.setText(tr("port.close"))
             port = self.port_combo.currentData() or ""
             baud = self.baud_combo.currentText().strip()
-            self.status_light.setText(f"● 已连接 {port} @ {baud}")
+            self.status_light.setText(tr("status.connected", port=port, baud=baud))
             self.status_light.setStyleSheet("color: #2ecc40; font-weight: bold; padding-right: 8px;")
-            self.statusBar().showMessage("串口已打开")
+            self.statusBar().showMessage(tr("status.opened"))
         else:
-            self.open_btn.setText("打开")
-            self.status_light.setText("● 未连接")
+            self.open_btn.setText(tr("port.open"))
+            self.status_light.setText(tr("status.disconnected"))
             self.status_light.setStyleSheet("color: #ff4136; font-weight: bold; padding-right: 8px;")
             self.refresh_timer.start()
             if not self.worker.is_open():
-                self.statusBar().showMessage("串口已关闭")
+                self.statusBar().showMessage(tr("status.closed"))
 
     def _check_baud(self, text: str) -> None:
         """Mark the baud box invalid (red border) when the typed value is not usable."""
@@ -422,7 +512,7 @@ class MainWindow(QMainWindow):
             else:
                 payload = ascii_str_to_bytes(text)
         except ValueError as exc:
-            self.on_log_line(f"发送内容错误: {exc}")
+            self.on_log_line(tr("log.send_error", e=exc))
             return
         payload = self._apply_checksum(payload)
         self.worker.send(payload)

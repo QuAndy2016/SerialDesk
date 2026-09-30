@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
 from app.protocol import ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
@@ -47,7 +48,8 @@ class QuickSendPanel(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
 
         head = QHBoxLayout()
-        head.addWidget(QLabel("快速发送"))
+        self._title_lbl = QLabel(tr("qs.title"))
+        head.addWidget(self._title_lbl)
         head.addStretch(1)
         self.count_label = QLabel("0/99")
         head.addWidget(self.count_label)
@@ -65,8 +67,8 @@ class QuickSendPanel(QWidget):
         scroll.setWidget(self._container)
         layout.addWidget(scroll, 1)
 
-        self.add_btn = QPushButton("+ 添加指令")
-        self.add_btn.setToolTip(f"添加一条快速指令（最多 {MAX_ENTRIES} 条）")
+        self.add_btn = QPushButton(tr("qs.add"))
+        self.add_btn.setToolTip(tr("qs.add.tip", n=MAX_ENTRIES))
         self.add_btn.clicked.connect(lambda: self.add_row())
         layout.addWidget(self.add_btn)
 
@@ -74,14 +76,14 @@ class QuickSendPanel(QWidget):
 
     def add_row(self, text: str = "", is_hex: bool = True):
         if len(self._rows) >= MAX_ENTRIES:
-            self.log.emit(f"最多支持 {MAX_ENTRIES} 条指令")
+            self.log.emit(tr("qs.max", n=MAX_ENTRIES))
             return
         row = QWidget()
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)
 
         edit = QLineEdit(text)
-        edit.setPlaceholderText("指令内容")
+        edit.setPlaceholderText(tr("qs.placeholder"))
         h.addWidget(edit, 1)
 
         fmt = QComboBox()
@@ -89,7 +91,7 @@ class QuickSendPanel(QWidget):
         fmt.setCurrentIndex(0 if is_hex else 1)
         h.addWidget(fmt)
 
-        send = QPushButton("发送")
+        send = QPushButton(tr("qs.send"))
         send.setMinimumWidth(52)
         send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
         send.clicked.connect(lambda: self._send_row(row))
@@ -98,12 +100,12 @@ class QuickSendPanel(QWidget):
         dele = QPushButton("×")
         dele.setFixedWidth(28)
         dele.setStyleSheet("padding: 0px;")  # key fix: global padding 5px 14px ate the 28px width
-        dele.setToolTip("删除此条")
+        dele.setToolTip(tr("qs.delete.tip"))
         dele.clicked.connect(lambda: self._delete_row(row))
         h.addWidget(dele)
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
-        self._rows.append({"widget": row, "edit": edit, "fmt": fmt})
+        self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send, "del": dele})
         self._update_count()
 
     def _send_row(self, row: QWidget):
@@ -112,7 +114,7 @@ class QuickSendPanel(QWidget):
             return
         text = entry["edit"].text().strip()
         if not text:
-            self.log.emit("指令内容为空")
+            self.log.emit(tr("qs.empty"))
             return
         try:
             if entry["fmt"].currentIndex() == 0:
@@ -120,7 +122,7 @@ class QuickSendPanel(QWidget):
             else:
                 payload = ascii_str_to_bytes(text)
         except ValueError as exc:
-            self.log.emit(f"指令格式错误: {exc}")
+            self.log.emit(tr("qs.bad_fmt", e=exc))
             return
         self.send_payload.emit(payload)
 
@@ -140,6 +142,16 @@ class QuickSendPanel(QWidget):
 
     def _update_count(self):
         self.count_label.setText(f"{len(self._rows)}/{MAX_ENTRIES}")
+
+    def retranslate(self):
+        """Re-apply translated strings after a language change."""
+        self._title_lbl.setText(tr("qs.title"))
+        self.add_btn.setText(tr("qs.add"))
+        self.add_btn.setToolTip(tr("qs.add.tip", n=MAX_ENTRIES))
+        for entry in self._rows:
+            entry["edit"].setPlaceholderText(tr("qs.placeholder"))
+            entry["send"].setText(tr("qs.send"))
+            entry["del"].setToolTip(tr("qs.delete.tip"))
 
     # -- persistence -----------------------------------------------------------
 
@@ -175,4 +187,4 @@ class QuickSendPanel(QWidget):
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except OSError as exc:
-            self.log.emit(f"保存配置失败: {exc}")
+            self.log.emit(tr("qs.save_fail", e=exc))

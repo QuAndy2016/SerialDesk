@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.2.15] - 2026-09-30
+
+### Added
+
+- **Bilingual UI (U19)**: the whole interface is now available in Chinese and English. A new
+  "视图 → 语言 / View → Language" submenu offers 跟随系统 / 中文 / English; the choice is persisted in
+  config.json (`language`) and defaults to the OS locale.
+- `app/i18n.py`: small key -> {zh, en} string table plus `tr()`; every visible string (window title,
+  menus, group boxes, labels, buttons, combo items, tooltips, placeholders, status bar and log lines)
+  is translated and re-applied live when the language changes, without touching serial logic.
+
 ## [v0.2.13] - 2026-09-30
 
 ### Changed
