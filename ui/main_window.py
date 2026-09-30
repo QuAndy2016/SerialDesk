@@ -12,7 +12,9 @@ from PySide6.QtGui import QIcon
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -20,6 +22,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -73,6 +76,16 @@ TS_FULL_MS = 3
 
 CHECKSUM_KEYS = ["none", "crc16-modbus", "crc16-ccitt", "crc32", "sum8"]
 
+# -- serial parameters (T1); plain values accepted by pyserial ---------------
+BYTESIZE_KEYS = [5, 6, 7, 8]
+PARITY_KEYS = ["N", "O", "E", "M", "S"]
+STOPBITS_KEYS = [1, 1.5, 2]
+FLOW_KEYS = ["none", "xonxoff", "rtscts"]
+HISTORY_MAX = 50
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
+LOG_MAX_BYTES = 2 * 1024 * 1024
+LOG_MAX_SECONDS = 30 * 60
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -94,8 +107,21 @@ class MainWindow(QMainWindow):
         # initial language from config (default: follow system)
         i18n.set_language(str(load_config().get("language", "system")))
 
+        self._log_fp = None
+        self._log_started = 0.0
+        self._log_bytes = 0
+        self._send_history: list[str] = []
+        self._sent_count = 0
+        self._repeat_timer = QTimer(self)
+        self._repeat_timer.timeout.connect(self.on_send)
+
         self._build_ui()
         self._build_menu()
+
+        # send history (T5) from config
+        self._send_history = [str(h) for h in load_config().get("send_history", [])
+                              if str(h).strip()][:HISTORY_MAX]
+        self.history_combo.addItems(self._send_history)
 
         # initial theme from config (default: follow system)
         choice = load_config().get("theme", "system")
@@ -200,6 +226,26 @@ class MainWindow(QMainWindow):
             tr("ts.off"), "HH:MM:SS", "HH:MM:SS.mmm", "yyyy-MM-dd HH:MM:SS.mmm"])
         self.ts_combo.setToolTip(tr("ts.tip"))
         self.clear_btn.setText(tr("btn.clear"))
+        self.save_log_btn.setText(tr("btn.save_log"))
+        self.autosave_check.setText(tr("log.autosave"))
+        self.autosave_check.setToolTip(tr("log.autosave.tip"))
+        self._dbit_lbl.setText(tr("params.databits"))
+        self._parity_lbl.setText(tr("params.parity"))
+        self._stopbit_lbl.setText(tr("params.stopbits"))
+        self._flow_lbl.setText(tr("params.flow"))
+        self._reload_combo(self.parity_combo, [tr("parity.none"), tr("parity.odd"), tr("parity.even"),
+                                               "Mark", "Space"])
+        self._reload_combo(self.flow_combo, [tr("flow.none"), tr("flow.sw"), tr("flow.hw")])
+        for combo in self._param_combos:
+            combo.setToolTip(tr("params.tip"))
+        self._hist_lbl.setText(tr("tx.history"))
+        self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
+        self.repeat_check.setText(tr("tx.repeat"))
+        self.repeat_check.setToolTip(tr("tx.repeat.tip"))
+        self.repeat_ms.setToolTip(tr("tx.interval.tip"))
+        self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
+        self.crlf_check.setText(tr("tx.crlf"))
+        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
         self._tx_group.setTitle(tr("group.tx"))
         self._tx_fmt_lbl.setText(tr("txfmt.label"))
         self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
@@ -277,6 +323,41 @@ class MainWindow(QMainWindow):
         bar.addStretch(1)
         root.addLayout(bar)
 
+        # --- serial parameters row (T1) --------------------------------------
+        self._param_combos = []
+        params = QHBoxLayout()
+        self._dbit_lbl = QLabel(tr("params.databits"))
+        params.addWidget(self._dbit_lbl)
+        self.dbits_combo = QComboBox()
+        self.dbits_combo.addItems([str(b) for b in BYTESIZE_KEYS])
+        self.dbits_combo.setCurrentIndex(len(BYTESIZE_KEYS) - 1)     # 8
+        params.addWidget(self.dbits_combo)
+
+        self._parity_lbl = QLabel(tr("params.parity"))
+        params.addWidget(self._parity_lbl)
+        self.parity_combo = QComboBox()
+        self.parity_combo.addItems([tr("parity.none"), tr("parity.odd"), tr("parity.even"),
+                                    "Mark", "Space"])
+        params.addWidget(self.parity_combo)
+
+        self._stopbit_lbl = QLabel(tr("params.stopbits"))
+        params.addWidget(self._stopbit_lbl)
+        self.stopbits_combo = QComboBox()
+        self.stopbits_combo.addItems([str(b) for b in STOPBITS_KEYS])
+        params.addWidget(self.stopbits_combo)
+
+        self._flow_lbl = QLabel(tr("params.flow"))
+        params.addWidget(self._flow_lbl)
+        self.flow_combo = QComboBox()
+        self.flow_combo.addItems([tr("flow.none"), tr("flow.sw"), tr("flow.hw")])
+        params.addWidget(self.flow_combo)
+
+        self._param_combos = [self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo]
+        for combo in self._param_combos:
+            combo.setToolTip(tr("params.tip"))
+        params.addStretch(1)
+        root.addLayout(params)
+
         # --- main splitter: left (rx/tx) + right (quick send) ---------------
         splitter = QSplitter()
 
@@ -324,6 +405,15 @@ class MainWindow(QMainWindow):
         self.clear_btn = QPushButton(tr("btn.clear"))
         self.clear_btn.clicked.connect(self.on_clear)
         rx_opts.addWidget(self.clear_btn)
+
+        self.save_log_btn = QPushButton(tr("btn.save_log"))
+        self.save_log_btn.clicked.connect(self.on_save_log)
+        rx_opts.addWidget(self.save_log_btn)
+
+        self.autosave_check = QCheckBox(tr("log.autosave"))
+        self.autosave_check.setToolTip(tr("log.autosave.tip"))
+        self.autosave_check.toggled.connect(self._on_autosave_toggled)
+        rx_opts.addWidget(self.autosave_check)
         self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
         rx_opts.addWidget(self.rx_count_label)
         rx_layout.addLayout(rx_opts)
@@ -338,6 +428,17 @@ class MainWindow(QMainWindow):
         self._tx_group = QGroupBox(tr("group.tx"))
         tx_group = self._tx_group
         tx_layout = QVBoxLayout(tx_group)
+
+        hist_row = QHBoxLayout()
+        self._hist_lbl = QLabel(tr("tx.history"))
+        hist_row.addWidget(self._hist_lbl)
+        self.history_combo = QComboBox()
+        self.history_combo.setMinimumWidth(200)
+        self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
+        self.history_combo.activated.connect(self._on_history_pick)
+        hist_row.addWidget(self.history_combo, 1)
+        tx_layout.addLayout(hist_row)
+
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
         self.tx_edit.setMaximumHeight(90)
@@ -351,6 +452,11 @@ class MainWindow(QMainWindow):
         self.tx_fmt_combo.addItems(["HEX", "ASCII"])
         self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
         tx_fmt_row.addWidget(self.tx_fmt_combo)
+        self.crlf_check = QCheckBox(tr("tx.crlf"))
+        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
+        tx_fmt_row.addWidget(self.crlf_check)
+        self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
+        self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
         tx_col.addLayout(tx_fmt_row)
 
         crc_row = QHBoxLayout()
@@ -361,6 +467,24 @@ class MainWindow(QMainWindow):
         self.checksum_combo.setToolTip(tr("crc.tip"))
         crc_row.addWidget(self.checksum_combo)
         tx_col.addLayout(crc_row)
+
+        repeat_row = QHBoxLayout()
+        self.repeat_check = QCheckBox(tr("tx.repeat"))
+        self.repeat_check.setToolTip(tr("tx.repeat.tip"))
+        self.repeat_check.toggled.connect(self._on_repeat_toggled)
+        repeat_row.addWidget(self.repeat_check)
+        self.repeat_ms = QSpinBox()
+        self.repeat_ms.setRange(10, 60000)
+        self.repeat_ms.setValue(1000)
+        self.repeat_ms.setSingleStep(100)
+        self.repeat_ms.setSuffix(" ms")
+        self.repeat_ms.setMaximumWidth(96)
+        self.repeat_ms.setToolTip(tr("tx.interval.tip"))
+        self.repeat_ms.valueChanged.connect(self._on_repeat_interval)
+        repeat_row.addWidget(self.repeat_ms)
+        self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
+        repeat_row.addWidget(self.sent_lbl)
+        tx_col.addLayout(repeat_row)
 
         self.send_btn = QPushButton(tr("btn.send"))
         self.send_btn.clicked.connect(self.on_send)
@@ -390,6 +514,134 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
     # -- helpers ---------------------------------------------------------------
+
+    # -- receive log to file (T4) -------------------------------------------
+
+    def _log_open(self) -> None:
+        """Open a new log segment under logs/ (auto-save mode)."""
+        try:
+            os.makedirs(LOG_DIR, exist_ok=True)
+            name = time.strftime("serial_%Y%m%d_%H%M%S.txt")
+            self._log_path = os.path.join(LOG_DIR, name)
+            self._log_fp = open(self._log_path, "a", encoding="utf-8")
+            self._log_started = time.time()
+            self._log_bytes = 0
+            self.statusBar().showMessage(tr("log.autosave.on", path=self._log_path), 5000)
+        except OSError as exc:
+            self._log_fp = None
+            self.on_log_line(tr("log.save_fail", e=exc))
+
+    def _log_close(self) -> None:
+        if self._log_fp is not None:
+            try:
+                self._log_fp.close()
+            except OSError:
+                pass
+            self._log_fp = None
+
+    def _log_append(self, text: str) -> None:
+        """Append a chunk of received text to the auto-save file, rotating when needed."""
+        if self._log_fp is None:
+            return
+        if (self._log_bytes > LOG_MAX_BYTES
+                or time.time() - self._log_started > LOG_MAX_SECONDS):
+            self._log_close()
+            self._log_open()
+            if self._log_fp is None:
+                return
+        try:
+            self._log_fp.write(text)
+            self._log_fp.flush()
+            self._log_bytes += len(text.encode("utf-8"))
+        except OSError as exc:
+            self._log_close()
+            self.on_log_line(tr("log.save_fail", e=exc))
+
+    def _on_autosave_toggled(self, checked: bool) -> None:
+        if checked:
+            self._log_open()
+            if self._log_fp is None:
+                self.autosave_check.setChecked(False)
+        else:
+            self._log_close()
+
+    def on_save_log(self) -> None:
+        """Manually save everything currently shown in the receive pane."""
+        try:
+            os.makedirs(LOG_DIR, exist_ok=True)
+        except OSError:
+            pass
+        default = os.path.join(LOG_DIR, time.strftime("serial_%Y%m%d_%H%M%S.txt"))
+        path, _ = QFileDialog.getSaveFileName(self, tr("log.save.title"), default, "Text (*.txt)")
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(self.rx_view.toPlainText())
+                fh.write("\n")
+            self.statusBar().showMessage(tr("log.saved", path=path), 5000)
+        except OSError as exc:
+            self.on_log_line(tr("log.save_fail", e=exc))
+
+    # -- quick helpers --------------------------------------------------------
+
+    def _emit_rx_text(self, text: str) -> None:
+        """Insert text into the receive pane and mirror it to the auto-save log."""
+        self.rx_view.insertPlainText(text)
+        self._log_append(text)
+
+    def _on_history_pick(self, index: int):
+        text = self.history_combo.itemText(index)
+        if text:
+            self.tx_edit.setPlainText(text)
+
+    def _remember_send(self, text: str):
+        """Push a sent command into the dedup history (max HISTORY_MAX) and persist it."""
+        text = text.strip()
+        if not text:
+            return
+        self._send_history = [text] + [h for h in self._send_history if h != text]
+        self._send_history = self._send_history[:HISTORY_MAX]
+        self.history_combo.blockSignals(True)
+        self.history_combo.clear()
+        self.history_combo.addItems(self._send_history)
+        self.history_combo.blockSignals(False)
+        config = load_config()
+        config["send_history"] = self._send_history
+        save_config(config)
+
+    def _on_repeat_toggled(self, checked: bool):
+        if checked:
+            self._sent_count = 0
+            self.sent_lbl.setText(tr("tx.sent_count", n=0))
+            self._repeat_timer.start(self.repeat_ms.value())
+        else:
+            self._repeat_timer.stop()
+
+    def _on_repeat_interval(self, value: int):
+        if self._repeat_timer.isActive():
+            self._repeat_timer.setInterval(value)
+
+    def _stop_repeat(self):
+        if self.repeat_check.isChecked():
+            self.repeat_check.setChecked(False)   # triggers _on_repeat_toggled -> stop
+        else:
+            self._repeat_timer.stop()
+
+    def _serial_params(self) -> dict:
+        """Collect the parameter widgets into pyserial open_port kwargs (T1)."""
+        flow = FLOW_KEYS[self.flow_combo.currentIndex()]
+        return {
+            "bytesize": BYTESIZE_KEYS[self.dbits_combo.currentIndex()],
+            "parity": PARITY_KEYS[self.parity_combo.currentIndex()],
+            "stopbits": STOPBITS_KEYS[self.stopbits_combo.currentIndex()],
+            "rtscts": flow == "rtscts",
+            "xonxoff": flow == "xonxoff",
+        }
+
+    def _on_tx_fmt_changed(self, index: int):
+        # appending CRLF only makes sense for ASCII (index 1)
+        self.crlf_check.setEnabled(index == 1)
 
     def _on_split_mode_changed(self, index: int):
         self.split_ms_edit.setEnabled(index == SPLIT_MANUAL)
@@ -469,7 +721,7 @@ class MainWindow(QMainWindow):
             except ValueError:
                 self.statusBar().showMessage(tr("status.bad_baud"), 5000)
                 return
-            ok = self.worker.open_port(device, baud)
+            ok = self.worker.open_port(device, baud, **self._serial_params())
             if ok:
                 self.refresh_timer.stop()  # keep port list stable while open
 
@@ -481,11 +733,16 @@ class MainWindow(QMainWindow):
             self.status_light.setText(tr("status.connected", port=port, baud=baud))
             self.status_light.setStyleSheet("color: #2ecc40; font-weight: bold; padding-right: 8px;")
             self.statusBar().showMessage(tr("status.opened"))
+            for combo in self._param_combos:
+                combo.setEnabled(False)
         else:
             self.open_btn.setText(tr("port.open"))
             self.status_light.setText(tr("status.disconnected"))
             self.status_light.setStyleSheet("color: #ff4136; font-weight: bold; padding-right: 8px;")
+            self._stop_repeat()
             self.refresh_timer.start()
+            for combo in self._param_combos:
+                combo.setEnabled(True)
             if not self.worker.is_open():
                 self.statusBar().showMessage(tr("status.closed"))
 
@@ -515,8 +772,13 @@ class MainWindow(QMainWindow):
             self.on_log_line(tr("log.send_error", e=exc))
             return
         payload = self._apply_checksum(payload)
+        if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
+            payload += b"\r\n"
         self.worker.send(payload)
         self.tx_bytes += len(payload)
+        self._sent_count += 1
+        self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
+        self._remember_send(text)
         self.update_counts()
 
     def on_quick_send(self, payload: bytes):
@@ -551,10 +813,10 @@ class MainWindow(QMainWindow):
         if new_line:
             prefix = self._ts_prefix(ts)
             if has_text:
-                self.rx_view.insertPlainText("\n")
+                self._emit_rx_text("\n")
             if prefix:
-                self.rx_view.insertPlainText(prefix)
-        self.rx_view.insertPlainText(text)
+                self._emit_rx_text(prefix)
+        self._emit_rx_text(text)
 
         sb = self.rx_view.verticalScrollBar()
         sb.setValue(sb.maximum())
@@ -574,14 +836,14 @@ class MainWindow(QMainWindow):
             if i == 0:
                 # bytes before the first header: continue current line
                 if seg:
-                    self.rx_view.insertPlainText(self._format_rx(seg))
+                    self._emit_rx_text(self._format_rx(seg))
                 continue
             if not seg:
                 continue  # adjacent headers, frame with empty body
             if self.rx_view.document().characterCount() > 1:
-                self.rx_view.insertPlainText("\n")
-            self.rx_view.insertPlainText(self._ts_prefix(ts))
-            self.rx_view.insertPlainText(self._format_rx(header_b + seg))
+                self._emit_rx_text("\n")
+            self._emit_rx_text(self._ts_prefix(ts))
+            self._emit_rx_text(self._format_rx(header_b + seg))
 
         sb = self.rx_view.verticalScrollBar()
         sb.setValue(sb.maximum())
@@ -598,6 +860,7 @@ class MainWindow(QMainWindow):
         self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
 
     def closeEvent(self, event):
+        self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()
         self.worker.close_port()

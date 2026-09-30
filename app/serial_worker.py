@@ -42,6 +42,8 @@ class SerialWorker(QThread):
                 bytesize=kwargs.get("bytesize", serial.EIGHTBITS),
                 parity=kwargs.get("parity", serial.PARITY_NONE),
                 stopbits=kwargs.get("stopbits", serial.STOPBITS_ONE),
+                rtscts=kwargs.get("rtscts", False),
+                xonxoff=kwargs.get("xonxoff", False),
                 timeout=0.1,
             )
         except Exception as exc:  # noqa: BLE001 - surface any serial error

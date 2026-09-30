@@ -61,6 +61,17 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Timestamp format at the start of each line\nHH:MM:SS.mmm is handy for shell debugging",
     },
     "btn.clear": {"zh": "清空", "en": "Clear"},
+    # ---- receive log to file (T4) ----
+    "btn.save_log": {"zh": "保存日志", "en": "Save log"},
+    "log.autosave": {"zh": "自动保存", "en": "Auto-save"},
+    "log.autosave.tip": {
+        "zh": "勾选后接收数据自动写入 logs/ 目录，单个文件超过 2 MB 或每 30 分钟自动分段",
+        "en": "When enabled, received data is written to the logs/ folder; a new segment starts every 2 MB or 30 minutes",
+    },
+    "log.save.title": {"zh": "保存接收日志", "en": "Save receive log"},
+    "log.saved": {"zh": "已保存: {path}", "en": "Saved: {path}"},
+    "log.save_fail": {"zh": "保存日志失败: {e}", "en": "Failed to save log: {e}"},
+    "log.autosave.on": {"zh": "自动保存到 {path}", "en": "Auto-saving to {path}"},
     # ---- send group ----
     "group.tx": {"zh": "发送", "en": "Send"},
     "txfmt.label": {"zh": "格式:", "en": "Format:"},
@@ -74,6 +85,34 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "发送时自动追加的校验\nCRC16-Modbus：低字节在前（Modbus RTU）\nCRC16-CCITT：高字节在前\nCRC32：4 字节大端\nSUM8：单字节累加和",
         "en": "Checksum appended on send\nCRC16-Modbus: low byte first (Modbus RTU)\nCRC16-CCITT: high byte first\nCRC32: 4 bytes, big endian\nSUM8: single-byte sum",
     },
+    # ---- serial parameters (T1) ----
+    "params.databits": {"zh": "数据位:", "en": "Data bits:"},
+    "params.parity": {"zh": "校验位:", "en": "Parity:"},
+    "params.stopbits": {"zh": "停止位:", "en": "Stop bits:"},
+    "params.flow": {"zh": "流控:", "en": "Flow:"},
+    "params.tip": {
+        "zh": "串口参数在打开端口时生效；修改后请重新打开端口",
+        "en": "Serial parameters apply when the port is opened; reopen the port after changing them",
+    },
+    "parity.none": {"zh": "无", "en": "None"},
+    "parity.odd": {"zh": "奇", "en": "Odd"},
+    "parity.even": {"zh": "偶", "en": "Even"},
+    "flow.none": {"zh": "无", "en": "None"},
+    "flow.sw": {"zh": "软件(XON/XOFF)", "en": "Software (XON/XOFF)"},
+    "flow.hw": {"zh": "硬件(RTS/CTS)", "en": "Hardware (RTS/CTS)"},
+    # ---- append CRLF (T3) ----
+    "tx.crlf": {"zh": "追加 \\r\\n", "en": "Append \\r\\n"},
+    "tx.crlf.tip": {
+        "zh": "ASCII 模式下发送时自动追加回车换行（AT 指令常用）",
+        "en": "Append CRLF when sending in ASCII mode (handy for AT commands)",
+    },
+    # ---- repeat send (T2) / send history (T5) ----
+    "tx.repeat": {"zh": "循环发送", "en": "Repeat send"},
+    "tx.repeat.tip": {"zh": "按设定间隔重复发送当前内容", "en": "Repeat the current input at the set interval"},
+    "tx.interval.tip": {"zh": "重复间隔（毫秒，10~60000）", "en": "Repeat interval (ms, 10~60000)"},
+    "tx.sent_count": {"zh": "已发送 {n} 次", "en": "Sent {n} times"},
+    "tx.history": {"zh": "发送历史:", "en": "History:"},
+    "tx.history.tip": {"zh": "最近发送过的指令（最多 {n} 条），选中即回填", "en": "Recently sent commands (up to {n}); pick one to fill the box"},
     "btn.send": {"zh": "发送", "en": "Send"},
     # ---- status bar / log ----
     "status.disconnected": {"zh": "● 未连接", "en": "● Disconnected"},

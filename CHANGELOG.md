@@ -1,5 +1,29 @@
 # Changelog
 
+## [v0.3.0] - 2026-09-30
+
+Feature batch T1-T5 (the "SSCOM main-feature parity" release).
+
+### Added
+
+- **Full serial parameters (T1)**: data bits (5-8), parity (none/odd/even/mark/space),
+  stop bits (1/1.5/2) and flow control (none / XON-XOFF / RTS-CTS). A second toolbar row holds the
+  new dropdowns; they are locked while a port is open and applied when it is opened.
+- **Repeat send (T2)**: a "Repeat send" checkbox with a 10-60000 ms interval sends the current input
+  over and over, shows a sent counter, updates the interval live and stops automatically when the port closes.
+- **Append CRLF (T3)**: optional `\r\n` appended on send in ASCII mode (AT-command friendly);
+  the checkbox is disabled in HEX mode. The checksum is still computed over the payload, before the CRLF.
+- **Receive log to file (T4)**: "Save log" writes the receive pane to a .txt file of your choice, and
+  "Auto-save" streams incoming data into `logs/` with a new segment every 2 MB or 30 minutes.
+- **Send history (T5)**: the last 50 sent commands are recorded (deduplicated, newest first), persisted
+  in config.json and offered in a dropdown above the send box; picking one refills the input.
+
+### Changed
+
+- All new UI strings are bilingual (zh/en) and switch live with the language menu.
+- `SerialWorker.open_port()` now passes `rtscts` / `xonxoff` through to pyserial.
+- `logs/` is git-ignored (runtime data is never committed).
+
 ## [v0.2.16] - 2026-09-30
 
 ### Changed
