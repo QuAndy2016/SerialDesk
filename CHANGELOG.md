@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.10.0] - 2026-10-01
+
+### Changed
+
+- **The send-history popup got the P0 pass**: the list is drawn in a monospace font so hex strings line up and can be
+  compared at a glance; a line above it says how many entries there are ("4 entries · newest first"); the hint reads
+  "Double-click or Enter to recall · Delete removes the entry · Esc closes"; "Delete this entry" is now a quieter,
+  secondary button, while "Clear the history" sits apart from the other actions and needs a second click to confirm;
+  and the dialog remembers the size you dragged it to (`history_dlg_size`).
+
+### Added
+
+- **Send-history P1 pass**: every row carries secondary metadata on the right - format (HEX/ASCII), payload size in
+  bytes and a relative age ("3 min ago"); a filter box above the list narrows rows as you type, case-insensitively,
+  and the count line switches to "2 of 4 match" while a filter is active. Selected rows now use the project accent
+  colours and hold >=4.5:1 text contrast in both themes.
+
+### Fixed
+
+- **Dialogs were not themed**: `QDialog` had no background rule, so over a dark palette the send-history window could
+  keep a light background. Dark and light QSS now both style `QDialog`, matching the main window.
+
 ## [v0.9.1] - 2026-10-01
 
 ### Fixed

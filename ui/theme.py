@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 DARK_QSS = """
 QMainWindow { background: #1e1e2e; }
+QDialog { background: #1e1e2e; }
 QWidget { color: #d4d4d4; font-size: 13px; }
 QGroupBox {
     border: 1px solid #3a3a4a;
@@ -34,6 +35,8 @@ QPushButton {
 QPushButton:hover { background: #4a4a5a; }
 QPushButton:pressed { background: #2a2a3a; }
 QPushButton:disabled { color: #666; background: #2a2a35; }
+QPushButton[secondary="true"] { background: #2d2d3d; border: 1px solid #4a4a5a; color: #cfcfcf; }
+QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #6a6a7a; }
 QComboBox, QLineEdit {
     background: #2d2d3d;
     border: 1px solid #4a4a5a;
@@ -111,6 +114,7 @@ QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.16); border: 1
 
 LIGHT_QSS = """
 QMainWindow { background: #f5f5f7; }
+QDialog { background: #f5f5f7; }
 QWidget { color: #1f1f1f; font-size: 13px; }
 QGroupBox {
     border: 1px solid #d0d0d8;
@@ -134,6 +138,8 @@ QPushButton {
 QPushButton:hover { background: #ececf2; }
 QPushButton:pressed { background: #dcdce4; }
 QPushButton:disabled { color: #aaa; background: #e8e8ee; }
+QPushButton[secondary="true"] { background: #f4f4f6; border: 1px solid #c9c9d1; color: #44444c; }
+QPushButton[secondary="true"]:hover { background: #e9e9ee; border-color: #a9a9b4; }
 QComboBox, QLineEdit {
     background: #ffffff;
     border: 1px solid #c8c8d0;
@@ -272,6 +278,20 @@ def tx_color() -> str:
 def meta_color() -> str:
     """Timestamp + direction marker colour: dimmer than the payload (U62)."""
     return "#7d8590" if resolved_dark() else "#6d6d78"
+
+
+def history_list_colors() -> dict:
+    """Colours for the send-history list (v0.10.0 P0/P1).
+
+    Selected rows keep >=4.5:1 text contrast in both themes (measured):
+    dark  #ffffff on #33506e = 8.3:1, meta #c9d6e8 = 5.7:1;
+    light #111111 on #cfe0f5 = 15.4:1, meta #3d5e84 = 5.5:1.
+    """
+    if resolved_dark():
+        return {"sel_bg": "#33506e", "sel_text": "#ffffff", "sel_meta": "#c9d6e8",
+                "text": "#c0c0c0", "meta": "#9aa4b1"}
+    return {"sel_bg": "#cfe0f5", "sel_text": "#111111", "sel_meta": "#3d5e84",
+            "text": "#111111", "meta": "#6d6d78"}
 
 
 def watch_system_theme(app: QApplication, callback) -> None:

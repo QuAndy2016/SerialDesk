@@ -194,6 +194,7 @@ class MainWindow(QMainWindow):
         self._log_max_seconds = max(1, int(_cfg0.get("autosave_max_minutes", 30) or 30)) * 60
         self._log_dir = str(_cfg0.get("log_dir") or "") or LOG_DIR
         self._send_history: list[str] = []
+        self._history_meta: dict = {}   # v0.10.0: text -> {"fmt", "b", "ts"}
         self._history_dlg = None        # U87: lazily created non-modal popup
         self._recall_index = -1         # U87: Ctrl+Up/Down position in the history
         self._recall_draft = ""
@@ -237,8 +238,10 @@ class MainWindow(QMainWindow):
         self.autosave_check.setChecked(bool(_cfg.get("autosave_enabled", False)))
 
         # send history (T5) from config
-        self._send_history = [str(h) for h in load_config().get("send_history", [])
+        _hcfg = load_config()
+        self._send_history = [str(h) for h in _hcfg.get("send_history", [])
                               if str(h).strip()][:HISTORY_MAX]
+        self._history_meta = self._prune_history_meta(_hcfg.get("history_meta"))
         self._update_history_button()
 
         # auto-reply rules (T10) from config
@@ -1366,6 +1369,7 @@ class MainWindow(QMainWindow):
         self._cfg_save_timer.stop()
         config = load_config()
         config["send_history"] = self._send_history
+        config["history_meta"] = self._prune_history_meta(self._history_meta)
         save_config(config)
 
     def _on_worker_error(self, text: str) -> None:
@@ -1438,7 +1442,7 @@ class MainWindow(QMainWindow):
         incoming = data.get("config") if isinstance(data.get("config"), dict) else data
 
         config = load_config()
-        for key in ("theme", "language", "quick_send", "send_history",
+        for key in ("theme", "language", "quick_send", "send_history", "history_meta",
                     "auto_reply", "auto_reply_enabled"):
             if key in incoming:
                 config[key] = incoming[key]
@@ -1472,6 +1476,7 @@ class MainWindow(QMainWindow):
         self.quick_panel.reload_from_config()
 
         self._send_history = [str(h) for h in cfg.get("send_history", []) if str(h).strip()][:HISTORY_MAX]
+        self._history_meta = self._prune_history_meta(cfg.get("history_meta"))
         self._update_history_button()
 
         self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
@@ -1868,7 +1873,7 @@ class MainWindow(QMainWindow):
             self._history_dlg.fill_requested.connect(self._on_history_fill)
             self._history_dlg.delete_requested.connect(self._remove_history_entry)
             self._history_dlg.clear_requested.connect(self._clear_history)
-        self._history_dlg.set_history(self._send_history)
+        self._history_dlg.set_history(self._send_history, self._history_meta)
         self._history_dlg.show()
         self._history_dlg.raise_()
         self._history_dlg.activateWindow()
@@ -1902,13 +1907,29 @@ class MainWindow(QMainWindow):
         self._recall_index = min(self._recall_index, len(self._send_history) - 1)
         self.tx_edit.setPlainText(self._send_history[self._recall_index])
 
-    def _remember_send(self, text: str):
+    def _prune_history_meta(self, raw) -> dict:
+        """Keep only the metadata of commands that are still in the history (v0.10.0)."""
+        if not isinstance(raw, dict):
+            return {}
+        allowed = set(self._send_history)
+        out = {}
+        for text, meta in raw.items():
+            if str(text) in allowed and isinstance(meta, dict):
+                out[str(text)] = meta
+        return out
+
+    def _remember_send(self, text: str, fmt: str = "", nbytes: int | None = None):
         """Push a sent command into the dedup history (max HISTORY_MAX) and persist it."""
         text = text.strip()
         if not text:
             return
         self._send_history = [text] + [h for h in self._send_history if h != text]
         self._send_history = self._send_history[:HISTORY_MAX]
+        record = {"fmt": fmt, "ts": time.time()}
+        if isinstance(nbytes, int):
+            record["b"] = nbytes
+        self._history_meta[text] = record
+        self._history_meta = self._prune_history_meta(self._history_meta)
         self._update_history_button()
         self._schedule_history_save()
 
@@ -1919,13 +1940,14 @@ class MainWindow(QMainWindow):
         self.history_btn.setToolTip(tr("tx.history.btn.tip", n=n))
         self.history_btn.setEnabled(n > 0)
         if self._history_dlg is not None:
-            self._history_dlg.set_history(self._send_history)
+            self._history_dlg.set_history(self._send_history, self._history_meta)
 
     def _remove_history_entry(self, row: int) -> None:
         """Drop one entry from the send history and persist (U77)."""
         if not (0 <= row < len(self._send_history)):
             return
         removed = self._send_history.pop(row)
+        self._history_meta.pop(removed, None)
         self._update_history_button()
         self._schedule_history_save()
         self._notify(tr("tx.history.removed", text=removed), "info", ms=3000)
@@ -1935,6 +1957,7 @@ class MainWindow(QMainWindow):
         if not self._send_history:
             return
         self._send_history = []
+        self._history_meta = {}
         self._update_history_button()
         self._schedule_history_save()
         self._notify(tr("tx.history.cleared"), "info", ms=3000)
@@ -2169,7 +2192,10 @@ class MainWindow(QMainWindow):
         self.tx_bytes += len(payload)
         self._sent_count += 1
         self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
-        self._remember_send(text)
+        self._remember_send(
+            text,
+            "hex" if self.tx_fmt_combo.currentIndex() == 0 else "ascii",
+            len(payload))
         self.update_counts()
 
     def on_quick_send(self, payload: bytes):
