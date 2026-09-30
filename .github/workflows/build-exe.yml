@@ -1,0 +1,113 @@
+name: Build & Release Windows EXE
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Get version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = python -c "from app import __version__; print(__version__)"
+          echo "version=$v" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: Verify tag matches app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = "${{ steps.ver.outputs.version }}"
+          if ($tag -ne "v$ver") {
+            Write-Error "Tag '$tag' does not match app.__version__ 'v$ver'. Bump app/__init__.py or fix the tag."
+            exit 1
+          }
+          Write-Host "Tag $tag matches app version v$ver"
+
+      # onedir (not onefile): the onefile self-extracting bootloader is a known
+      # trigger for Microsoft Defender / SmartScreen false positives.
+      - name: Build EXE with PyInstaller (onedir)
+        run: |
+          $exe = "SerialDesk_v${{ steps.ver.outputs.version }}"
+          pyinstaller --noconfirm --clean --windowed --onedir --name $exe --icon assets/icon.ico --add-data "assets;assets" main.py
+
+      - name: Package release zip
+        shell: pwsh
+        run: |
+          $ver  = "${{ steps.ver.outputs.version }}"
+          $name = "SerialDesk_v$ver"
+          $pkg  = "dist\pkg\$name"
+          New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+          Copy-Item -Path "dist\$name\*" -Destination $pkg -Recurse -Force
+
+          $lines = @(
+            "SerialDesk v$ver - Windows 64-bit",
+            "",
+            "用法 / Usage",
+            "  1. 解压本压缩包到任意目录（不要只把 exe 单独拷出来，同目录的文件夹是运行库）",
+            "  2. 双击 $name\$name.exe 运行，无需安装 Python",
+            "",
+            "首次运行被 Windows 拦下时 / If Windows blocks the first run",
+            "  - SmartScreen 弹窗：点「更多信息」→「仍要运行」",
+            "  - Edge 下载被拦：下载面板 → 该文件右侧 ... → 保留",
+            "  - 若提示文件被锁定：右键 exe → 属性 → 勾选「解除锁定」→ 确定",
+            "",
+            "校验 / Checksum",
+            "  同目录的 .sha256 文件是本压缩包的 SHA256，可用 certutil -hashfile 校验。",
+            "",
+            "项目主页 / Homepage",
+            "  https://github.com/QuAndy2016/SerialDesk"
+          )
+          $lines -join "`r`n" | Set-Content -Path "$pkg\使用说明.txt" -Encoding UTF8
+
+          Compress-Archive -Path $pkg -DestinationPath "dist\$name-win64.zip" -Force
+          $hash = (Get-FileHash "dist\$name-win64.zip" -Algorithm SHA256).Hash
+          "$hash  $name-win64.zip" | Set-Content -Path "dist\$name-win64.zip.sha256" -Encoding ASCII
+          Write-Host "Packaged dist\$name-win64.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SerialDesk-${{ steps.ver.outputs.version }}-win64
+          path: |
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip.sha256
+          retention-days: 30
+
+      - name: Show build output
+        run: |
+          Get-ChildItem dist\ -Name
+          Get-ChildItem "dist\SerialDesk_v${{ steps.ver.outputs.version }}" -Name
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          name: SerialDesk v${{ steps.ver.outputs.version }}
+          files: |
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip
+            dist/SerialDesk_v${{ steps.ver.outputs.version }}-win64.zip.sha256
+          fail_on_unmatched_files: true
+          generate_release_notes: true

@@ -1,0 +1,248 @@
+# SerialDesk
+
+**串口台 —— 嵌入式工程师的串口伴侣，一个干净、够用、能一直长下去的跨平台串口调试工具。**
+
+SerialDesk (串口台) — a clean, capable, cross-platform serial debugging tool for embedded engineers.
+
+基于 **PySide6 + PySerial**，面向嵌入式 / 电机控制 / 工业控制工程师。
+
+> **Language:** 本页默认中文。英文版在页面底部的折叠区，点击展开 **English version — click to expand**。
+
+---
+
+## 这是什么
+
+串口是嵌入式世界里最古老、也最可靠的接口。每一次点亮一块新板子、每一条 Modbus 报文、每一段固件升级日志，最后都要落在屏幕上一行行滚动的字节里。
+
+但真正顺手的串口工具并不多：功能强的往往界面停留在上个十年，清爽的又缺了工程师每天都要用的那几个开关。这个项目想做的事很朴素 —— 界面现代、开箱即用、开源可改，把日常调试里最高频的能力一次做对。
+
+它不追求做下一个 VOFA+，只想成为你调试时最不需要思考的那一个窗口。
+
+## 下载 Windows EXE（无需 Python）
+
+到 [Releases 页面](https://github.com/QuAndy2016/SerialDesk/releases/latest) 下载 `SerialDesk_vX.Y.Z-win64.zip`，解压后双击里面的 exe 即可运行，不需要安装 Python。
+
+请解压整个目录再运行，不要把 exe 单独拷出来 —— 同目录的文件夹是运行库。每个 release 都附带 `.sha256` 校验文件，可用 `certutil -hashfile <zip> SHA256` 核对。
+
+### 被 Windows 拦下来怎么办
+
+本项目没有购买代码签名证书，新发布的 exe 首次运行时 Windows 会有提示，属正常现象，三步可解：
+
+1. **Edge 下载被拦**：打开下载面板（Ctrl+J）→ 该文件右侧「…」→ 保留
+2. **SmartScreen 提示「通常不会下载」**：点「更多信息」→「仍要运行」
+3. **提示文件被锁定**：右键 exe → 属性 → 勾选「解除锁定」→ 确定
+
+打包方式已从单文件（onefile）改为目录模式（onedir），杀软误报概率明显降低；如仍遇到误报，欢迎提 Issue。
+
+## 功能
+
+- **串口枚举自动刷新** —— 3 秒轮询，插拔自动感知
+- **波特率 26 档预设（110 ~ 3000000）** —— 兼容 LLCOM 档位，并支持自定义输入（非法值即时红框提示）
+- **接收格式** —— ASCII / HEX / HEX+ASCII 双显示
+- **发送格式** —— ASCII / HEX
+- **分包模式** —— 不分包 / 自动按波特率（3.5 字符法则）/ 手动 ms / 按帧头（字节级）
+- **时间戳前缀** —— 不显示 / HH:MM:SS / HH:MM:SS.mmm / 完整日期毫秒
+- **校验追加套件** —— CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8
+- **快速发送面板** —— 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢
+- **主题切换** —— 跟随系统 / 深色 / 浅色，选择持久化
+- **收发字节计数 + 状态指示灯**（显示端口与波特率）
+- **正式图标** —— 窗口 / 任务栏 / EXE 文件图标
+- **背景 QThread 读取** —— UI 永不卡顿
+
+### 界面预览
+
+<p align="center">
+  <img src="assets/screenshot_dark.jpg" width="49%" alt="深色主题">
+  <img src="assets/screenshot_light.jpg" width="49%" alt="浅色主题">
+  <br>
+  <sub>左：深色主题 · 右：浅色主题</sub>
+</p>
+
+## 路线图
+
+| 版本 | 内容 | 状态 |
+|------|------|------|
+| v0.1.0 | 基础收发 + HEX/ASCII + CRC16 | 已完成 |
+| v0.2.0 | 格式下拉 / 分包 / 毫秒时间戳 / 校验套件 / 快速发送 / 主题 | 已完成 |
+| v0.2.1 ~ v0.2.13 | UI 修复、图标、版本号、Releases 发布（onedir + zip）、主题一致性、快速发送默认 10 条、波特率输入框可用性、README 双语 | 已完成 |
+| v0.3.0 | 完整串口参数（数据位/停止位/校验/流控）、循环发送、追加 \r\n、日志保存、发送历史 | 计划中 |
+| v0.4.0 | 文件发送、多编码（UTF-8/GBK）、转义解析、DTR/RTS 控制、自动应答规则 | 计划中 |
+| v0.5.0 | 波形显示（pyqtgraph）、TCP/UDP 调试、指令序列、断线重连、配置导入导出 | 计划中 |
+
+## 快速开始
+
+从源码运行：
+
+```bash
+git clone https://github.com/QuAndy2016/SerialDesk.git
+cd serialdesk
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python main.py
+```
+
+运行测试：
+
+```bash
+pytest tests/ -v
+```
+
+## 目录结构
+
+```
+main.py                  # entry point
+app/protocol.py          # HEX/ASCII, CRC16/CRC32/SUM8 checksums, Modbus frames
+app/serial_worker.py     # serial QThread (timestamped receive)
+app/config.py            # settings persistence (config.json)
+ui/main_window.py        # main window
+ui/quick_send_panel.py   # quick send panel
+ui/theme.py              # dark / light / follow-system themes
+assets/                  # logo, donation QR, arrow icons
+tests/                   # unit tests
+```
+
+## 致谢
+
+这个项目的功能取舍与交互细节，受了下面这些前辈工具很多启发，在此致谢：
+
+- **SSCOM** —— 经典串口调试助手，功能范式的参照（作者：大虾丁丁，[大虾电子网](http://www.daxia.com)）
+- **LLCOM** —— 开源串口工具，支持 Lua 自动化、串口调试、串口曲线、TCP/MQTT 测试（[chenxuuu/llcom](https://github.com/chenxuuu/llcom)）
+- **UartAssist** —— 指令序列、自动应答、追加换行等实用功能的启发（未找到稳定官方站点，不贴链接）
+- **VOFA+** —— 上位机波形可视化工具（[vofa.plus](https://www.vofa.plus)）
+
+也感谢 **PySide6 / PySerial / PyInstaller** 及整个 Python 开源社区。
+
+## 参与贡献
+
+Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issue 描述你的场景即可。
+
+## 支持这个项目
+
+这个串口助手是从第一行代码开始，一个个深夜攒出来的。它没有广告、没有弹窗、没有「基础功能免费、高级功能收费」的套路；代码永远开源，源码永远在你手里。
+
+如果你用它省下过哪怕一个下午的调试时间，可以考虑请作者喝杯咖啡。一杯咖啡不影响你什么，却是我把它继续做下去的底气。打赏完全自愿 —— 不打赏也照样用，工具该更新还是会更新。
+
+<p align="center">
+  <img src="assets/donate_wechat.png" width="240" alt="微信打赏">
+  <br>
+  <sub>微信扫码，随心就好</sub>
+</p>
+
+**海外读者**：微信个人收款码在境外无法使用，本项目暂不设海外收款渠道。如果你觉得这个工具有用，点一个 Star、提一个 Issue、或者把它分享给同样在调串口的同事，就是最大的支持。
+
+## 许可证
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+<details>
+<summary><b>🇬🇧 English version — click to expand</b></summary>
+
+<br>
+
+### Overview
+
+Serial is the oldest and most reliable interface in embedded work. Every new board, every Modbus frame, every firmware log ends up as lines of bytes scrolling on a screen. Yet decent serial tools are rare: the powerful ones look like they were designed a decade ago, and the tidy ones are missing the switches engineers use every day.
+
+This project aims for something simple — a modern interface, ready out of the box, open for you to change, with the daily essentials done right. It is not trying to be the next VOFA+; it just wants to be the window you never have to think about.
+
+### Download for Windows
+
+Grab `SerialDesk_vX.Y.Z-win64.zip` from the [Releases page](https://github.com/QuAndy2016/SerialDesk/releases/latest), extract it, and double-click the exe inside — no Python required.
+
+Please extract the whole folder and run it from there; the sibling folder holds the runtime. Every release ships with a `.sha256` checksum file.
+
+#### If Windows blocks it
+
+This project has no code-signing certificate, so Windows warns on the first run. That is expected — three steps fix it:
+
+1. **Edge blocks the download:** open the downloads panel (Ctrl+J) → "…" next to the file → Keep
+2. **SmartScreen says "isn't commonly downloaded":** click More info → Run anyway
+3. **File appears locked:** right-click the exe → Properties → tick Unblock → OK
+
+Packaging has moved from onefile to onedir, which greatly reduces false positives. If your antivirus still flags it, please open an issue.
+
+### Features
+
+- **Auto-refreshing port list** — 3s polling, hot-plug aware
+- **26 baud presets (110 ~ 3000000)** — LLCOM-compatible, plus editable custom input (invalid values get a red border)
+- **Receive format** — ASCII / HEX / HEX+ASCII dual display
+- **Send format** — ASCII / HEX
+- **Frame splitting** — off / auto by baud rate (3.5-char rule) / manual ms / by header (byte level)
+- **Timestamp prefix** — none / HH:MM:SS / HH:MM:SS.mmm / full date with milliseconds
+- **Checksum append suite** — CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8
+- **Quick-send panel** — 10 rows by default, up to 99 commands, persisted to config.json
+- **Themes** — follow system / dark / light, remembered across restarts
+- **RX/TX byte counters + status light** showing port and baud rate
+- **Proper icons** for window, taskbar and the EXE
+- **Background QThread reading** — the UI never blocks
+
+### Screenshots
+
+<p align="center">
+  <img src="assets/screenshot_dark.jpg" width="49%" alt="Dark theme">
+  <img src="assets/screenshot_light.jpg" width="49%" alt="Light theme">
+  <br>
+  <sub>Left: dark theme · Right: light theme</sub>
+</p>
+
+### Roadmap
+
+| Version | Content | Status |
+|---------|---------|--------|
+| v0.1.0 | Core TX/RX + HEX/ASCII + CRC16 | Done |
+| v0.2.0 | Format dropdowns / splitting / ms timestamps / checksums / quick send / themes | Done |
+| v0.2.1 ~ v0.2.13 | UI fixes, icons, versioning, Releases via tags (onedir + zip), theme consistency, 10 default rows, baud box affordance, bilingual README | Done |
+| v0.3.0 | Full serial parameters (data/parity/stop/flow), repeat send, append CRLF, log to file, send history | Planned |
+| v0.4.0 | File transfer, encodings (UTF-8/GBK), escape parsing, DTR/RTS control, auto-reply rules | Planned |
+| v0.5.0 | Waveform view (pyqtgraph), TCP/UDP, command sequences, auto-reconnect, config import/export | Planned |
+
+### Quick start
+
+Run from source:
+
+```bash
+git clone https://github.com/QuAndy2016/SerialDesk.git
+cd serialdesk
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python main.py
+```
+
+Run tests:
+
+```bash
+pytest tests/ -v
+```
+
+### Acknowledgements
+
+This project owes a lot to the tools that came before it:
+
+- **SSCOM** — the classic Chinese serial assistant and our functional reference ([daxia.com](http://www.daxia.com))
+- **LLCOM** — open-source serial toolkit with Lua automation ([chenxuuu/llcom](https://github.com/chenxuuu/llcom))
+- **UartAssist** — inspiration for command sequences, auto-reply and append-CRLF
+- **VOFA+** — waveform host tool ([vofa.plus](https://www.vofa.plus))
+
+Thanks also to **PySide6 / PySerial / PyInstaller** and the Python community.
+
+### Contributing
+
+Issues, PRs and stars are all welcome. If a serial debugging pain point is missing here, open an issue and describe your workflow.
+
+### Support
+
+This tool was built line by line, late at night. No ads, no pop-ups, no "free core, paid extras" playbook — the code stays open, and it stays yours.
+
+If it has ever saved you an afternoon of debugging, you are welcome to buy the author a coffee. It changes nothing for you, and it is what keeps this project moving. Donations are entirely optional — the tool keeps getting updates either way.
+
+The donation QR code in the Chinese section is a personal WeChat Pay code, which only works inside mainland China; this project does not run an overseas donation channel. If the tool is useful to you, a star, an issue, or a share with a colleague who debugs serial ports means just as much.
+
+### License
+
+MIT — see [LICENSE](LICENSE).
+
+</details>
