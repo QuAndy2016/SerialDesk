@@ -150,6 +150,18 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "一键把接收区内容保存到 logs/ 目录（文件名带时间戳），状态栏会给出完整路径",
         "en": "Save the receive pane into logs/ in one click (timestamped file name); the exact path is shown in the status bar",
     },
+    "as.title": {"zh": "自动保存设置", "en": "Auto-save settings"},
+    "as.menu": {"zh": "自动保存设置(&A)…", "en": "&Auto-save settings…"},
+    "as.enable": {"zh": "启用自动保存（打开串口后持续写入）", "en": "Enable auto-save (writes while the port is open)"},
+    "as.max_mb": {"zh": "单个文件上限 (MB)", "en": "Max size per file (MB)"},
+    "as.max_minutes": {"zh": "最长时间 (分钟)", "en": "Max duration (minutes)"},
+    "as.dir": {"zh": "保存目录", "en": "Folder"},
+    "as.dir.pick": {"zh": "选择日志保存目录", "en": "Choose the log folder"},
+    "as.browse": {"zh": "浏览…", "en": "Browse…"},
+    "as.note": {
+        "zh": "接收到的每一行（含发送回显）会实时写入日志文件；超过上面的体积或时长就自动换一个新文件，文件名形如 serial_20261001_0200.txt。勾选右侧的「自动保存」开关与这里的「启用」是同一个状态。",
+        "en": "Every received line (including TX echo) is written live to a log file; a new file starts once the size or duration above is reached, named like serial_20261001_0200.txt. The Auto-save switch in the receive toolbar and Enable here are the same state.",
+    },
     "log.autosave": {"zh": "自动保存", "en": "Auto-save"},
     "log.autosave.tip": {
         "zh": "勾选后接收数据自动写入 logs/ 目录，单个文件超过 2 MB 或每 30 分钟自动分段",

@@ -63,6 +63,7 @@ from app.config import load_config, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
+from ui.autosave_dialog import AutoSaveDialog
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import QuickSendPanel
 from app import i18n
@@ -175,6 +176,10 @@ class MainWindow(QMainWindow):
         self._log_fp = None
         self._log_started = 0.0
         self._log_bytes = 0
+        _cfg0 = load_config()                       # U75: configurable auto-save
+        self._log_max_bytes = max(1, int(_cfg0.get("autosave_max_mb", 2) or 2)) * 1024 * 1024
+        self._log_max_seconds = max(1, int(_cfg0.get("autosave_max_minutes", 30) or 30)) * 60
+        self._log_dir = str(_cfg0.get("log_dir") or "") or LOG_DIR
         self._send_history: list[str] = []
         self._sent_count = 0
         self._repeat_timer = QTimer(self)
@@ -203,6 +208,15 @@ class MainWindow(QMainWindow):
         self._setup_tab_order()
         self._setup_shortcuts()
         self._first_run_hint()
+        self._autosave_dlg = AutoSaveDialog(self)              # U75
+        self._autosave_dlg.settingsChanged.connect(self._apply_autosave_settings)
+        _cfg = load_config()
+        self._autosave_dlg.set_values(
+            enabled=bool(_cfg.get("autosave_enabled", False)),
+            max_mb=int(_cfg.get("autosave_max_mb", 2) or 2),
+            max_minutes=int(_cfg.get("autosave_max_minutes", 30) or 30),
+            folder=self._log_dir)
+        self.autosave_check.setChecked(bool(_cfg.get("autosave_enabled", False)))
 
         # send history (T5) from config
         self._send_history = [str(h) for h in load_config().get("send_history", [])
@@ -305,6 +319,11 @@ class MainWindow(QMainWindow):
         self._cfg_menu.addAction(self._cfg_import_act)
 
         # U44: about box (version is otherwise invisible in the UI)
+        self._autosave_act = QAction(tr("as.menu"), self)
+        self._autosave_act.setToolTip(tr("as.note"))
+        self._autosave_act.triggered.connect(self._show_autosave_settings)
+        self._settings_menu.addAction(self._autosave_act)
+
         self._settings_menu.addSeparator()
         self._reconnect_act = QAction(tr("conn.auto"), self, checkable=True)
         self._reconnect_act.setToolTip(tr("conn.auto.tip"))
@@ -361,6 +380,41 @@ class MainWindow(QMainWindow):
             ("Esc", self._esc_action),
         ):
             QShortcut(QKeySequence(seq), self).activated.connect(handler)
+
+    def _apply_autosave_settings(self) -> None:
+        """Apply the auto-save dialog values live and remember them (U75)."""
+        values = self._autosave_dlg.values()
+        self._log_max_bytes = max(1, int(values["max_mb"])) * 1024 * 1024
+        self._log_max_seconds = max(1, int(values["max_minutes"])) * 60
+        if values["dir"]:
+            self._log_dir = values["dir"]
+        config = load_config()
+        config["autosave_enabled"] = bool(values["enabled"])
+        config["autosave_max_mb"] = int(values["max_mb"])
+        config["autosave_max_minutes"] = int(values["max_minutes"])
+        config["log_dir"] = self._log_dir
+        save_config(config)
+        if self.autosave_check.isChecked() != values["enabled"]:
+            self.autosave_check.blockSignals(True)
+            self.autosave_check.setChecked(values["enabled"])
+            self.autosave_check.blockSignals(False)
+        if values["enabled"]:
+            if self._log_fp is None:
+                self._log_open()
+        else:
+            self._log_close()
+
+    def _show_autosave_settings(self) -> None:
+        """Open the auto-save settings dialog (U75)."""
+        self._autosave_dlg.show()
+        self._autosave_dlg.raise_()
+        self._autosave_dlg.activateWindow()
+
+    def _on_autoscroll_toggled(self, checked: bool) -> None:
+        """Remember the auto-scroll preference (U75)."""
+        config = load_config()
+        config["autoscroll"] = bool(checked)
+        save_config(config)
 
     def _on_reconnect_toggled(self, checked: bool) -> None:
         """Persist and apply the auto-reconnect preference (T14)."""
@@ -523,6 +577,9 @@ class MainWindow(QMainWindow):
         self._repeat_lbl.setText(tr("tx.interval.label"))
         self.tx_edit.setPlaceholderText(tr("tx.placeholder"))
         self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+        self._autosave_act.setText(tr("as.menu"))
+        self._autosave_act.setToolTip(tr("as.note"))
+        self._autosave_dlg.retranslate()
         self._update_payload_size()
         self._undo_btn.setText(tr("qs.undo"))
         self._undo_btn.setToolTip(tr("qs.deleted"))
@@ -732,8 +789,9 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(self.echo_tx_check)
 
         self.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
-        self.autoscroll_check.setChecked(True)
+        self.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
         self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
+        self.autoscroll_check.toggled.connect(self._on_autoscroll_toggled)
         toolbar.addWidget(self.autoscroll_check)
 
         self.clear_btn = QPushButton(tr("btn.clear"))
@@ -1377,9 +1435,9 @@ class MainWindow(QMainWindow):
     def _log_open(self) -> None:
         """Open a new log segment under logs/ (auto-save mode)."""
         try:
-            os.makedirs(LOG_DIR, exist_ok=True)
+            os.makedirs(self._log_dir, exist_ok=True)
             name = time.strftime("serial_%Y%m%d_%H%M%S.txt")
-            self._log_path = os.path.join(LOG_DIR, name)
+            self._log_path = os.path.join(self._log_dir, name)
             self._log_fp = open(self._log_path, "a", encoding="utf-8")
             self._log_started = time.time()
             self._log_bytes = 0
@@ -1400,8 +1458,8 @@ class MainWindow(QMainWindow):
         """Append a chunk of received text to the auto-save file, rotating when needed."""
         if self._log_fp is None:
             return
-        if (self._log_bytes > LOG_MAX_BYTES
-                or time.time() - self._log_started > LOG_MAX_SECONDS):
+        if (self._log_bytes > self._log_max_bytes
+                or time.time() - self._log_started > self._log_max_seconds):
             self._log_close()
             self._log_open()
             if self._log_fp is None:
@@ -1415,6 +1473,13 @@ class MainWindow(QMainWindow):
             self.on_log_line(tr("log.save_fail", e=exc))
 
     def _on_autosave_toggled(self, checked: bool) -> None:
+        if self._autosave_dlg.enable_check.isChecked() != checked:
+            self._autosave_dlg.enable_check.blockSignals(True)   # U75: one shared state
+            self._autosave_dlg.enable_check.setChecked(checked)
+            self._autosave_dlg.enable_check.blockSignals(False)
+        config = load_config()
+        config["autosave_enabled"] = bool(checked)
+        save_config(config)
         if checked:
             self._log_open()
             if self._log_fp is None:
@@ -1425,8 +1490,8 @@ class MainWindow(QMainWindow):
     def on_save_log_quick(self) -> None:
         """One-click save of the receive pane into logs/ (U25-D)."""
         try:
-            os.makedirs(LOG_DIR, exist_ok=True)
-            path = os.path.join(LOG_DIR, time.strftime("serial_RX_%Y%m%d_%H%M%S.txt"))
+            os.makedirs(self._log_dir, exist_ok=True)
+            path = os.path.join(self._log_dir, time.strftime("serial_RX_%Y%m%d_%H%M%S.txt"))
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(self.rx_view.toPlainText())
                 fh.write("\n")

@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.6.9] - 2026-10-01
+
+### Added
+
+- **Auto-save settings dialog (U75)**: the receive toolbar's Auto-save switch now has a companion dialog
+  (Settings -> Auto-save settings) to enable it, set the per-file size limit (default 2 MB), the maximum duration
+  (default 30 minutes) and the folder the segments land in (defaults to the app data folder, e.g.
+  `%APPDATA%\SerialDesk\logs`). Every change applies immediately and is remembered; the toolbar switch and the
+  dialog share one state, and the dialog note explains exactly what happens - every received line (including TX
+  echo) is written live, and a new file starts once a limit is reached, named like `serial_20261001_0200.txt`.
+
+### Changed
+
+- **Auto-scroll is on by default and now remembered (U75)**: the receive pane follows incoming data unless you turn
+  it off, and that choice survives a restart.
+
 ## [v0.6.8] - 2026-10-01
 
 ### Changed
