@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.6.17] - 2026-10-01
+
+### Fixed
+
+- **The size floor is now enforced per pane, not once for the window (U81 follow-up)**: the previous check derived a
+  single window minimum from whichever row happened to be widest, so a divider drag could still squeeze the rows of
+  the pane on the other side (the quick-send column could be dragged wide and the receive rows paid for it). Each
+  pane now carries its own hard minimum, computed from its widest control row, so no divider position can compress a
+  row.
+- **Row measurements use the layout's own minimum**: adding up the widget widths by hand missed a few pixels per
+  combo box, which left rows marginally too narrow; the layouts now report their minimum size directly, and they are
+  re-activated before measuring so the numbers follow the current font and translation (Chinese floor 1016-1043 px,
+  English 1092-1119 px here).
+- Verified across Chinese/English x three starting window sizes: at the computed minimum, with the quick-send column
+  dragged wide, with the receive pane squashed, and maximised - no row overflow and no widget squeezed below its
+  content in any combination.
+
 ## [v0.6.16] - 2026-10-01
 
 ### Fixed

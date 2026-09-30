@@ -569,7 +569,8 @@ class MainWindow(QMainWindow):
         combo.blockSignals(False)
 
     def retranslate(self):
-        QTimer.singleShot(0, self._fit_minimum_width)   # U81: labels change size
+        QTimer.singleShot(0, self._fit_minimum_width)     # U81: labels change size
+        QTimer.singleShot(150, self._fit_minimum_width)   # second pass once laid out
         """Re-apply every translated string (called after a language change)."""
         self._settings_btn.setText(tr("menu.settings"))
         self._theme_menu.setTitle(tr("theme.menu"))
@@ -1110,18 +1111,13 @@ class MainWindow(QMainWindow):
         return rows
 
     def _row_need(self, layout) -> int:
-        """Minimum width one row needs - items plus the spacing between them."""
-        total = 0
-        for i in range(layout.count()):
-            it = layout.itemAt(i)
-            wid = it.widget()
-            if wid is not None:
-                total += max(wid.minimumSizeHint().width(), wid.minimumWidth())
-            elif it.layout() is not None:
-                total += it.layout().minimumSize().width()
-            elif it.spacerItem() is not None:
-                total += it.spacerItem().sizeHint().width()
-        return total + layout.spacing() * max(0, layout.count() - 1)
+        """Minimum width one row needs.
+
+        Qt's own layout minimum accounts for the items' minimums, the layout's
+        internal spacing and its contents margins; adding them up by hand missed a
+        few pixels per combo box and left rows slightly too narrow (U81).
+        """
+        return int(layout.minimumSize().width())
 
     def _widest_row(self) -> tuple:
         """(need, row widget) of the widest control row (U81)."""
@@ -1133,20 +1129,50 @@ class MainWindow(QMainWindow):
                 best = (need, wid)
         return best
 
-    def _fit_minimum_width(self) -> None:
-        """Derive the window minimum from the widest row at the current font/DPI (U81).
+    def _fit_pane_minimums(self) -> None:
+        """Hard width floor per pane so a divider drag can never squeeze its rows (U81).
 
-        A hard-coded pixel minimum is only correct for the font it was measured
-        with; on another Windows DPI scale the rows need more and start to
-        overlap. Measuring here keeps the two in step.
+        Pushing the constraint onto the panes (instead of only computing one global
+        window minimum) means every splitter position stays safe: the splitter cannot
+        compress a pane below the width its widest control row actually needs.
         """
-        need, wid = self._widest_row()
-        if wid is None or need <= 0:
-            return
-        chrome = self.width() - wid.width()      # frame + group margins + quick panel
-        # assign (not only grow): the need depends on the current language, and the
-        # floor keeps the window usable even if a translation is unusually short
-        self.setMinimumWidth(max(980, need + max(0, chrome)))
+        for group in (self._rx_group, self._tx_group):
+            lay = group.layout()
+            if lay is None:
+                continue
+            widest, holder = 0, None
+            for i in range(lay.count()):
+                wid = lay.itemAt(i).widget()
+                if wid is not None and wid.layout() is not None:
+                    need = self._row_need(wid.layout())
+                    if need > widest:
+                        widest, holder = need, wid
+            if holder is None:
+                continue
+            pad = max(0, group.width() - holder.width())   # group frame + margins
+            group.setMinimumWidth(widest + pad)
+
+    def _fit_minimum_width(self) -> None:
+        """Window floor = the connection bar (spans the window) or both panes side by side.
+
+        Derived at start-up and after a language switch, because the needed width
+        follows the actual font, DPI scale and translation - a hard-coded value is
+        only right for the machine it was measured on.
+        """
+        # let the layouts recompute with the current font and translation first, or
+        # measurements taken right after a language switch use the old label widths
+        for lay in self._control_rows():
+            lay.activate()
+        central = self.centralWidget().layout()
+        if central is not None:
+            central.activate()
+        self._fit_pane_minimums()
+        rows = self._control_rows()
+        connect_need = self._row_need(rows[0]) if rows else 0
+        panel_min = max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width())
+        pair_need = (self._rx_group.minimumWidth() + panel_min + self._splitter.handleWidth()
+                     + max(0, self.width() - self._splitter.width()))
+        self.setMinimumWidth(max(980, connect_need, pair_need))
 
     def _give_data_area_the_room(self) -> None:
         """First run: hand every spare pixel to the receive pane (U79).
