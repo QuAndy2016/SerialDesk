@@ -237,6 +237,16 @@ STRINGS: dict[str, dict[str, str]] = {
     "status.no_port": {"zh": "未发现串口", "en": "No serial port found"},
     "status.bad_baud": {"zh": "波特率格式错误", "en": "Invalid baud rate"},
     "status.opened": {"zh": "串口已打开", "en": "Port opened"},
+    "err.tx.timeout": {
+        "zh": "发送超时：设备没有读取数据（发送缓冲已满）。请检查设备是否在线、波特率与流控设置",
+        "en": "Send timed out: the device is not draining its buffer. Check that it is online and that baud rate / flow control match",
+    },
+    "err.tx.closed": {"zh": "发送失败：串口未打开", "en": "Send failed: port is not open"},
+    "err.tx.queue": {
+        "zh": "发送队列已满（{n} 帧待发），请降低发送频率或检查设备是否停止接收",
+        "en": "Send queue is full ({n} frames pending). Slow down or check whether the device stopped receiving",
+    },
+    "err.tx.io": {"zh": "发送失败：{e}", "en": "Send failed: {e}"},
     "err.open.denied": {
         "zh": "打开串口失败：没有权限（{e}）。请关闭占用该端口的程序，或以管理员身份运行",
         "en": "Cannot open port: access denied ({e}). Close the program holding the port, or run as administrator",

@@ -127,6 +127,7 @@ class MainWindow(QMainWindow):
         self.worker.log.connect(self.on_log_line)
         self.worker.opened.connect(self.on_opened_changed)
         self.worker.error.connect(self._on_worker_error)
+        self.worker.send_error.connect(self._on_send_error)
 
         self.rx_bytes = 0
         self.tx_bytes = 0
@@ -148,6 +149,9 @@ class MainWindow(QMainWindow):
         self._sig_timer = QTimer(self)
         self._sig_timer.timeout.connect(self._poll_signals)
         self._sig_timer.start(50)
+        self._cfg_save_timer = QTimer(self)     # U52: debounced config persistence
+        self._cfg_save_timer.setSingleShot(True)
+        self._cfg_save_timer.timeout.connect(self._flush_history_save)
         self._file_data = b""
         self._file_pos = 0
         self._file_path = ""
@@ -716,6 +720,28 @@ class MainWindow(QMainWindow):
         self.status_light.setStyleSheet(
             f"color: {cols[key]}; font-weight: bold; padding-right: 8px;")
 
+    def _on_send_error(self, kind: str, detail: str) -> None:
+        """Report a write that failed on the worker thread (U52: GUI never blocks)."""
+        if kind == "timeout":
+            self._notify(tr("err.tx.timeout"), "error")
+        elif kind == "queue":
+            self._notify(tr("err.tx.queue", n=detail), "error")
+        elif kind == "closed":
+            self._notify(tr("err.tx.closed"), "error")
+        else:
+            self._notify(tr("err.tx.io", e=detail), "error")
+
+    def _schedule_history_save(self) -> None:
+        """Debounce history persistence: one write per 2 s instead of per click (U52)."""
+        self._cfg_save_timer.start(2000)
+
+    def _flush_history_save(self) -> None:
+        """Write the send history to config.json (called by the debounce timer)."""
+        self._cfg_save_timer.stop()
+        config = load_config()
+        config["send_history"] = self._send_history
+        save_config(config)
+
     def _on_worker_error(self, text: str) -> None:
         """Turn a serial open/IO failure into an actionable message (U37)."""
         low = text.lower()
@@ -1123,9 +1149,7 @@ class MainWindow(QMainWindow):
         self.history_combo.clear()
         self.history_combo.addItems(self._send_history)
         self.history_combo.blockSignals(False)
-        config = load_config()
-        config["send_history"] = self._send_history
-        save_config(config)
+        self._schedule_history_save()
 
     def _on_repeat_toggled(self, checked: bool):
         if checked:
@@ -1409,6 +1433,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self._sig_timer.stop()
+        self._flush_history_save()
         self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()

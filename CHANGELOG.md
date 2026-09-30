@@ -1,5 +1,23 @@
 # Changelog
 
+## [v0.4.7] - 2026-09-30
+
+### Fixed
+
+- **The app could freeze solid after a few sends (U52)**: all serial I/O now runs on the worker thread,
+  and every blocking path is bounded or cached.
+  - Outgoing frames are enqueued (`send()` never touches the port) and written by the worker, so a stalled
+    device can no longer block the GUI thread.
+  - The port is opened with `write_timeout=0.3`: a driver that never completes a transfer (for example
+    hardware flow control waiting for a CTS that never arrives) now raises instead of hanging forever, and
+    the app reports "Send timed out: the device is not draining its buffer" persistently in red.
+  - Modem status lines (CTS / DSR / DCD / RI) are polled on the worker thread every 200 ms and cached; the
+    GUI only reads the cache, so those device ioctls can no longer freeze the interface.
+  - The send queue is bounded (64 frames) and reports "Send queue is full" instead of growing without limit
+    when the port stops draining.
+  - Send history is persisted with a 2 s debounce instead of one `config.json` read + write per click; the
+    old path did synchronous disk I/O on every send (painful with real-time antivirus scanning).
+
 ## [v0.4.6] - 2026-09-30
 
 ### Added
