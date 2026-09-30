@@ -29,6 +29,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "cfg.import_fail": {"zh": "导入配置失败: {e}", "en": "Import failed: {e}"},
     "cfg.import_bad": {"zh": "文件格式不正确（不是 SerialDesk 配置）", "en": "Unsupported file (not a SerialDesk config)"},
     "menu.view": {"zh": "视图", "en": "View"},
+    "portset.title": {"zh": "串口设置", "en": "Port settings"},
+    "portset.open": {"zh": "串口设置…", "en": "Port settings…"},
+    "portset.tip": {
+        "zh": "数据位 / 校验位 / 停止位 / 流控 / 编码 与信号线（低频设置，独立窗口）",
+        "en": "Data bits, parity, stop bits, flow control, encoding and the signal lines",
+    },
+    "portset.summary.tip": {
+        "zh": "当前串口参数；点右侧「串口设置…」修改",
+        "en": "Current port parameters - use Port settings… to change them",
+    },
+    "portset.menu": {"zh": "串口设置(&P)…", "en": "&Port settings…"},
     "about.menu": {"zh": "关于 SerialDesk(&A)…", "en": "&About SerialDesk…"},
     "about.title": {"zh": "关于 SerialDesk", "en": "About SerialDesk"},
     "about.text": {

@@ -62,6 +62,7 @@ from app.config import load_config, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
+from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import QuickSendPanel
 from app import i18n
 from app.i18n import hex_error_message, tr
@@ -287,6 +288,10 @@ class MainWindow(QMainWindow):
 
         # U44: about box (version is otherwise invisible in the UI)
         self._settings_menu.addSeparator()
+        self._portset_act = QAction(tr("portset.menu"), self)
+        self._portset_act.triggered.connect(self._show_port_settings)
+        self._settings_menu.addAction(self._portset_act)
+
         self._about_act = QAction(tr("about.menu"), self)
         self._about_act.triggered.connect(self._show_about)
         self._settings_menu.addAction(self._about_act)
@@ -336,6 +341,21 @@ class MainWindow(QMainWindow):
             ("Esc", self._esc_action),
         ):
             QShortcut(QKeySequence(seq), self).activated.connect(handler)
+
+    def _show_port_settings(self) -> None:
+        """Show the port-settings dialog (U35-P3)."""
+        self._port_dlg.show()
+        self._port_dlg.raise_()
+        self._port_dlg.activateWindow()
+
+    def _update_params_summary(self) -> None:
+        """One-line summary of the low-frequency settings (U35-P3)."""
+        parity = ["N", "O", "E", "M", "S"][max(0, min(4, self.parity_combo.currentIndex()))]
+        data = self.dbits_combo.currentText()
+        stop = self.stopbits_combo.currentText()
+        flow = self.flow_combo.currentText()
+        enc = self.encoding_combo.currentText()
+        self.params_summary.setText(f"{data}{parity}{stop} · {flow} · {enc}")
 
     def _show_about(self) -> None:
         """About box: version, runtime versions and the project link (U44)."""
@@ -431,6 +451,11 @@ class MainWindow(QMainWindow):
         self.autoscroll_check.setText(tr("rx.autoscroll"))
         self.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
         self.autosave_check.setToolTip(tr("log.autosave.tip"))
+        self._port_set_btn.setText(tr("portset.open"))
+        self._port_set_btn.setToolTip(tr("portset.tip"))
+        self.params_summary.setToolTip(tr("portset.summary.tip"))
+        self._port_dlg.retranslate()
+        self._update_params_summary()
         self._dbit_lbl.setText(tr("params.databits"))
         self._parity_lbl.setText(tr("params.parity"))
         self._stopbit_lbl.setText(tr("params.stopbits"))
@@ -543,74 +568,35 @@ class MainWindow(QMainWindow):
         self.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
         bar.addWidget(self.rx_fmt_combo)
 
+        bar.addSpacing(12)
+        self.params_summary = QLabel("")
+        self.params_summary.setToolTip(tr("portset.summary.tip"))
+        bar.addWidget(self.params_summary)
+        self.port_set_btn = QPushButton(tr("portset.open"))
+        self.port_set_btn.setToolTip(tr("portset.tip"))
+        self.port_set_btn.clicked.connect(self._show_port_settings)
+        bar.addWidget(self.port_set_btn)
+
         bar.addStretch(1)
         root.addLayout(bar)
 
-        # --- serial parameters row (T1) --------------------------------------
-        self._param_combos = []
-        params = QHBoxLayout()
-        self._dbit_lbl = QLabel(tr("params.databits"))
-        params.addWidget(self._dbit_lbl)
-        self.dbits_combo = QComboBox()
-        self.dbits_combo.addItems([str(b) for b in BYTESIZE_KEYS])
-        self.dbits_combo.setCurrentIndex(len(BYTESIZE_KEYS) - 1)     # 8
-        params.addWidget(self.dbits_combo)
-
-        self._parity_lbl = QLabel(tr("params.parity"))
-        params.addWidget(self._parity_lbl)
-        self.parity_combo = QComboBox()
-        self.parity_combo.addItems([tr("parity.none"), tr("parity.odd"), tr("parity.even"),
-                                    "Mark", "Space"])
-        params.addWidget(self.parity_combo)
-
-        self._stopbit_lbl = QLabel(tr("params.stopbits"))
-        params.addWidget(self._stopbit_lbl)
-        self.stopbits_combo = QComboBox()
-        self.stopbits_combo.addItems([str(b) for b in STOPBITS_KEYS])
-        params.addWidget(self.stopbits_combo)
-
-        self._flow_lbl = QLabel(tr("params.flow"))
-        params.addWidget(self._flow_lbl)
-        self.flow_combo = QComboBox()
-        self.flow_combo.addItems([tr("flow.none"), tr("flow.sw"), tr("flow.hw")])
-        params.addWidget(self.flow_combo)
-
-        self._enc_lbl = QLabel(tr("params.encoding"))
-        params.addWidget(self._enc_lbl)
-        self.encoding_combo = QComboBox()
-        self.encoding_combo.addItems(["ASCII", "UTF-8", "GBK", "GB2312"])
-        self.encoding_combo.setToolTip(tr("params.encoding.tip"))
-        params.addWidget(self.encoding_combo)
-
-        params.addSpacing(12)
-        # U32: outputs (controllable) vs inputs (read-only status)
-        self._sig_out_lbl = QLabel(tr("sig.out"))
-        self._sig_out_lbl.setEnabled(False)
-        self._sig_out_lbl.setToolTip(tr("sig.out.tip"))
-        params.addWidget(self._sig_out_lbl)
-        self.dtr_check = QCheckBox("DTR")
-        self.dtr_check.setToolTip(tr("sig.dtr.tip"))
+        # U35-P3: the parameter widgets now live in their own dialog; the main
+        # window keeps the same attribute names so the rest of the code is unchanged.
+        self._port_dlg = PortSettingsDialog(self)
+        for _name in ("dbits_combo", "parity_combo", "stopbits_combo", "flow_combo",
+                      "encoding_combo", "dtr_check", "rts_check", "sig_lbl",
+                      "_dbit_lbl", "_parity_lbl", "_stopbit_lbl", "_flow_lbl",
+                      "_enc_lbl", "_sig_out_lbl", "_sig_in_lbl"):
+            setattr(self, _name, getattr(self._port_dlg, _name))
         self.dtr_check.toggled.connect(self.worker.set_dtr)
-        params.addWidget(self.dtr_check)
-        self.rts_check = QCheckBox("RTS")
-        self.rts_check.setToolTip(tr("sig.rts.tip"))
         self.rts_check.toggled.connect(self.worker.set_rts)
-        params.addWidget(self.rts_check)
-
-        self._sig_in_lbl = QLabel(tr("sig.in"))
-        self._sig_in_lbl.setEnabled(False)
-        self._sig_in_lbl.setToolTip(tr("sig.in.tip"))
-        params.addWidget(self._sig_in_lbl)
-        self.sig_lbl = QLabel(self._signals_html({}))
-        self.sig_lbl.setTextFormat(Qt.TextFormat.RichText)
-        self.sig_lbl.setToolTip(tr("sig.in.tip"))
-        params.addWidget(self.sig_lbl)
-
-        self._param_combos = [self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo]
+        self._param_combos = [self.dbits_combo, self.parity_combo,
+                              self.stopbits_combo, self.flow_combo]
         for combo in self._param_combos:
             combo.setToolTip(tr("params.tip"))
-        params.addStretch(1)
-        root.addLayout(params)
+            combo.currentIndexChanged.connect(self._update_params_summary)
+        self.encoding_combo.currentIndexChanged.connect(self._update_params_summary)
+        self._update_params_summary()
 
         # --- main splitter: left (rx/tx) + right (quick send) ---------------
         splitter = QSplitter()
@@ -902,7 +888,7 @@ class MainWindow(QMainWindow):
         names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
                  "split_combo", "split_ms_edit", "header_edit", "ts_combo",
                  "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
-                 "tx_fmt_combo", "encoding_combo", "escape_check", "crlf_check",
+                 "tx_fmt_combo", "escape_check", "crlf_check",
                  "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
                  "history_combo", "send_btn", "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]

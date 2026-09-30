@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.5.1] - 2026-10-01
+
+### Changed
+
+- **Serial parameters moved into their own dialog (U35-P3)**: data bits, parity, stop bits, flow control,
+  encoding, plus DTR/RTS and the CTS/DSR/DCD/RI signal lines, are configured once and rarely touched, so they
+  now live in a modeless "Port settings" window (opened from the Settings menu or the button beside the port
+  selector). The main window keeps a one-line summary of the active parameters ("8N1 - None - ASCII"), which
+  completes the U35 layout work: the data panes keep the space those controls used to occupy and the settings
+  stay one click away. The parameter controls are still disabled while a port is open, and the open/send paths
+  read them exactly as before.
+
 ## [v0.5.0] - 2026-10-01
 
 Batched usability release: the ten remaining "small" items from the task list, shipped together instead of
