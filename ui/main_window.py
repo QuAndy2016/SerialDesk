@@ -65,6 +65,7 @@ from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
 from ui.autosave_dialog import AutoSaveDialog
+from ui.history_dialog import HistoryDialog
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import QuickSendPanel
 from app import i18n
@@ -192,6 +193,9 @@ class MainWindow(QMainWindow):
         self._log_max_seconds = max(1, int(_cfg0.get("autosave_max_minutes", 30) or 30)) * 60
         self._log_dir = str(_cfg0.get("log_dir") or "") or LOG_DIR
         self._send_history: list[str] = []
+        self._history_dlg = None        # U87: lazily created non-modal popup
+        self._recall_index = -1         # U87: Ctrl+Up/Down position in the history
+        self._recall_draft = ""
         self._sent_count = 0
         self._repeat_timer = QTimer(self)
         self._repeat_timer.timeout.connect(self.on_send)
@@ -234,7 +238,7 @@ class MainWindow(QMainWindow):
         # send history (T5) from config
         self._send_history = [str(h) for h in load_config().get("send_history", [])
                               if str(h).strip()][:HISTORY_MAX]
-        self.history_combo.addItems(self._send_history)
+        self._update_history_button()
 
         # auto-reply rules (T10) from config
         cfg = load_config()
@@ -417,6 +421,8 @@ class MainWindow(QMainWindow):
             ("Ctrl+K", lambda: self.tx_edit.setFocus()),
             ("F5", self.toggle_open),
             ("Ctrl+B", self._toggle_quick_panel),          # U88: fold/unfold the panel
+            ("Ctrl+Up", lambda: self._recall_history(1)),    # U87: older command
+            ("Ctrl+Down", lambda: self._recall_history(-1)),  # U87: newer command
             ("Ctrl+F", lambda: self._toggle_find_bar(True)),
             ("Esc", self._esc_action),
         ):
@@ -460,7 +466,7 @@ class MainWindow(QMainWindow):
         self._apply_autosave_settings()
         self.autoscroll_check.setChecked(True)
         self._send_history = []
-        self.history_combo.clear()
+        self._update_history_button()
         self._auto_rules = []
         self.auto_reply_check.setChecked(False)
         self._sent_count = 0
@@ -676,7 +682,7 @@ class MainWindow(QMainWindow):
         for combo in self._param_combos:
             combo.setToolTip(tr("params.tip"))
         self._hist_lbl.setText(tr("tx.history"))
-        self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
+        self._update_history_button()
         self.repeat_check.setText(tr("tx.repeat"))
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
@@ -965,20 +971,6 @@ class MainWindow(QMainWindow):
         tx_layout.setContentsMargins(8, 2, 8, 6)
         tx_layout.setSpacing(4)
 
-        hist_row = QHBoxLayout()
-        self._hist_lbl = QLabel(tr("tx.history"))
-        hist_row.addWidget(self._hist_lbl)
-        self.history_combo = QComboBox()
-        self.history_combo.setMinimumWidth(130)   # U69: keeps the group narrow enough
-        self.history_combo.setToolTip(tr("tx.history.tip", n=HISTORY_MAX))
-        self.history_combo.activated.connect(self._on_history_pick)
-        # U77: make the history list manageable (right-click delete / clear, Delete key)
-        self.history_combo.view().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.history_combo.view().customContextMenuRequested.connect(self._on_history_context_menu)
-        self.history_combo.view().installEventFilter(self)
-        hist_row.addWidget(self.history_combo, 1)
-        tx_layout.addWidget(_fixed_row(hist_row))   # U70
-
         # U74: payload options above, the input owning the middle with the primary
         # Send button beside it, then the repeat controls and the file row. The old
         # layout squeezed the input to ~134 px (a control column ate ~83% of the
@@ -1023,6 +1015,16 @@ class MainWindow(QMainWindow):
         self.send_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.send_btn.setToolTip(tr("sc.send.tip"))
         tx_row.addWidget(self.send_btn)
+        # U87: the history is a popup now, so it costs one compact button beside the
+        # primary action instead of a whole row of its own.
+        self.history_btn = QPushButton(tr("tx.history.btn", n=0))
+        self.history_btn.setToolTip(tr("tx.history.btn.tip", n=0))
+        self.history_btn.setMinimumWidth(88)
+        self.history_btn.setMinimumHeight(60)
+        self.history_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.history_btn.setEnabled(False)
+        self.history_btn.clicked.connect(self._show_history)
+        tx_row.addWidget(self.history_btn)
         tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
 
         repeat_row = QHBoxLayout()
@@ -1256,7 +1258,7 @@ class MainWindow(QMainWindow):
                  "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
                  "tx_fmt_combo", "escape_check", "crlf_check",
                  "tx_edit", "checksum_combo", "repeat_check", "repeat_ms",
-                 "history_combo", "send_btn", "send_file_btn"]
+                 "history_btn", "send_btn", "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
         for first, second in zip(widgets, widgets[1:]):
             QWidget.setTabOrder(first, second)
@@ -1463,8 +1465,7 @@ class MainWindow(QMainWindow):
         self.quick_panel.reload_from_config()
 
         self._send_history = [str(h) for h in cfg.get("send_history", []) if str(h).strip()][:HISTORY_MAX]
-        self.history_combo.clear()
-        self.history_combo.addItems(self._send_history)
+        self._update_history_button()
 
         self._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
         self.auto_reply_check.setChecked(bool(cfg.get("auto_reply_enabled", False)))
@@ -1775,10 +1776,6 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
         """Delete the highlighted history entry with the keyboard (U77)."""
-        if obj is self.history_combo.view() and event.type() == QEvent.Type.KeyPress \
-                and event.key() == Qt.Key.Key_Delete:
-            self._remove_history_entry(self.history_combo.view().currentIndex().row())
-            return True
         return super().eventFilter(obj, event)
 
     def _snapshot_rx_fragments(self) -> list:
@@ -1857,10 +1854,46 @@ class MainWindow(QMainWindow):
         self._line_is_tx = True
         self._scroll_rx_bottom()          # U43
 
-    def _on_history_pick(self, index: int):
-        text = self.history_combo.itemText(index)
-        if text:
-            self.tx_edit.setPlainText(text)
+    def _show_history(self) -> None:
+        """Open (or raise) the non-modal history popup (U87)."""
+        if self._history_dlg is None:
+            self._history_dlg = HistoryDialog(self)
+            self._history_dlg.fill_requested.connect(self._on_history_fill)
+            self._history_dlg.delete_requested.connect(self._remove_history_entry)
+            self._history_dlg.clear_requested.connect(self._clear_history)
+        self._history_dlg.set_history(self._send_history)
+        self._history_dlg.show()
+        self._history_dlg.raise_()
+        self._history_dlg.activateWindow()
+
+    def _on_history_fill(self, text: str) -> None:
+        """Recall a stored command into the send box (U87)."""
+        self.tx_edit.setPlainText(text)
+        self.tx_edit.setFocus()
+        self._recall_index = -1
+        if self._history_dlg is not None:
+            self._history_dlg.close()
+
+    def _recall_history(self, step: int) -> None:
+        """Walk the send history with Ctrl+Up / Ctrl+Down (U87).
+
+        step +1 goes further back in time (older), -1 comes towards the newest;
+        stepping past the newest restores whatever was typed before browsing.
+        """
+        if not self._send_history:
+            self._notify(tr("tx.history.empty"), "info", ms=2500)
+            return
+        if self._recall_index < 0:
+            self._recall_draft = self.tx_edit.toPlainText()
+            self._recall_index = 0
+        else:
+            self._recall_index += step
+        if self._recall_index < 0:
+            self._recall_index = -1
+            self.tx_edit.setPlainText(self._recall_draft)
+            return
+        self._recall_index = min(self._recall_index, len(self._send_history) - 1)
+        self.tx_edit.setPlainText(self._send_history[self._recall_index])
 
     def _remember_send(self, text: str):
         """Push a sent command into the dedup history (max HISTORY_MAX) and persist it."""
@@ -1869,38 +1902,24 @@ class MainWindow(QMainWindow):
             return
         self._send_history = [text] + [h for h in self._send_history if h != text]
         self._send_history = self._send_history[:HISTORY_MAX]
-        self._refresh_history_combo()
+        self._update_history_button()
         self._schedule_history_save()
 
-    def _refresh_history_combo(self) -> None:
-        """Rebuild the dropdown from the history list (U77)."""
-        self.history_combo.blockSignals(True)
-        self.history_combo.clear()
-        self.history_combo.addItems(self._send_history)
-        self.history_combo.blockSignals(False)
-
-    def _on_history_context_menu(self, pos) -> None:
-        """Right-click menu on the history dropdown: delete one entry or all (U77)."""
-        view = self.history_combo.view()
-        index = view.indexAt(pos)
-        menu = QMenu(self)
-        act_delete = menu.addAction(tr("tx.history.delete"))
-        act_delete.setEnabled(index.isValid())
-        menu.addSeparator()
-        act_clear = menu.addAction(tr("tx.history.clear"))
-        act_clear.setEnabled(bool(self._send_history))
-        chosen = menu.exec(view.mapToGlobal(pos))
-        if chosen is act_delete and index.isValid():
-            self._remove_history_entry(index.row())
-        elif chosen is act_clear:
-            self._clear_history()
+    def _update_history_button(self) -> None:
+        """Keep the History button (label, tooltip, enabled state) in sync (U87)."""
+        n = len(self._send_history)
+        self.history_btn.setText(tr("tx.history.btn", n=n))
+        self.history_btn.setToolTip(tr("tx.history.btn.tip", n=n))
+        self.history_btn.setEnabled(n > 0)
+        if self._history_dlg is not None:
+            self._history_dlg.set_history(self._send_history)
 
     def _remove_history_entry(self, row: int) -> None:
         """Drop one entry from the send history and persist (U77)."""
         if not (0 <= row < len(self._send_history)):
             return
         removed = self._send_history.pop(row)
-        self._refresh_history_combo()
+        self._update_history_button()
         self._schedule_history_save()
         self._notify(tr("tx.history.removed", text=removed), "info", ms=3000)
 
@@ -1909,7 +1928,7 @@ class MainWindow(QMainWindow):
         if not self._send_history:
             return
         self._send_history = []
-        self._refresh_history_combo()
+        self._update_history_button()
         self._schedule_history_save()
         self._notify(tr("tx.history.cleared"), "info", ms=3000)
 

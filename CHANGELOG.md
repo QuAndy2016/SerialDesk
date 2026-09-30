@@ -1,5 +1,32 @@
 # Changelog
 
+## [v0.7.0] - 2026-10-01
+
+### Added
+
+- **The send history is a popup now (U87)**: it no longer takes a row of its own - a compact "History (12)" button
+  sits beside Send and opens a non-modal list of recently sent commands. Double-click (or Enter) recalls one into the
+  send box, Delete removes the highlighted entry, and explicit Use / Delete / Clear all / Close buttons are provided.
+  Ctrl+Up and Ctrl+Down walk the history straight from the input box (Ctrl on purpose - the box is multi-line, so the
+  bare arrow keys must keep moving the caret); stepping past the newest entry restores what was typed before.
+- **The quick-send panel folds away (U88)**: a button in its header, Ctrl+B, or the new "Show quick-send panel" entry
+  in the Settings menu folds/unfolds it, and folding hands the log about 357 px of width. The state is remembered.
+- **Format-specific send hints (U86)**: the send box shows "e.g. 01 03 00 00" in HEX mode and "e.g. AT+VERSION?" in
+  text mode, switching with the format and with the language; the full format rules stay in the tooltip.
+
+### Changed
+
+- **The port list shows names (U83)**: the dropdown lists `COM5` instead of `COM5 [USB Serial Port (COM5)]`, with the
+  full description in the tooltip of the control and of every entry, so the port name is never truncated.
+- **One control for the wire format (U84)**: the `8N1 - None - ASCII` summary is now the button that opens the
+  port-settings dialog, replacing a separate label plus button. The minimum window width drops by about 40 px
+  (roughly 1016 -> 981 px in Chinese) with every label left complete.
+
+### Fixed
+
+- Rows can no longer be squeezed by a divider drag, and row widths are measured from the layout itself, so the
+  numbers follow the current font, DPI scale and language (U81 follow-up).
+
 ## [v0.6.17] - 2026-10-01
 
 ### Fixed
