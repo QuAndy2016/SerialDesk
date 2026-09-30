@@ -118,9 +118,49 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "接收文本与发送文本使用的编码（ASCII 模式按字节显示，非可打印字符显示为 .）",
         "en": "Encoding used for received and sent text (ASCII shows bytes, non-printables as .)",
     },
+    "sig.out": {"zh": "输出:", "en": "Out:"},
+    "sig.out.tip": {
+        "zh": "输出控制线：勾选 = 置高（部分无源 485/422 转换器需要）",
+        "en": "Output control lines: checked = driven high (needed by some passive 485/422 converters)",
+    },
+    "sig.dtr.tip": {
+        "zh": "DTR（Data Terminal Ready，数据终端就绪）：输出信号，勾选置高",
+        "en": "DTR (Data Terminal Ready): output line, checked = high",
+    },
+    "sig.rts.tip": {
+        "zh": "RTS（Request To Send，请求发送）：输出信号；开启硬件流控后由驱动自动管理",
+        "en": "RTS (Request To Send): output line; managed automatically under hardware flow control",
+    },
+    "sig.in": {"zh": "输入:", "en": "In:"},
+    "sig.in.tip": {
+        "zh": "输入状态线（只读，每 50 ms 刷新）：CTS 清除发送 / DSR 数据装置就绪 / DCD 载波检测 / RI 振铃指示",
+        "en": "Input status lines (read-only, refreshed every 50 ms): CTS / DSR / DCD / RI",
+    },
+    "sig.high": {"zh": "高", "en": "High"},
+    "sig.low": {"zh": "低", "en": "Low"},
+    "sig.cts.tip": {
+        "zh": "CTS（Clear To Send，清除发送）：对端允许我方发送；硬件流控下用它暂停发送",
+        "en": "CTS (Clear To Send): peer allows us to send; pauses TX under hardware flow control",
+    },
+    "sig.dsr.tip": {
+        "zh": "DSR（Data Set Ready，数据装置就绪）：对端设备已上电并可通信",
+        "en": "DSR (Data Set Ready): peer device is powered and ready",
+    },
+    "sig.dcd.tip": {
+        "zh": "DCD（Data Carrier Detect，载波检测）：调制解调器检测到载波",
+        "en": "DCD (Data Carrier Detect): modem detected a carrier",
+    },
+    "sig.ri.tip": {
+        "zh": "RI（Ring Indicator，振铃指示）：调制解调器检测到来电振铃",
+        "en": "RI (Ring Indicator): modem detected an incoming ring",
+    },
     "sig.tip": {
         "zh": "信号线状态（CTS/DSR/DCD/RI），每 50 ms 刷新；DTR/RTS 为输出控制",
         "en": "Modem status lines (CTS/DSR/DCD/RI), refreshed every 50 ms; DTR/RTS are output controls",
+    },
+    "tx.hex.tip": {
+        "zh": "十六进制格式：可空格分隔，也支持 0x 前缀与逗号/短横线分隔",
+        "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
     "tx.escape": {"zh": "解析转义符", "en": "Parse escapes"},
     "tx.escape.tip": {
@@ -144,6 +184,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Append CRLF when sending in ASCII mode (handy for AT commands)",
     },
     # ---- repeat send (T2) / send history (T5) ----
+    "tx.interval.label": {"zh": "间隔(ms)", "en": "Interval (ms)"},
+    "split.auto.hint": {
+        "zh": "按波特率自动（约 3.5 字符）",
+        "en": "Auto by baud (~3.5 chars)",
+    },
+    "split.off.hint": {"zh": "不按时间分包", "en": "No time-based split"},
     "tx.repeat": {"zh": "循环发送", "en": "Repeat send"},
     "tx.repeat.tip": {"zh": "按设定间隔重复发送当前内容", "en": "Repeat the current input at the set interval"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，10~60000）", "en": "Repeat interval (ms, 10~60000)"},
@@ -191,6 +237,22 @@ STRINGS: dict[str, dict[str, str]] = {
     "status.no_port": {"zh": "未发现串口", "en": "No serial port found"},
     "status.bad_baud": {"zh": "波特率格式错误", "en": "Invalid baud rate"},
     "status.opened": {"zh": "串口已打开", "en": "Port opened"},
+    "err.open.denied": {
+        "zh": "打开串口失败：没有权限（{e}）。请关闭占用该端口的程序，或以管理员身份运行",
+        "en": "Cannot open port: access denied ({e}). Close the program holding the port, or run as administrator",
+    },
+    "err.open.busy": {
+        "zh": "打开串口失败：端口被占用（{e}）。请先关闭其他正在使用该端口的程序",
+        "en": "Cannot open port: busy ({e}). Close the other program using this port first",
+    },
+    "err.open.missing": {
+        "zh": "打开串口失败：端口不存在或设备已拔出（{e}）。请刷新端口列表后重试",
+        "en": "Cannot open port: device missing ({e}). Refresh the port list and retry",
+    },
+    "err.open.other": {
+        "zh": "打开串口失败：{e}",
+        "en": "Failed to open port: {e}",
+    },
     "status.closed": {"zh": "串口已关闭", "en": "Port closed"},
     "log.send_error": {"zh": "发送内容错误: {e}", "en": "Send error: {e}"},
     # ---- quick send panel ----
@@ -202,6 +264,26 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.send": {"zh": "发送", "en": "Send"},
     "qs.delete.tip": {"zh": "删除此条", "en": "Delete this row"},
     "qs.empty": {"zh": "指令内容为空", "en": "Command is empty"},
+    "hex.empty": {
+        "zh": "十六进制内容为空（只有分隔符）",
+        "en": "Hex content is empty (separators only)",
+    },
+    "hex.odd": {
+        "zh": "十六进制长度为奇数：第 {pos} 个字符后缺少一位",
+        "en": "Hex length is odd: one digit missing after position {pos}",
+    },
+    "hex.bad_char": {
+        "zh": "第 {pos} 个字符 '{ch}' 不是合法的十六进制字符",
+        "en": "'{ch}' at position {pos} is not a valid hex digit",
+    },
+    "hex.fullwidth": {
+        "zh": "检测到全角字符 '{ch}'（第 {pos} 位），请切换到英文输入法",
+        "en": "Full-width char '{ch}' at position {pos}; switch to the English IME",
+    },
+    "hex.prefix_missing": {
+        "zh": "第 {pos} 位的 0x 后面缺少十六进制数字",
+        "en": "Missing hex digits after 0x at position {pos}",
+    },
     "qs.bad_fmt": {"zh": "指令格式错误: {e}", "en": "Invalid command format: {e}"},
     "qs.save_fail": {"zh": "保存配置失败: {e}", "en": "Failed to save config: {e}"},
     # ---- command sequence (T13) ----
@@ -252,3 +334,19 @@ def tr(key: str, **kw) -> str:
         except (KeyError, IndexError):
             return text
     return text
+
+
+def hex_error_message(exc) -> str:
+    """Localized, actionable text for a HexFormatError (falls back to str)."""
+    kind = getattr(exc, "kind", None)
+    if kind == "empty":
+        return tr("hex.empty")
+    if kind == "odd":
+        return tr("hex.odd", pos=exc.pos)
+    if kind == "bad_char":
+        return tr("hex.bad_char", pos=exc.pos, ch=exc.ch)
+    if kind == "fullwidth":
+        return tr("hex.fullwidth", pos=exc.pos, ch=exc.ch)
+    if kind == "prefix":
+        return tr("hex.prefix_missing", pos=exc.pos)
+    return str(exc)

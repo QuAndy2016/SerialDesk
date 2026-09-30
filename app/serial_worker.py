@@ -25,6 +25,7 @@ class SerialWorker(QThread):
     received = Signal(float, bytes)   # (time.monotonic(), raw bytes)
     log = Signal(str)                 # info/error lines
     opened = Signal(bool)             # True when opened, False when closed/error
+    error = Signal(str)               # user-facing open/IO failure text (U37)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -48,6 +49,7 @@ class SerialWorker(QThread):
             )
         except Exception as exc:  # noqa: BLE001 - surface any serial error
             self.log.emit(f"open failed: {exc}")
+            self.error.emit(str(exc))
             self.opened.emit(False)
             return False
         self._running = True

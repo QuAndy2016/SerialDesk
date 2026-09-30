@@ -15,6 +15,7 @@ from app.protocol import (  # noqa: E402
     crc16_modbus,
     crc32,
     hex_str_to_bytes,
+    HexFormatError,
     modbus_read_holding_registers,
     parse_modbus_response,
     sum8,
@@ -147,3 +148,78 @@ class TestModbusFrames:
     def test_parse_response_short(self):
         ok, _, _ = parse_modbus_response(b"\x01\x03")
         assert not ok
+
+class TestHexLaxParsing:
+    """U36/D2: 0x prefix plus space/comma/dash separators, with precise errors."""
+
+    def test_0x_prefix_spaced(self):
+        assert hex_str_to_bytes("0x01 0x02") == bytes([0x01, 0x02])
+
+    def test_0x_prefix_compact(self):
+        assert hex_str_to_bytes("0x0103") == bytes([0x01, 0x03])
+
+    def test_comma_separator(self):
+        assert hex_str_to_bytes("01,03") == bytes([0x01, 0x03])
+
+    def test_dash_separator(self):
+        assert hex_str_to_bytes("01-03") == bytes([0x01, 0x03])
+
+    def test_newline_and_tab(self):
+        assert hex_str_to_bytes("01\n03\t0A") == bytes([0x01, 0x03, 0x0A])
+
+    def test_uppercase_and_lowercase_mixed(self):
+        assert hex_str_to_bytes("aA bB") == bytes([0xAA, 0xBB])
+
+    def test_odd_reports_last_digit_position(self):
+        try:
+            hex_str_to_bytes("01 0")
+        except HexFormatError as exc:
+            assert exc.kind == "odd" and exc.pos == 4
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_bad_char_position(self):
+        try:
+            hex_str_to_bytes("01 0Z")
+        except HexFormatError as exc:
+            assert exc.kind == "bad_char" and exc.pos == 5 and exc.ch == "Z"
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_fullwidth_detected(self):
+        try:
+            hex_str_to_bytes("\uff10\uff11")
+        except HexFormatError as exc:
+            assert exc.kind == "fullwidth" and exc.pos == 1
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_prefix_without_digits(self):
+        try:
+            hex_str_to_bytes("0x")
+        except HexFormatError as exc:
+            assert exc.kind == "prefix"
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_0x_inside_token_is_invalid(self):
+        try:
+            hex_str_to_bytes("010x03")
+        except HexFormatError as exc:
+            assert exc.kind == "bad_char" and exc.ch == "x"
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_separator_only_is_empty(self):
+        try:
+            hex_str_to_bytes(" , - ")
+        except HexFormatError as exc:
+            assert exc.kind == "empty"
+            return
+        raise AssertionError("expected HexFormatError")
+
+    def test_blank_still_returns_empty_bytes(self):
+        assert hex_str_to_bytes("   ") == b""
+
+    def test_hex_error_is_value_error(self):
+        assert issubclass(HexFormatError, ValueError)

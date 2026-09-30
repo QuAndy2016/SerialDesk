@@ -1,5 +1,50 @@
 # Changelog
 
+## [v0.4.6] - 2026-09-30
+
+### Added
+
+- **Precise HEX validation with actionable errors (U36)**: the HEX parser now accepts `0x` prefixes and
+  space / tab / newline / comma / dash separators, and every failure points at the offending character
+  ("'Z' at position 5 is not a valid hex digit", "odd length: one digit missing after position 3").
+  Full-width characters typed with a Chinese IME get their own message; malformed input is flagged live
+  in the send box (red border + tooltip) instead of only after pressing Send.
+- **Status-bar message levels (U30 / U36)**: all 16 status-bar messages now go through a single
+  `_notify()` exit with three levels - info (auto 5 s), warning (auto 10 s) and error (persistent until
+  the next action). Colours follow the active theme and were measured against WCAG AA
+  (error `#ff7b72` dark / `#c62828` light, both >= 4.5:1).
+- **Actionable serial-open failures (U37)**: opening a port that is denied, busy or missing now shows a
+  persistent red message explaining the cause and what to do, instead of a fleeting raw pyserial error.
+- **Split-mode slot (U50)**: the receive "Split:" row shows exactly one control that follows the mode -
+  an explanatory hint for Off / Auto, the ms box for Manual, the header box for By-header - inside a
+  fixed 120 px slot, so nothing shifts when the mode changes. The always-visible grey boxes are gone.
+- **Handshake signals grouped by direction (U32)**: DTR / RTS are labelled as outputs (checkable),
+  CTS / DSR / DCD / RI as read-only inputs rendered as High/Low text plus colour and a per-line tooltip
+  explaining each signal - readable without relying on colour alone.
+- **Dark native title bar (U51)**: the Windows title bar now follows the app theme
+  (`DWMWA_USE_IMMERSIVE_DARK_MODE` via ctypes, plus Qt 6.8 `styleHints.setColorScheme`), re-applied on
+  every theme switch; no-op on Linux / macOS.
+
+### Changed
+
+- **Millisecond inputs unified (U31)**: the repeat interval and the per-row sequence delays are plain
+  number fields with the unit in the label ("Interval (ms)") - no spin arrows, no clipped " ms" suffix,
+  range-checked with sane fallbacks.
+- **Baud rate field widened (U49)**: minimum width raised to 124 px so 1000000 / 3000000 are no longer
+  clipped (the editable area grew from 60 px to 83 px).
+- **Connection indicator colours (U38)**: the status light is theme-aware and measured >= 4.5:1
+  (dark `#7ee787` / `#ff7b72` / `#9a9a9a`, light `#176c2c` / `#c62828` / `#5f5f5f`); previously the
+  light theme's green sat at 1.75:1 and was barely readable.
+- **Checkbox indicators (U29)**: check boxes are drawn by the stylesheets in both themes (unchecked /
+  checked / disabled) instead of the pale system indicator.
+
+### Fixed
+
+- The HEX parser silently swallowed a stray `0x` inside a compact string (e.g. `010x03`); it is now
+  reported as an invalid character with its position.
+- Whitespace-only HEX input is still treated as empty, but a string made only of separators is reported
+  as an explicit "empty content" error instead of being accepted.
+
 ## [v0.4.5] - 2026-09-30
 
 ### Fixed

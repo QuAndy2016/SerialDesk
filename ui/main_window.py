@@ -7,10 +7,17 @@ import os
 import sys
 import time
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
 
-from PySide6.QtGui import QAction, QActionGroup, QColor, QTextCharFormat, QTextCursor
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QColor,
+    QIntValidator,
+    QTextCharFormat,
+    QTextCursor,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -26,6 +33,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -39,6 +47,7 @@ from app.protocol import (
     decode_text,
     encode_text,
     hex_str_to_bytes,
+    HexFormatError,
 )
 from app import __version__
 from app.config import load_config, save_config
@@ -47,7 +56,7 @@ from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
 from ui.quick_send_panel import QuickSendPanel
 from app import i18n
-from app.i18n import tr
+from app.i18n import hex_error_message, tr
 
 def resource_path(rel: str) -> str:
     """Resolve resource path; works in source and PyInstaller bundle."""
@@ -117,6 +126,7 @@ class MainWindow(QMainWindow):
         self.worker.received.connect(self.on_received)
         self.worker.log.connect(self.on_log_line)
         self.worker.opened.connect(self.on_opened_changed)
+        self.worker.error.connect(self._on_worker_error)
 
         self.rx_bytes = 0
         self.tx_bytes = 0
@@ -165,6 +175,8 @@ class MainWindow(QMainWindow):
         else:
             theme.set_override(None)
         theme.apply_theme(QApplication.instance())
+        self._recolor_status_light()
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))
 
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self.refresh_ports)
@@ -277,7 +289,14 @@ class MainWindow(QMainWindow):
         self.save_log_as_btn.setText(tr("btn.save_log_as"))
         self.dtr_check.setToolTip(tr("sig.tip"))
         self.rts_check.setToolTip(tr("sig.tip"))
-        self.sig_lbl.setToolTip(tr("sig.tip"))
+        self._sig_out_lbl.setText(tr("sig.out"))
+        self._sig_out_lbl.setToolTip(tr("sig.out.tip"))
+        self._sig_in_lbl.setText(tr("sig.in"))
+        self._sig_in_lbl.setToolTip(tr("sig.in.tip"))
+        self.dtr_check.setToolTip(tr("sig.dtr.tip"))
+        self.rts_check.setToolTip(tr("sig.rts.tip"))
+        self.sig_lbl.setToolTip(tr("sig.in.tip"))
+        self._poll_signals()
         self.auto_reply_check.setText(tr("rb.enable"))
         self.auto_reply_check.setToolTip(tr("rb.enable.tip"))
         self.rules_btn.setText(tr("rb.rules_btn"))
@@ -302,6 +321,9 @@ class MainWindow(QMainWindow):
         self.repeat_check.setText(tr("tx.repeat"))
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
+        self._repeat_lbl.setText(tr("tx.interval.label"))
+        self.split_hint_lbl.setText(
+            tr("split.auto.hint") if self.split_combo.currentIndex() == SPLIT_AUTO else tr("split.off.hint"))
         self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
         self._enc_lbl.setText(tr("params.encoding"))
         self.encoding_combo.setToolTip(tr("params.encoding.tip"))
@@ -318,7 +340,7 @@ class MainWindow(QMainWindow):
         self.checksum_combo.setToolTip(tr("crc.tip"))
         self.send_btn.setText(tr("btn.send"))
         self.quick_panel.retranslate()
-        self.statusBar().showMessage(tr("status.opened") if self.worker.is_open() else tr("status.idle"))
+        self._notify(tr("status.opened") if self.worker.is_open() else tr("status.idle"))
         if self.worker.is_open():
             port = self.port_combo.currentData() or ""
             baud = self.baud_combo.currentText().strip()
@@ -329,18 +351,24 @@ class MainWindow(QMainWindow):
     def _set_theme_system(self):
         theme.set_override(None)
         theme.apply_theme(QApplication.instance())
+        self._recolor_status_light()
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))
         self._recolor_rx_view()
         self._persist_theme("system")
 
     def _set_theme_dark(self):
         theme.set_override(True)
         theme.apply_theme(QApplication.instance())
+        self._recolor_status_light()
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))
         self._recolor_rx_view()
         self._persist_theme("dark")
 
     def _set_theme_light(self):
         theme.set_override(False)
         theme.apply_theme(QApplication.instance())
+        self._recolor_status_light()
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))
         self._recolor_rx_view()
         self._persist_theme("light")
 
@@ -370,6 +398,8 @@ class MainWindow(QMainWindow):
         self.baud_combo.setEditable(True)
         self.baud_combo.setCurrentText("115200")
         self.baud_combo.setToolTip(tr("baud.tip"))
+        self.baud_combo.setMinimumWidth(124)          # U49: 1000000/3000000 must fit
+        self.baud_combo.setMinimumContentsLength(7)
         self.baud_combo.lineEdit().textChanged.connect(self._check_baud)
         bar.addWidget(self.baud_combo)
 
@@ -426,16 +456,27 @@ class MainWindow(QMainWindow):
         params.addWidget(self.encoding_combo)
 
         params.addSpacing(12)
+        # U32: outputs (controllable) vs inputs (read-only status)
+        self._sig_out_lbl = QLabel(tr("sig.out"))
+        self._sig_out_lbl.setEnabled(False)
+        self._sig_out_lbl.setToolTip(tr("sig.out.tip"))
+        params.addWidget(self._sig_out_lbl)
         self.dtr_check = QCheckBox("DTR")
-        self.dtr_check.setToolTip(tr("sig.tip"))
+        self.dtr_check.setToolTip(tr("sig.dtr.tip"))
         self.dtr_check.toggled.connect(self.worker.set_dtr)
         params.addWidget(self.dtr_check)
         self.rts_check = QCheckBox("RTS")
-        self.rts_check.setToolTip(tr("sig.tip"))
+        self.rts_check.setToolTip(tr("sig.rts.tip"))
         self.rts_check.toggled.connect(self.worker.set_rts)
         params.addWidget(self.rts_check)
-        self.sig_lbl = QLabel("CTS ○  DSR ○  DCD ○  RI ○")
-        self.sig_lbl.setToolTip(tr("sig.tip"))
+
+        self._sig_in_lbl = QLabel(tr("sig.in"))
+        self._sig_in_lbl.setEnabled(False)
+        self._sig_in_lbl.setToolTip(tr("sig.in.tip"))
+        params.addWidget(self._sig_in_lbl)
+        self.sig_lbl = QLabel(self._signals_html({}))
+        self.sig_lbl.setTextFormat(Qt.TextFormat.RichText)
+        self.sig_lbl.setToolTip(tr("sig.in.tip"))
         params.addWidget(self.sig_lbl)
 
         self._param_combos = [self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo]
@@ -465,19 +506,26 @@ class MainWindow(QMainWindow):
         self.split_combo.currentIndexChanged.connect(self._on_split_mode_changed)
         rx_opts.addWidget(self.split_combo)
 
+        # U50: one fixed-width slot whose content follows the split mode
         self.split_ms_edit = QLineEdit("10")
-        self.split_ms_edit.setMaximumWidth(52)
+        self.split_ms_edit.setValidator(QIntValidator(0, 60000, self))
+        self.split_ms_edit.setMaximumWidth(104)
         self.split_ms_edit.setToolTip(tr("split.ms.tip"))
-        self.split_ms_edit.setEnabled(False)
-        rx_opts.addWidget(self.split_ms_edit)
 
         self.header_edit = QLineEdit("fw:")
-        self.header_edit.setMaximumWidth(90)
         self.header_edit.setPlaceholderText(tr("header.placeholder"))
         self.header_edit.setToolTip(tr("header.tip"))
-        self.header_edit.setEnabled(False)
         self.header_edit.textChanged.connect(self._on_header_changed)
-        rx_opts.addWidget(self.header_edit)
+
+        self.split_hint_lbl = QLabel(tr("split.auto.hint"))
+        self.split_hint_lbl.setEnabled(False)
+
+        self.split_slot = QStackedWidget()
+        self.split_slot.setMinimumWidth(120)
+        self.split_slot.addWidget(self.split_hint_lbl)   # 0 auto / off
+        self.split_slot.addWidget(self.split_ms_edit)    # 1 manual
+        self.split_slot.addWidget(self.header_edit)      # 2 by header
+        rx_opts.addWidget(self.split_slot)
 
         self._ts_lbl = QLabel(tr("ts.label"))
         rx_opts.addWidget(self._ts_lbl)
@@ -562,6 +610,8 @@ class MainWindow(QMainWindow):
         self.escape_check.setToolTip(tr("tx.escape.tip"))
         tx_fmt_row.addWidget(self.escape_check)
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
+        self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
+        self.tx_edit.textChanged.connect(self._check_hex_input)
         self._on_tx_fmt_changed(self.tx_fmt_combo.currentIndex())
         tx_col.addLayout(tx_fmt_row)
 
@@ -579,14 +629,13 @@ class MainWindow(QMainWindow):
         self.repeat_check.setToolTip(tr("tx.repeat.tip"))
         self.repeat_check.toggled.connect(self._on_repeat_toggled)
         repeat_row.addWidget(self.repeat_check)
-        self.repeat_ms = QSpinBox()
-        self.repeat_ms.setRange(10, 60000)
-        self.repeat_ms.setValue(1000)
-        self.repeat_ms.setSingleStep(100)
-        self.repeat_ms.setSuffix(" ms")
+        self._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
+        repeat_row.addWidget(self._repeat_lbl)
+        self.repeat_ms = QLineEdit("1000")
+        self.repeat_ms.setValidator(QIntValidator(10, 60000, self))
         self.repeat_ms.setMaximumWidth(112)
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
-        self.repeat_ms.valueChanged.connect(self._on_repeat_interval)
+        self.repeat_ms.textChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
         self.sent_lbl = QLabel(tr("tx.sent_count", n=0))
         repeat_row.addWidget(self.sent_lbl)
@@ -629,6 +678,7 @@ class MainWindow(QMainWindow):
         self.quick_panel = QuickSendPanel()
         self.quick_panel.send_payload.connect(self.on_quick_send)
         self.quick_panel.log.connect(self.on_log_line)
+        self.quick_panel.error.connect(lambda m: self._notify(m, "error"))
         splitter.addWidget(self.quick_panel)
         splitter.setSizes([820, 340])
 
@@ -636,10 +686,64 @@ class MainWindow(QMainWindow):
 
         # status bar with connection indicator -------------------------------
         self.status_light = QLabel(tr("status.disconnected"))
-        self.status_light.setStyleSheet("color: #999999; font-weight: bold; padding-right: 8px;")
+        self.status_light.setStyleSheet(
+            f"color: {theme.status_colors()['idle']}; font-weight: bold; padding-right: 8px;")
         self.statusBar().addPermanentWidget(self.status_light)
-        self.statusBar().showMessage(tr("status.idle"))
+        self._notify(tr("status.idle"))
         self.setCentralWidget(central)
+
+    # -- notifications (U30/U36/U37/U38) --------------------------------------
+
+    def _notify(self, msg: str, level: str = "info", ms: int | None = None) -> None:
+        """Single exit for status-bar messages.
+
+        level: info (auto 5 s) / warn (auto 10 s) / error (persistent until the
+        next action). Colour follows the active theme via theme.level_color().
+        """
+        sb = self.statusBar()
+        sb.setStyleSheet(f"QStatusBar {{ color: {theme.level_color(level)}; }}")
+        if ms is None:
+            ms = -1 if level == "error" else (10000 if level == "warn" else 5000)
+        if ms < 0:
+            sb.showMessage(msg)
+        else:
+            sb.showMessage(msg, ms)
+
+    def _recolor_status_light(self) -> None:
+        """Re-apply the connection indicator colour (theme-aware, U38)."""
+        cols = theme.status_colors()
+        key = "ok" if self.worker.is_open() else ("idle" if self.port_combo.count() == 0 else "err")
+        self.status_light.setStyleSheet(
+            f"color: {cols[key]}; font-weight: bold; padding-right: 8px;")
+
+    def _on_worker_error(self, text: str) -> None:
+        """Turn a serial open/IO failure into an actionable message (U37)."""
+        low = text.lower()
+        if "access is denied" in low or "permission" in low or "denied" in low:
+            key = "err.open.denied"
+        elif "busy" in low or "in use" in low:
+            key = "err.open.busy"
+        elif "could not open port" in low or "not found" in low or "no such" in low:
+            key = "err.open.missing"
+        else:
+            key = "err.open.other"
+        self._notify(tr(key, e=text), "error")
+
+    def _check_hex_input(self) -> None:
+        """Live-validate the TX box in HEX mode: red border + tooltip (U36)."""
+        if self.tx_fmt_combo.currentIndex() != 0:
+            self.tx_edit.setStyleSheet("")
+            self.tx_edit.setToolTip(tr("tx.hex.tip"))
+            return
+        try:
+            hex_str_to_bytes(self.tx_edit.toPlainText())
+        except HexFormatError as exc:
+            self.tx_edit.setStyleSheet(f"border: 1px solid {theme.level_color('error')};")
+            self.tx_edit.setToolTip(hex_error_message(exc))
+            return
+        self.tx_edit.setStyleSheet("")
+        self.tx_edit.setToolTip(tr("tx.hex.tip"))
+
 
     # -- helpers ---------------------------------------------------------------
 
@@ -661,7 +765,7 @@ class MainWindow(QMainWindow):
         try:
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, ensure_ascii=False, indent=2)
-            self.statusBar().showMessage(tr("cfg.exported", path=path), 5000)
+            self._notify(tr("cfg.exported", path=path), ms=5000)
         except OSError as exc:
             self.on_log_line(tr("cfg.export_fail", e=exc))
 
@@ -690,7 +794,7 @@ class MainWindow(QMainWindow):
             self.on_log_line(tr("cfg.import_fail", e="config.json"))
             return
         self._apply_config()
-        self.statusBar().showMessage(tr("cfg.imported", path=path), 5000)
+        self._notify(tr("cfg.imported", path=path), ms=5000)
 
     def _apply_config(self) -> None:
         """Re-apply settings loaded from config.json (used after an import)."""
@@ -704,6 +808,8 @@ class MainWindow(QMainWindow):
         else:
             theme.set_override(None)
         theme.apply_theme(QApplication.instance())
+        self._recolor_status_light()
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))
         self._recolor_rx_view()
         {"dark": self._theme_dark, "light": self._theme_light}.get(
             choice, self._theme_system).setChecked(True)
@@ -737,7 +843,7 @@ class MainWindow(QMainWindow):
         config = load_config()
         config["auto_reply"] = self._auto_rules
         save_config(config)
-        self.statusBar().showMessage(tr("rb.saved", n=len(self._auto_rules)), 5000)
+        self._notify(tr("rb.saved", n=len(self._auto_rules)), ms=5000)
 
     def _check_auto_reply(self, data: bytes) -> None:
         """Send the configured reply when a match string shows up in the stream."""
@@ -760,7 +866,7 @@ class MainWindow(QMainWindow):
                     self.worker.send(reply)
                     self.tx_bytes += len(reply)
                     self.update_counts()
-                    self.statusBar().showMessage(tr("rb.sent", n=len(reply)), 3000)
+                    self._notify(tr("rb.sent", n=len(reply)), ms=3000)
                 self._reply_buf = b""
                 break
 
@@ -793,13 +899,22 @@ class MainWindow(QMainWindow):
     def _poll_signals(self) -> None:
         """Refresh the CTS/DSR/DCD/RI indicators (50 ms timer)."""
         sig = self.worker.signals()
-        if not sig.get("open"):
-            self.sig_lbl.setText("CTS ○  DSR ○  DCD ○  RI ○")
-            return
-        mark = lambda on: "●" if on else "○"
-        self.sig_lbl.setText(
-            f"CTS {mark(sig['cts'])}  DSR {mark(sig['dsr'])}  "
-            f"DCD {mark(sig['dcd'])}  RI {mark(sig['ri'])}")
+        self.sig_lbl.setText(self._signals_html(sig if sig.get("open") else {}))
+
+    def _signals_html(self, sig: dict) -> str:
+        """Coloured 高/低 text for CTS/DSR/DCD/RI (U32: never colour alone)."""
+        cols = theme.status_colors()
+        tips = {"cts": "sig.cts.tip", "dsr": "sig.dsr.tip",
+                "dcd": "sig.dcd.tip", "ri": "sig.ri.tip"}
+        parts = []
+        for name, tip_key in tips.items():
+            on = bool(sig.get(name, False))
+            col = cols["ok"] if on else cols["idle"]
+            word = tr("sig.high") if on else tr("sig.low")
+            parts.append(
+                f'<span style="color:{col}" title="{tr(tip_key)}">'
+                f"{name.upper()} {word}</span>")
+        return "&nbsp;&nbsp;".join(parts)
 
     # -- file send (T6) ------------------------------------------------------
 
@@ -834,7 +949,7 @@ class MainWindow(QMainWindow):
             self._abort_file_send()
             return
         if not self.worker.is_open():
-            self.statusBar().showMessage(tr("file.no_port"), 5000)
+            self._notify(tr("file.no_port"), ms=5000)
             return
         filters = ";;".join([tr("file.filter.all"), tr("file.filter.hex"),
                              tr("file.filter.text"), tr("file.filter.bin")])
@@ -882,7 +997,7 @@ class MainWindow(QMainWindow):
         self._file_timer.stop()
         self.send_file_btn.setText(tr("btn.send_file"))
         self.file_progress.setValue(100)
-        self.statusBar().showMessage(tr("file.done", name=name, size=size), 5000)
+        self._notify(tr("file.done", name=name, size=size), ms=5000)
 
     def _abort_file_send(self):
         self._file_timer.stop()
@@ -901,7 +1016,7 @@ class MainWindow(QMainWindow):
             self._log_fp = open(self._log_path, "a", encoding="utf-8")
             self._log_started = time.time()
             self._log_bytes = 0
-            self.statusBar().showMessage(tr("log.autosave.on", path=self._log_path), 5000)
+            self._notify(tr("log.autosave.on", path=self._log_path), ms=5000)
         except OSError as exc:
             self._log_fp = None
             self.on_log_line(tr("log.save_fail", e=exc))
@@ -948,7 +1063,7 @@ class MainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(self.rx_view.toPlainText())
                 fh.write("\n")
-            self.statusBar().showMessage(tr("log.saved", path=path), 5000)
+            self._notify(tr("log.saved", path=path), ms=5000)
         except OSError as exc:
             self.on_log_line(tr("log.save_fail", e=exc))
 
@@ -966,7 +1081,7 @@ class MainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(self.rx_view.toPlainText())
                 fh.write("\n")
-            self.statusBar().showMessage(tr("log.saved", path=path), 5000)
+            self._notify(tr("log.saved", path=path), ms=5000)
         except OSError as exc:
             self.on_log_line(tr("log.save_fail", e=exc))
 
@@ -1016,13 +1131,21 @@ class MainWindow(QMainWindow):
         if checked:
             self._sent_count = 0
             self.sent_lbl.setText(tr("tx.sent_count", n=0))
-            self._repeat_timer.start(self.repeat_ms.value())
+            self._repeat_timer.start(self._repeat_value())
         else:
             self._repeat_timer.stop()
 
-    def _on_repeat_interval(self, value: int):
+    def _repeat_value(self) -> int:
+        """Parse the repeat interval (10-60000 ms), clamped, defaulting to 1000."""
+        try:
+            value = int((self.repeat_ms.text() or "").strip())
+        except ValueError:
+            return 1000
+        return max(10, min(60000, value))
+
+    def _on_repeat_interval(self, _text: str):
         if self._repeat_timer.isActive():
-            self._repeat_timer.setInterval(value)
+            self._repeat_timer.setInterval(self._repeat_value())
 
     def _stop_repeat(self):
         if self.repeat_check.isChecked():
@@ -1046,8 +1169,14 @@ class MainWindow(QMainWindow):
         self.crlf_check.setEnabled(index == 1)
 
     def _on_split_mode_changed(self, index: int):
-        self.split_ms_edit.setEnabled(index == SPLIT_MANUAL)
-        self.header_edit.setEnabled(index == SPLIT_HEADER)
+        if index == SPLIT_MANUAL:
+            self.split_slot.setCurrentIndex(1)
+        elif index == SPLIT_HEADER:
+            self.split_slot.setCurrentIndex(2)
+        else:
+            self.split_hint_lbl.setText(
+                tr("split.auto.hint") if index == SPLIT_AUTO else tr("split.off.hint"))
+            self.split_slot.setCurrentIndex(0)
 
     def _on_header_changed(self, text: str):
         # typing a frame header auto-switches to header-split mode
@@ -1120,13 +1249,13 @@ class MainWindow(QMainWindow):
             self.open_btn.setText(tr("port.open"))
         else:
             if self.port_combo.count() == 0:
-                self.statusBar().showMessage(tr("status.no_port"))
+                self._notify(tr("status.no_port"), "warn")
                 return
             device = self.port_combo.currentData()
             try:
                 baud = int(self.baud_combo.currentText().strip())
             except ValueError:
-                self.statusBar().showMessage(tr("status.bad_baud"), 5000)
+                self._notify(tr("status.bad_baud"), "error")
                 return
             ok = self.worker.open_port(device, baud, **self._serial_params())
             if ok:
@@ -1138,14 +1267,16 @@ class MainWindow(QMainWindow):
             port = self.port_combo.currentData() or ""
             baud = self.baud_combo.currentText().strip()
             self.status_light.setText(tr("status.connected", port=port, baud=baud))
-            self.status_light.setStyleSheet("color: #2ecc40; font-weight: bold; padding-right: 8px;")
-            self.statusBar().showMessage(tr("status.opened"))
+            self.status_light.setStyleSheet(
+                f"color: {theme.status_colors()['ok']}; font-weight: bold; padding-right: 8px;")
+            self._notify(tr("status.opened"))
             for combo in self._param_combos:
                 combo.setEnabled(False)
         else:
             self.open_btn.setText(tr("port.open"))
             self.status_light.setText(tr("status.disconnected"))
-            self.status_light.setStyleSheet("color: #ff4136; font-weight: bold; padding-right: 8px;")
+            self.status_light.setStyleSheet(
+                f"color: {theme.status_colors()['err']}; font-weight: bold; padding-right: 8px;")
             self._stop_repeat()
             self._abort_file_send()
             self.quick_panel.stop_sequence()
@@ -1153,7 +1284,7 @@ class MainWindow(QMainWindow):
             for combo in self._param_combos:
                 combo.setEnabled(True)
             if not self.worker.is_open():
-                self.statusBar().showMessage(tr("status.closed"))
+                self._notify(tr("status.closed"))
 
     def _check_baud(self, text: str) -> None:
         """Mark the baud box invalid (red border) when the typed value is not usable."""
@@ -1177,8 +1308,11 @@ class MainWindow(QMainWindow):
                 payload = hex_str_to_bytes(text)
             else:
                 payload = encode_text(text, self._encoding(), self.escape_check.isChecked())
+        except HexFormatError as exc:
+            self._notify(hex_error_message(exc), "error")
+            return
         except ValueError as exc:
-            self.on_log_line(tr("log.send_error", e=exc))
+            self._notify(tr("log.send_error", e=exc), "error")
             return
         payload = self._apply_checksum(payload)
         if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
@@ -1259,7 +1393,7 @@ class MainWindow(QMainWindow):
         sb.setValue(sb.maximum())
 
     def on_log_line(self, line: str):
-        self.statusBar().showMessage(line, 5000)
+        self._notify(line, ms=5000)
 
     def on_clear(self):
         self.rx_view.clear()
@@ -1268,6 +1402,10 @@ class MainWindow(QMainWindow):
 
     def update_counts(self):
         self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
+
+    def showEvent(self, event):  # noqa: N802 - Qt naming
+        super().showEvent(event)
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))   # U51 (frame exists now)
 
     def closeEvent(self, event):
         self._sig_timer.stop()

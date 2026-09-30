@@ -6,6 +6,7 @@ import json
 import os
 
 from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -14,13 +15,12 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
-from app.i18n import tr
-from app.protocol import ascii_str_to_bytes, hex_str_to_bytes
+from app.i18n import hex_error_message, tr
+from app.protocol import HexFormatError, ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
 DEFAULT_ROWS = 10   # blank rows seeded on first run (U15)
@@ -35,6 +35,7 @@ class QuickSendPanel(QWidget):
     """
 
     send_payload = Signal(bytes)   # parsed payload, no checksum applied yet
+    error = Signal(str)            # user-facing format error text (U36)
     log = Signal(str)
 
     def __init__(self, parent=None):
@@ -115,11 +116,8 @@ class QuickSendPanel(QWidget):
         fmt.setCurrentIndex(0 if is_hex else 1)
         h.addWidget(fmt)
 
-        delay = QSpinBox()
-        delay.setRange(0, 60000)
-        delay.setValue(max(0, int(delay_ms)))
-        delay.setSingleStep(100)
-        delay.setSuffix(" ms")
+        delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
+        delay.setValidator(QIntValidator(0, 60000, self))
         delay.setMaximumWidth(104)
         delay.setToolTip(tr("qs.delay.tip"))
         h.addWidget(delay)
@@ -153,7 +151,10 @@ class QuickSendPanel(QWidget):
                 return hex_str_to_bytes(text)
             return ascii_str_to_bytes(text)
         except ValueError as exc:
-            self.log.emit(tr("qs.bad_fmt", e=exc))
+            if isinstance(exc, HexFormatError):
+                self.error.emit(hex_error_message(exc))
+            else:
+                self.error.emit(tr("qs.bad_fmt", e=exc))
             return None
 
     def _send_row(self, row: QWidget):
@@ -195,11 +196,19 @@ class QuickSendPanel(QWidget):
         total = len(self._seq_queue)
         self.seq_label.setText(tr("qs.seq.progress", i=self._seq_index + 1, n=total))
         if self._seq_index + 1 >= total:
-            delay = entry["delay"].value()
+            delay = self._row_delay(entry)
             self._seq_timer.singleShot(delay, self._finish_sequence)
             return
         self._seq_index += 1
-        self._seq_timer.start(entry["delay"].value())
+        self._seq_timer.start(self._row_delay(entry))
+
+    def _row_delay(self, entry: dict) -> int:
+        """Parse a row's delay in ms (0-60000), defaulting to 500."""
+        try:
+            value = int((entry["delay"].text() or "").strip())
+        except ValueError:
+            return 500
+        return max(0, min(60000, value))
 
     def _seq_advance(self) -> None:
         if self._seq_running:
@@ -285,7 +294,7 @@ class QuickSendPanel(QWidget):
     def save(self):
         items = [
             {"text": e["edit"].text(), "hex": e["fmt"].currentIndex() == 0,
-             "delay": e["delay"].value()}
+             "delay": self._row_delay(e)}
             for e in self._rows
         ]
         config = {}

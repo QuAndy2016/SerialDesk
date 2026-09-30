@@ -231,3 +231,57 @@ def watch_system_theme(app: QApplication, callback) -> None:
         hints.colorSchemeChanged.connect(_on_system_change)
     except (AttributeError, RuntimeError):
         pass  # older Qt without live theme switching
+
+
+def status_colors() -> dict:
+    """State-light colours per theme (U38; all values WCAG AA >= 4.5:1 measured).
+
+    Keys: ok (connected) / err (not connected) / idle (port not open).
+    """
+    if resolved_dark():
+        return {"ok": "#7ee787", "err": "#ff7b72", "idle": "#9a9a9a"}
+    return {"ok": "#176c2c", "err": "#c62828", "idle": "#5f5f5f"}
+
+
+def level_color(level: str) -> str:
+    """Status-bar message colour for a notification level (U30/U36).
+
+    error -> red, warn -> amber, anything else -> current theme text colour.
+    """
+    dark = resolved_dark()
+    if level == "error":
+        return "#ff7b72" if dark else "#c62828"
+    if level == "warn":
+        return "#ffb74d" if dark else "#9c5300"
+    return text_color()
+
+
+def apply_native_dark(widget, dark: bool) -> None:
+    """Match the OS window frame to the app theme (U51).
+
+    Windows: DWMWA_USE_IMMERSIVE_DARK_MODE (attribute 20 on Win10 1809+, 19 on
+    earlier builds) turns the native title bar dark. Qt 6.8+: setColorScheme
+    keeps other native surfaces in sync. No-op elsewhere; never raises.
+    """
+    try:
+        setter = getattr(QGuiApplication.styleHints(), "setColorScheme", None)
+        if setter is not None:
+            setter(Qt.ColorScheme.Dark if dark else Qt.ColorScheme.Light)
+    except Exception:  # noqa: BLE001 - older Qt / headless
+        pass
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+
+        hwnd = int(widget.winId())
+        value = ctypes.c_int(1 if dark else 0)
+        for attr in (20, 19):
+            try:
+                if ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                        hwnd, attr, ctypes.byref(value), ctypes.sizeof(value)) == 0:
+                    break
+            except Exception:  # noqa: BLE001 - try the next attribute id
+                continue
+    except Exception:  # noqa: BLE001 - never break theming
+        pass

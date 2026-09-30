@@ -15,6 +15,7 @@ def main() -> int:
     dark = theme.apply_theme(app)          # follow OS color scheme
     win = MainWindow()
     win.show()
+    theme.apply_native_dark(win, bool(dark))   # U51: match native title bar
     # live switch when OS theme changes
     theme.watch_system_theme(app, lambda is_dark: theme.apply_theme(app, is_dark))
     return app.exec()

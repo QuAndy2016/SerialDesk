@@ -10,17 +10,76 @@ from typing import Tuple
 # HEX / ASCII
 # ---------------------------------------------------------------------------
 
-def hex_str_to_bytes(s: str) -> bytes:
-    """Convert '01 03 00 00 00 02' or '010300000002' to bytes.
+class HexFormatError(ValueError):
+    """Malformed HEX text, with the exact offending position.
 
-    Raises ValueError on malformed input.
+    kind: "empty" | "odd" | "bad_char" | "fullwidth" | "prefix"
+    pos:  1-based position in the original text (None when kind == "empty")
+    ch:   offending character (for bad_char / fullwidth / prefix)
     """
-    cleaned = "".join(s.split())
-    if not cleaned:
+
+    def __init__(self, kind: str, pos: int | None = None, ch: str = ""):
+        self.kind = kind
+        self.pos = pos
+        self.ch = ch
+        super().__init__(f"hex format error: kind={kind} pos={pos} ch={ch!r}")
+
+
+# Separators accepted between hex bytes (U36/D2): whitespace, comma, dash.
+_HEX_SEPARATORS = " \t\r\n,;-"
+_HEX_DIGITS = "0123456789abcdefABCDEF"
+
+
+def _is_fullwidth_hex(ch: str) -> bool:
+    """True for full-width forms like ０-９ / ａ-ｆ / ｘ (common with CN IME)."""
+    o = ord(ch)
+    return (
+        0xFF10 <= o <= 0xFF19  # ０-９
+        or 0xFF21 <= o <= 0xFF26  # Ａ-Ｆ
+        or 0xFF41 <= o <= 0xFF46  # ａ-ｆ
+        or ch in ("\uff58", "\uff38")  # ｘ Ｘ
+    )
+
+
+def hex_str_to_bytes(s: str) -> bytes:
+    """Convert HEX text to bytes.
+
+    Accepted forms: "01 03", "0103", "0x01 0x02", "0x0103", "01,03", "01-03",
+    tab/newline separated, any letter case.
+
+    Raises HexFormatError (a ValueError subclass) carrying the offending
+    position, so the UI can point at the exact character.
+    """
+    if not s or not s.strip():
         return b""
-    if len(cleaned) % 2 != 0:
-        raise ValueError("HEX string length must be even")
-    return binascii.unhexlify(cleaned)
+    digits: list[str] = []
+    positions: list[int] = []
+    i, n = 0, len(s)
+    while i < n:
+        ch = s[i]
+        if ch in _HEX_SEPARATORS or ch.isspace():
+            i += 1
+            continue
+        at_token_start = i == 0 or s[i - 1] in _HEX_SEPARATORS or s[i - 1].isspace()
+        if ch == "0" and at_token_start and i + 1 < n and s[i + 1] in "xX":
+            j = i + 2
+            if j >= n or s[j] in _HEX_SEPARATORS or s[j].isspace() or not s[j] in _HEX_DIGITS:
+                raise HexFormatError("prefix", i + 1, "0x")
+            i = j
+            continue
+        if ch in _HEX_DIGITS:
+            digits.append(ch)
+            positions.append(i + 1)
+            i += 1
+            continue
+        if _is_fullwidth_hex(ch):
+            raise HexFormatError("fullwidth", i + 1, ch)
+        raise HexFormatError("bad_char", i + 1, ch)
+    if not digits:
+        raise HexFormatError("empty")
+    if len(digits) % 2:
+        raise HexFormatError("odd", positions[-1])
+    return binascii.unhexlify("".join(digits))
 
 
 def bytes_to_hex_str(data: bytes, sep: str = " ") -> str:
