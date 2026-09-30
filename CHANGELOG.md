@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.8.0] - 2026-10-01
+
+### Changed
+
+- **Tighter control rows (U92)**: the receive and send control rows stood 44-47 px tall for widgets that only
+  need 26-29 px - Qt's default 9 px top/bottom padding on the row layouts made up the difference. Every control row
+  is now 29-33 px, which hands the log about 25-50 px of extra height (285 px at the default window size, 645 px
+  maximised) and lets the send pane start lower.
+- **The HEX hint lists all three accepted spellings (U93)**: the send box now shows
+  "e.g. 01 03 00 00 | 0x01,0x03 | 01-03-00-00" instead of a single example, so the 0x-prefixed and the
+  comma/dash-separated forms are actually discoverable.
+
+### Fixed
+
+- **The frame-header box no longer pretends "fw:" is a value (U94)**: it starts empty (it used to be pre-filled with
+  "fw:", which read like a required format and silently enabled header-based splitting), and its hint follows the
+  send format - "e.g. AA 55 or 0xAA,0x55" in HEX mode, "e.g. $GPGGA" in text mode. The tooltip now explains that
+  the header is a byte sequence which starts a new line and accepts space, 0x, comma and dash separators.
+
 ## [v0.7.1] - 2026-10-01
 
 ### Fixed

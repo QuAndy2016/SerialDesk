@@ -134,10 +134,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "How frames are split\nAuto: 3.5-char time by baud rate\nManual: fixed millisecond gap\nBy header: split on the header string",
     },
     "split.ms.tip": {"zh": "手动分包间隔（毫秒，0~60000，默认 10）", "en": "Manual split gap in ms (0-60000, default 10)"},
-    "header.placeholder": {"zh": "帧头如 fw:", "en": "Header, e.g. fw:"},
+    "header.placeholder.hex": {"zh": "帧头示例：AA 55 或 0xAA,0x55", "en": "e.g. AA 55 or 0xAA,0x55"},
+    "header.placeholder.ascii": {"zh": "帧头示例：$GPGGA", "en": "e.g. $GPGGA"},
     "header.tip": {
-        "zh": "按帧头分包的帧头字符串\n填写后自动切换为按帧头模式",
-        "en": "Header string for header-based splitting\nTyping one switches to header mode automatically",
+        "zh": "按帧头分包的帧头字符串：收到这一段字节就开新行\n支持空格分隔、0x 前缀、逗号或短横线分隔\n填写后自动切换为按帧头模式",
+        "en": "Frame header for header-based splitting: each time these bytes arrive a new line starts\nSpace separated, 0x prefixes, commas and dashes all work\nTyping one switches to header mode automatically",
     },
     "ts.label": {"zh": "时间戳:", "en": "Timestamp:"},
     "ts.off": {"zh": "不显示", "en": "None"},
@@ -247,7 +248,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "十六进制格式：可空格分隔，也支持 0x 前缀与逗号/短横线分隔",
         "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
-    "tx.placeholder.hex": {"zh": "例如：01 03 00 00", "en": "e.g. 01 03 00 00"},
+    "tx.placeholder.hex": {
+        "zh": "例如：01 03 00 00 \uff5c 0x01,0x03 \uff5c 01-03-00-00",
+        "en": "e.g. 01 03 00 00 | 0x01,0x03 | 01-03-00-00",
+    },
     "tx.placeholder.ascii": {"zh": "例如：AT+VERSION?", "en": "e.g. AT+VERSION?"},
     "tx.input.tip.ascii": {
         "zh": "字符串模式：按文本发送（勾选「解析转义符」后 \\r\\n 等转义生效）",

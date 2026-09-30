@@ -87,9 +87,10 @@ def _fixed_row(layout) -> QWidget:
     receive group grew. A holder with a Fixed vertical policy pins it to the top.
     """
     holder = QWidget()
-    holder.setLayout(layout)
+    layout.setContentsMargins(0, 2, 0, 2)   # U92: drop Qt's default 9 px top/bottom, which
+    holder.setLayout(layout)                #      made every control row 18 px taller than
     holder.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-    return holder
+    return holder                            #      the widgets inside it needed
 
 
 RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
@@ -634,7 +635,7 @@ class MainWindow(QMainWindow):
             tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header")])
         self.split_combo.setToolTip(tr("split.tip"))
         self.split_ms_edit.setToolTip(tr("split.ms.tip"))
-        self.header_edit.setPlaceholderText(tr("header.placeholder"))
+        self.header_edit.setPlaceholderText(tr("header.placeholder.hex"))
         self.header_edit.setToolTip(tr("header.tip"))
         self._ts_lbl.setText(tr("ts.label"))
         self._reload_combo(self.ts_combo, [
@@ -856,10 +857,11 @@ class MainWindow(QMainWindow):
         self.split_ms_edit.setMaximumWidth(104)
         self.split_ms_edit.setToolTip(tr("split.ms.tip"))
 
-        self.header_edit = QLineEdit("fw:")
-        self.header_edit.setPlaceholderText(tr("header.placeholder"))
+        self.header_edit = QLineEdit()      # U94: never pre-fill a value the user did not type
+        self.header_edit.setPlaceholderText(tr("header.placeholder.hex"))
         self.header_edit.setToolTip(tr("header.tip"))
         self.header_edit.textChanged.connect(self._on_header_changed)
+        self._update_input_placeholder()   # U94: hint follows the send format
 
         self.split_hint_lbl = QLabel(tr("split.auto.hint"))
         self.split_hint_lbl.setEnabled(False)
@@ -1979,11 +1981,14 @@ class MainWindow(QMainWindow):
         self._update_input_placeholder()   # U86: hint follows the send format
 
     def _update_input_placeholder(self) -> None:
-        """Show a format-specific example in the send box (U86)."""
+        """Keep the send box and the frame-header box hints in step with the format (U86/U93/U94)."""
         if not hasattr(self, "tx_edit"):
             return          # the format row is built before the input box
-        key = "tx.placeholder.hex" if self.tx_fmt_combo.currentIndex() == 0 else "tx.placeholder.ascii"
-        self.tx_edit.setPlaceholderText(tr(key))
+        hex_mode = self.tx_fmt_combo.currentIndex() == 0
+        self.tx_edit.setPlaceholderText(tr("tx.placeholder.hex" if hex_mode else "tx.placeholder.ascii"))
+        if hasattr(self, "header_edit"):
+            self.header_edit.setPlaceholderText(
+                tr("header.placeholder.hex" if hex_mode else "header.placeholder.ascii"))
 
     def _on_split_mode_changed(self, index: int):
         self._flush_rx_frames()   # don't lose a half-collected frame (U57)
