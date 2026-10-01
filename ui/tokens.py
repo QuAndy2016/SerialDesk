@@ -86,3 +86,28 @@ LIGHT_TOKENS: dict[str, str] = {
     "check_border_off": "#b0b0bc",
     "check_border_off_disabled": "#82828a",
 }
+
+#: Type scale. Batch 3 extracts the values that were typed inline; nothing changes yet,
+#: which is why the rendered sheets stay byte-identical to the snapshot.
+#: Colours painted at runtime into the receive view (they are character formats, not
+#: QSS rules): the received payload, the echo of a sent payload and the meta line.
+#: The echo is deliberately NOT the brand accent - in the light theme they used to be
+#: the same literal #1e5aa8, so "what I sent" and "the product colour" were identical.
+#: Measured (tests/test_text_colours.py): hue distance to the accent >= 18 deg,
+#: saturation below the accent's, contrast on the pane >= 4.5:1.
+TEXT_COLOURS: dict[str, dict[str, str]] = {
+    "dark": {"rx": "#c0c0c0", "echo": "#89a9cc", "meta": "#7d8590"},
+    "light": {"rx": "#111111", "echo": "#2f6b7a", "meta": "#6d6d78"},
+}
+
+#: The background those runtime colours are painted on (QPlainTextEdit).
+PANE_BG: dict[str, str] = {"dark": "#16161f", "light": "#ffffff"}
+
+FONT_TOKENS: dict[str, str] = {
+    "fs_badge": "9px",      # corner index on a quick-send row
+    "fs_small": "12px",     # hints, property chips
+    "fs_body": "13px",      # default text
+    "fs_action": "15px",    # the round delete glyph
+    "ff_mono": 'Consolas, "Courier New", monospace',
+    "fw_title": "bold",
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from string import Template
 
-from ui.tokens import DARK_TOKENS, LIGHT_TOKENS
+from ui.tokens import DARK_TOKENS, FONT_TOKENS, LIGHT_TOKENS, TEXT_COLOURS
 
 import os
 import sys
@@ -16,9 +16,9 @@ from PySide6.QtWidgets import QApplication
 _DARK_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: 12px; }
+QLabel#payloadHint { font-size: $fs_small; }
 QFrame#vSep { background: $border_muted; }
-QWidget { color: $text_primary; font-size: 13px; }
+QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
     border: 1px solid $border_muted;
     border-radius: 6px;
@@ -30,7 +30,7 @@ QGroupBox::title {
     left: 10px;
     padding: 0 4px;
     color: $accent;
-    font-weight: bold;
+    font-weight: $fw_title;
 }
 QPushButton {
     background: $border_muted;
@@ -55,7 +55,7 @@ QComboBox:hover, QLineEdit:hover { border-color: $accent; }
 QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $accent; background: $focus_border; }
 QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
 QCheckBox:focus { color: $accent; }
-QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
+QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
 QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 10px; height: 6px; }
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
@@ -79,8 +79,8 @@ QPlainTextEdit {
     border: 1px solid $border_muted;
     border-radius: 4px;
     color: $text_strong;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 13px;
+    font-family: $ff_mono;
+    font-size: $fs_body;
 }
 QCheckBox { spacing: 6px; }
 QCheckBox::indicator { width: 14px; height: 14px; }
@@ -96,7 +96,7 @@ QMenu::item { padding: 5px 24px 5px 28px; border-radius: 4px; }
 QMenu::item:selected { background: $selection_bg; color: $selection_text; }
 QMenu::separator { height: 1px; background: $border_strong; margin: 4px 8px; }
 QSplitter::handle { background: $border_muted; }
-QPushButton#qsDel { color: $danger_disabled; background: transparent; border: none; font-size: 15px; }
+QPushButton#qsDel { color: $danger_disabled; background: transparent; border: none; font-size: $fs_action; }
 QPushButton#qsDel:hover { color: $danger_hover; background: $border_muted; border-radius: 4px; }
 QToolButton#paramsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: $accent; }
@@ -110,7 +110,7 @@ QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
 QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 8px 12px; }
 QToolButton#qsCollapse:hover { background: $border_muted; border-color: $border_hover_rail; }
 /* U118/U121: the property chip (row properties, send options) */
-QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $border_muted; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
 /* U120: the quick-send panel toggle beside Settings */
@@ -136,7 +136,7 @@ QScrollBar::handle:horizontal { background: $scroll_handle; min-width: 30px; bor
 QScrollBar::handle:horizontal:hover { background: $border_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: $accent; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
+QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
 """
@@ -149,9 +149,9 @@ def _render(template: str, tokens: dict[str, str]) -> str:
 _LIGHT_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: 12px; }
+QLabel#payloadHint { font-size: $fs_small; }
 QFrame#vSep { background: $border_sep; }
-QWidget { color: $text_primary; font-size: 13px; }
+QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
     border: 1px solid $border_muted;
     border-radius: 6px;
@@ -163,7 +163,7 @@ QGroupBox::title {
     left: 10px;
     padding: 0 4px;
     color: $accent;
-    font-weight: bold;
+    font-weight: $fw_title;
 }
 QPushButton {
     background: $surface_1;
@@ -187,7 +187,7 @@ QComboBox:hover, QLineEdit:hover { border-color: $accent; }
 QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $accent; background: $focus_bg; }
 QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
 QCheckBox:focus { color: $accent; }
-QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
+QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
 QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 10px; height: 6px; }
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
@@ -211,8 +211,8 @@ QPlainTextEdit {
     border: 1px solid $border_muted;
     border-radius: 4px;
     color: $text_strong;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 13px;
+    font-family: $ff_mono;
+    font-size: $fs_body;
 }
 QCheckBox { spacing: 6px; }
 QCheckBox::indicator { width: 14px; height: 14px; }
@@ -228,7 +228,7 @@ QMenu::item { padding: 5px 24px 5px 28px; border-radius: 4px; }
 QMenu::item:selected { background: $selection_bg; color: $text_strong; }
 QMenu::separator { height: 1px; background: $border_muted; margin: 4px 8px; }
 QSplitter::handle { background: $border_muted; }
-QPushButton#qsDel { color: $danger_disabled; background: transparent; border: none; font-size: 15px; }
+QPushButton#qsDel { color: $danger_disabled; background: transparent; border: none; font-size: $fs_action; }
 QPushButton#qsDel:hover { color: $danger_hover; background: $surface_soft; border-radius: 4px; }
 QToolButton#paramsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: $accent; }
@@ -241,7 +241,7 @@ QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
 QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_light.png); qproperty-iconSize: 8px 12px; }
 QToolButton#qsCollapse:hover { background: $surface_hover; border-color: $border_hover_rail; }
 /* U118/U121: the property chip (row properties, send options) */
-QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $surface_hover; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
 /* U120: the quick-send panel toggle beside Settings */
@@ -267,13 +267,13 @@ QScrollBar::handle:horizontal { background: $scroll_handle; min-width: 30px; bor
 QScrollBar::handle:horizontal:hover { background: $scroll_handle_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: $accent; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
+QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(70, 70, 100, 0.08); border: 1px solid rgba(70, 70, 100, 0.20); }   /* U114-D7: neutral, not the TX blue */
 """
 
-DARK_QSS = _render(_DARK_QSS_TEMPLATE, DARK_TOKENS)
-LIGHT_QSS = _render(_LIGHT_QSS_TEMPLATE, LIGHT_TOKENS)
+DARK_QSS = _render(_DARK_QSS_TEMPLATE, {**DARK_TOKENS, **FONT_TOKENS})
+LIGHT_QSS = _render(_LIGHT_QSS_TEMPLATE, {**LIGHT_TOKENS, **FONT_TOKENS})
 
 
 def asset_dir() -> str:
@@ -327,17 +327,17 @@ def apply_theme(app: QApplication, dark: bool | None = None) -> bool:
 
 def text_color() -> str:
     """Receive-pane text colour (U62: dark theme softened from #e0e0e0, which glared)."""
-    return "#c0c0c0" if resolved_dark() else "#111111"
+    return TEXT_COLOURS["dark" if resolved_dark() else "light"]["rx"]
 
 
 def tx_color() -> str:
-    """Colour used to highlight echoed TX data (calm blue, never red)."""
-    return "#7fb3d5" if resolved_dark() else "#1e5aa8"
+    """Colour used to highlight echoed TX data (calm blue, never red, never the accent)."""
+    return TEXT_COLOURS["dark" if resolved_dark() else "light"]["echo"]
 
 
 def meta_color() -> str:
     """Timestamp + direction marker colour: dimmer than the payload (U62)."""
-    return "#7d8590" if resolved_dark() else "#6d6d78"
+    return TEXT_COLOURS["dark" if resolved_dark() else "light"]["meta"]
 
 
 def history_list_colors() -> dict:
