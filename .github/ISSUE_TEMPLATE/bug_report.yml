@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in SerialDesk does not work as expected
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please fill in the fields below - a
+        report with the version and the steps is usually fixable within a day.
+  - type: input
+    id: version
+    attributes:
+      label: SerialDesk version
+      description: Shown in the window title, e.g. SerialDesk v0.14.0
+      placeholder: SerialDesk v0.14.0
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: How did you install it?
+      options:
+        - Installer (SerialDesk_vX.Y.Z-win64-setup.exe)
+        - Portable zip (SerialDesk_vX.Y.Z-win64.zip)
+        - Running from source (python main.py)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      placeholder: Windows 10 22H2 / Windows 11 24H2
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you clicked, what you sent, what the device answered.
+      placeholder: |
+        1. Open COM3 at 115200
+        2. Send HEX 01 03 00 00 00 02 (CRC on)
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, a saved log, the USB-serial chip (CH340 / CP2102 / FT232).
+    validations:
+      required: false

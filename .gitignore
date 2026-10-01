@@ -34,6 +34,7 @@ config.local.json
 *.pem
 docs/
 config.json
+config.backup_*.json
 
 # Runtime logs
 logs/
