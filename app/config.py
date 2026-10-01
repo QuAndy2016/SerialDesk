@@ -81,12 +81,23 @@ def load_config() -> dict:
         return {}
 
 
-def save_config(data: dict) -> bool:
-    """Write config.json atomically; returns success."""
+def save_config(data: dict, merge: bool = True) -> bool:
+    """Write config.json atomically; returns success.
+
+    Merges into whatever is on disk by default. Callers that persist a single key (the
+    panel's folded flag, for instance) used to replace the whole file, silently
+    dropping every other setting - folding the quick-send panel wiped the theme, the
+    language, the log directory and the auto-save settings (U109).
+    """
     try:
+        payload = dict(data)
+        if merge:
+            current = load_config()
+            current.update(payload)
+            payload = current
         tmp = CONFIG_PATH + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, CONFIG_PATH)
         return True
     except OSError:

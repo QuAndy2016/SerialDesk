@@ -1,5 +1,25 @@
 # Changelog
 
+## [v1.1.0] - 2026-10-01
+
+### Added
+
+- **The quick-send panel folds both ways and stays visible while folded (U106)**: folding used to leave nothing behind - the
+  only way back was a menu entry or Ctrl+B. The header now carries a themed icon button (24x24 hit target) at the trailing
+  edge, and folding leaves a labelled 28 px rail you can click to bring the panel back.
+- **Quick-send rows are two lines now (U105)**: the command gets the whole row (measured 238 px, up from about 105 px) and
+  the row's properties moved to a second, indented line, where the delay field finally says `ms` (U104).
+
+### Fixed
+
+- **Sending from the quick-send panel never moved the send counter (U103)**: only the Send button incremented
+  "已发送 N 次" while the TX byte counter counted every path, so the two numbers disagreed on screen (ten 5-byte sends read
+  as "10 times" next to "TX: 500 B"). Quick send, the repeat loop and sequences now count too.
+- **Folding the panel wiped the settings (U109)**: `save_config()` replaced config.json instead of merging it, so persisting
+  the folded flag silently dropped the theme, language, log folder, auto-save settings and history. It merges now.
+- **The idle file-progress bar read as a divider (U108)**: it stays hidden until a transfer actually starts.
+
+
 ## [v1.0.0] - 2026-10-01
 
 **First stable release.** SerialDesk is feature-complete for everyday embedded work and

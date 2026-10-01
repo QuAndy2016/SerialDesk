@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import os
 
-from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal
-from PySide6.QtGui import QIntValidator
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -16,16 +16,69 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QStyle,
+    QStyleOption,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
+
+import ui.theme as theme
 
 from app.i18n import hex_error_message, tr
 from app.protocol import HexFormatError, ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
 DEFAULT_ROWS = 10   # blank rows seeded on first run (U15)
+RAIL_W = 28         # U106: width of the rail that stays visible while the panel is folded
+
+
+class RailStrip(QWidget):
+    """U106: the folded state of the quick-send panel.
+
+    Folding used to hide the panel completely, leaving a menu entry and Ctrl+B as the
+    only way back. The rail keeps a labelled, clickable strip on screen instead, so the
+    panel is never "gone" - you can always see what is folded away and click it open.
+    """
+
+    clicked = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._text = ""
+        self.setObjectName("qsRail")
+        self.setFixedWidth(RAIL_W)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def set_label(self, text: str) -> None:
+        self._text = text
+        self.update()
+
+    def paintEvent(self, event):  # noqa: N802 - Qt naming
+        opt = QStyleOption()
+        opt.initFrom(self)
+        painter = QPainter(self)
+        # let the stylesheet paint the background/border (#qsRail, incl. :hover)
+        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+
+        colour = QColor(theme.text_color())
+        cx = self.width() / 2.0
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(colour)
+        painter.drawPolygon(QPolygonF([QPointF(cx - 3, 10), QPointF(cx + 3, 15),
+                                       QPointF(cx - 3, 20)]))
+        painter.setPen(colour)
+        painter.save()
+        painter.translate(cx + 5, self.height() - 14)
+        painter.rotate(-90)
+        painter.drawText(0, 0, self._text)
+        painter.restore()
+        painter.end()
+
+    def mouseReleaseEvent(self, event):  # noqa: N802 - Qt naming
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
 from app.config import CONFIG_PATH   # U34: one data dir for the whole app
 
 
@@ -51,30 +104,39 @@ class QuickSendPanel(QWidget):
         self._seq_running = False
         self._seq_queue: list[dict] = []
         self._seq_index = 0
+        self._folded = False
         self._build_ui()
         self._load()
 
     # -- UI -----------------------------------------------------------------
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
+        # U106: the panel owns both of its states - the normal column, and a narrow rail
+        # that stays on screen while folded (so the way back is always visible).
+        outer = QHBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        self._content = QWidget()
+        outer.addWidget(self._content, 1)
+        layout = QVBoxLayout(self._content)
         layout.setContentsMargins(6, 6, 6, 6)
 
         head = QHBoxLayout()
-        # U88: fold the whole panel away - it is the biggest single consumer of width,
-        # so folding it hands the log roughly a third of the window.
-        self._collapse_btn = QToolButton()
-        self._collapse_btn.setObjectName("qsCollapse")
-        self._collapse_btn.setText("\u25be")
-        self._collapse_btn.setAutoRaise(True)
-        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
-        self._collapse_btn.clicked.connect(lambda: self.collapsed_changed.emit(True))
-        head.addWidget(self._collapse_btn)
         self._title_lbl = QLabel(tr("qs.title"))
         head.addWidget(self._title_lbl)
         head.addStretch(1)
         self.count_label = QLabel("0/99")
         head.addWidget(self.count_label)
+        # U106: the fold control sits at the trailing edge (matching the side it folds
+        # towards), is a themed icon button instead of a text glyph, has a 24x24 hit
+        # target, and toggles both ways.
+        self._collapse_btn = QToolButton()
+        self._collapse_btn.setObjectName("qsCollapse")
+        self._collapse_btn.setAutoRaise(True)
+        self._collapse_btn.setMinimumSize(24, 24)
+        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
+        self._collapse_btn.clicked.connect(lambda: self.collapsed_changed.emit(True))
+        head.addWidget(self._collapse_btn)
         layout.addLayout(head)
 
         # sequence mode (T13)
@@ -114,6 +176,13 @@ class QuickSendPanel(QWidget):
         self.add_btn.clicked.connect(lambda: self.add_row())
         layout.addWidget(self.add_btn)
 
+        self._rail = RailStrip()
+        self._rail.set_label(tr("qs.title"))
+        self._rail.setToolTip(tr("qs.rail.tip"))
+        self._rail.clicked.connect(lambda: self.collapsed_changed.emit(False))
+        self._rail.hide()
+        outer.addWidget(self._rail)
+
     # -- rows ----------------------------------------------------------------
 
     def add_row(self, text: str = "", is_hex: bool = True, delay_ms: int = 500,
@@ -127,7 +196,13 @@ class QuickSendPanel(QWidget):
         row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         row.setToolTip(tr("qs.row.tip"))
         row.installEventFilter(self)
-        h = QHBoxLayout(row)
+        v = QVBoxLayout(row)
+        v.setContentsMargins(0, 2, 0, 2)
+        v.setSpacing(2)
+
+        # U105: the first line is the command itself and gets the whole width - it used
+        # to share the row with four other controls and was left with ~105 px.
+        h = QHBoxLayout()
         h.setContentsMargins(0, 0, 0, 0)
 
         # U66: pick which rows the sequence runs, with a small order badge
@@ -147,10 +222,22 @@ class QuickSendPanel(QWidget):
         edit.setPlaceholderText(tr("qs.placeholder"))
         h.addWidget(edit, 1)
 
+        send = QPushButton(tr("qs.send"))
+        send.setMinimumWidth(52)
+        send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
+        send.clicked.connect(lambda: self._send_row(row))
+        h.addWidget(send)
+        v.addLayout(h)
+
+        # U105/U104: the second line carries the row's properties, indented under the
+        # text box, with the unit written out - "500" explained itself to nobody.
+        meta = QHBoxLayout()
+        meta.setContentsMargins(24, 0, 0, 0)
+        meta.setSpacing(4)
         fmt = QComboBox()
         fmt.addItems(["HEX", "ASCII"])
         fmt.setCurrentIndex(0 if is_hex else 1)
-        h.addWidget(fmt)
+        meta.addWidget(fmt)
 
         delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
         delay.setValidator(QIntValidator(0, 60000, self))
@@ -158,22 +245,39 @@ class QuickSendPanel(QWidget):
         delay.setStyleSheet("padding: 3px 4px;")   # U80: no room to waste in a tight row
         delay.setFixedWidth(self._delay_width())   # U80: just wide enough for 60000
         delay.setToolTip(tr("qs.delay.tip"))
-        h.addWidget(delay)
-
-        send = QPushButton(tr("qs.send"))
-        send.setMinimumWidth(52)
-        send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
-        send.clicked.connect(lambda: self._send_row(row))
-        h.addWidget(send)
+        meta.addWidget(delay)
+        unit = QLabel(tr("qs.delay.unit"))
+        unit.setObjectName("qsMeta")
+        meta.addWidget(unit)
+        meta.addStretch(1)
+        v.addLayout(meta)
 
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         edit.installEventFilter(self)      # clicking into the text selects the row
         self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send,
-                           "delay": delay, "sel": sel, "ord": ord_lbl})
+                           "delay": delay, "sel": sel, "ord": ord_lbl, "unit": unit})
         sel.setChecked(bool(selected))
         self._renumber_selection()
         self._update_count()
+
+    # -- folded state (U106) -------------------------------------------------
+
+    def set_folded(self, folded: bool) -> None:
+        """Show the rail instead of the panel contents, and let the splitter shrink."""
+        self._folded = bool(folded)
+        self._content.setVisible(not self._folded)
+        self._rail.setVisible(self._folded)
+        if self._folded:
+            self.setMinimumWidth(RAIL_W)
+            self.setMaximumWidth(RAIL_W)
+        else:
+            self.setMinimumWidth(0)
+            self.setMaximumWidth(16777215)      # QWIDGETSIZE_MAX
+        self.updateGeometry()
+
+    def is_folded(self) -> bool:
+        return self._folded
 
     # -- row selection + deletion (U68 plan A) -------------------------------
 
@@ -405,11 +509,15 @@ class QuickSendPanel(QWidget):
         self.seq_check.setToolTip(tr("qs.seq.tip"))
         self.seq_btn.setText(tr("qs.stop") if self._seq_running else tr("qs.run"))
         self.seq_btn.setToolTip(tr("qs.seq.tip"))
+        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
+        self._rail.set_label(tr("qs.title"))
+        self._rail.setToolTip(tr("qs.rail.tip"))
         for entry in self._rows:
             entry["edit"].setPlaceholderText(tr("qs.placeholder"))
             entry["send"].setText(tr("qs.send"))
             entry["widget"].setToolTip(tr("qs.row.tip"))
             entry["delay"].setToolTip(tr("qs.delay.tip"))
+            entry["unit"].setText(tr("qs.delay.unit"))
             if entry.get("sel") is not None:
                 entry["sel"].setToolTip(tr("qs.sel.tip"))
                 entry["ord"].setToolTip(tr("qs.sel.order.tip"))

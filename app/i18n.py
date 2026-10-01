@@ -470,6 +470,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.run": {"zh": "运行", "en": "Run"},
     "qs.stop": {"zh": "停止", "en": "Stop"},
     "qs.delay.tip": {"zh": "本条发送后等待的毫秒数（0~60000，默认 500）", "en": "Delay after this row, in ms (0-60000, default 500)"},
+    "qs.delay.unit": {"zh": "ms", "en": "ms"},
+    "qs.rail.tip": {"zh": "展开快速发送面板（Ctrl+B）", "en": "Show the quick-send panel (Ctrl+B)"},
     "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},

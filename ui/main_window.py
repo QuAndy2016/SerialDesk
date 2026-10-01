@@ -69,7 +69,7 @@ from ui.auto_reply_dialog import AutoReplyDialog
 from ui.autosave_dialog import AutoSaveDialog
 from ui.history_dialog import HistoryDialog
 from ui.port_settings_dialog import PortSettingsDialog
-from ui.quick_send_panel import QuickSendPanel
+from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from app import i18n
 from app.i18n import hex_error_message, tr
 
@@ -381,7 +381,9 @@ class MainWindow(QMainWindow):
 
     def _on_quick_panel_collapsed(self, collapsed: bool) -> None:
         """Fold the quick-send panel away (or bring it back) and remember it (U88)."""
-        self.quick_panel.setVisible(not collapsed)
+        # U106: keep the panel widget alive in its rail state instead of hiding it, so
+        # the folded panel still shows a labelled strip the user can click to come back.
+        self.quick_panel.set_folded(collapsed)
         if hasattr(self, "_quick_panel_act"):
             self._quick_panel_act.setChecked(not collapsed)
         save_config({"quick_panel_collapsed": bool(collapsed)})
@@ -391,7 +393,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_quick_panel(self) -> None:
         """Ctrl+B / menu: fold the quick-send panel when it is showing (U88)."""
-        self._on_quick_panel_collapsed(self.quick_panel.isVisible())
+        self._on_quick_panel_collapsed(not self.quick_panel.is_folded())
 
     def _toggle_find_bar(self, show: bool | None = None) -> None:
         """Show/hide the receive find bar (U41)."""
@@ -491,7 +493,7 @@ class MainWindow(QMainWindow):
         self._custom_split_sizes = False
         self._split_room_done = True
         QTimer.singleShot(0, self._give_data_area_the_room)
-        self.quick_panel.setVisible(True)       # U88: defaults = panel shown again
+        self.quick_panel.set_folded(False)      # U88/U106: defaults = panel shown again
         if hasattr(self, "_quick_panel_act"):
             self._quick_panel_act.setChecked(True)
         self.quick_panel.reload_from_config()   # seeds the default rows when config is gone
@@ -1039,6 +1041,7 @@ class MainWindow(QMainWindow):
         self.file_progress.setRange(0, 100)
         self.file_progress.setValue(0)
         self.file_progress.setMaximumWidth(120)
+        self.file_progress.hide()          # U108: idle progress bar read as a divider
         tx_fmt_row.addWidget(self.file_progress)
         self.file_info_lbl = QLabel("")
         tx_fmt_row.addWidget(self.file_info_lbl, 1)
@@ -1297,8 +1300,8 @@ class MainWindow(QMainWindow):
         self._left_column.setMinimumWidth(max(360, pane_need + pad))
         rows = self._control_rows()
         connect_need = self._row_need(rows[0]) if rows else 0
-        panel_min = (max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width())
-                     if self.quick_panel.isVisible() else 0)   # U88: a folded panel costs nothing
+        panel_min = (RAIL_W if self.quick_panel.is_folded() else
+                     max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width()))
         pair_need = (self._rx_group.minimumWidth() + panel_min + self._splitter.handleWidth()
                      + max(0, self.width() - self._splitter.width()))
         self.setMinimumWidth(max(980, connect_need, pair_need))
@@ -1717,6 +1720,7 @@ class MainWindow(QMainWindow):
         baud = self._baud_value()
         eta = max(1, int(len(data) / max(1.0, baud / 10.0)))
         self.file_progress.setValue(0)
+        self.file_progress.show()
         self.file_info_lbl.setText(tr("file.info", size=_human_bytes(len(data)), baud=baud, eta=eta))
         self.send_file_btn.setText(tr("btn.cancel_send"))
         self._file_timer.start(FILE_CHUNK_MS)
@@ -1745,6 +1749,7 @@ class MainWindow(QMainWindow):
         self._file_timer.stop()
         self.send_file_btn.setText(tr("btn.send_file"))
         self.file_progress.setValue(100)
+        self.file_progress.hide()
         self._notify(tr("file.done", name=name, size=size), ms=5000)
 
     def _abort_file_send(self):
@@ -1752,6 +1757,7 @@ class MainWindow(QMainWindow):
         self.send_file_btn.setText(tr("btn.send_file"))
         self.file_info_lbl.setText("")
         self.file_progress.setValue(0)
+        self.file_progress.hide()
 
     # -- receive log to file (T4) -------------------------------------------
 
@@ -2272,7 +2278,12 @@ class MainWindow(QMainWindow):
             self.quick_panel.stop_sequence()
             return
         self._echo_tx(payload)
+        # U103: quick send / sequence / repeat go through here, so the send counter
+        # has to move too - otherwise "已发送 N 次" stayed at the manual-send count
+        # while the TX byte counter kept climbing.
         self.tx_bytes += len(payload)
+        self._sent_count += 1
+        self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
         self.update_counts()
 
     def on_received(self, ts: float, data: bytes):
