@@ -1,5 +1,45 @@
 # Changelog
 
+## [v1.0.0] - 2026-10-01
+
+**First stable release.** SerialDesk is feature-complete for everyday embedded work and
+moves into long-term maintenance from here. Everything below is in the installer and the
+portable zip; nothing needs Python.
+
+### Serial
+
+- 26 baud presets plus free text, data / parity / stop bits, hardware and software flow control
+- HEX and ASCII views, HEX + ASCII dual view, framing (off / by baud rate / manual ms / by header)
+- Timestamps, and a receive area that echoes what you send with a direction marker and its own colour
+
+### Send
+
+- Quick-send bank (up to 99 rows) with sequence mode and per-row delay, repeat send with an interval
+- Checksums on send: CRC16-Modbus, CRC16-CCITT, CRC32, SUM8
+- File transfer with progress, encodings (UTF-8 / GBK / ...), escape parsing, append CRLF
+- Auto-reply rules, editable and persisted; send history with filter, and an undo window for deletions
+
+### Reliability
+
+- All serial I/O on a background thread, so the UI never freezes; auto-reconnect with backoff
+- Receive logs: save a snapshot, or auto-save with a size and time limit, into one folder you choose
+
+### Packaging and UI
+
+- Single-file Windows installer and a portable zip; `portable.txt` keeps everything beside the exe
+- Data lives in `%APPDATA%\SerialDesk` by default, and **settings from builds older than v0.6.0 are now migrated automatically** (U102) instead of silently resetting
+- Dark / light / follow-system themes, Chinese / English UI, collapsible quick-send panel, connection and signal-line indicators
+
+### Docs
+
+- Bilingual README with an English first screen, screenshots, an "if Windows blocks it" walkthrough, and a bug-report issue form plus CONTRIBUTING
+
+### Known limits
+
+- Windows is the only packaged platform; the exe is unsigned, so SmartScreen warns on first run
+- Waveform view (pyqtgraph) and TCP/UDP debugging are planned for after 1.0 and will be prioritised by user feedback
+
+
 ## [v0.15.0] - 2026-10-01
 
 ### Added
