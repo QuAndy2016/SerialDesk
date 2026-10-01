@@ -143,7 +143,8 @@ def apply_defaults(win: MainWindow) -> None:
     win._log_dir = log_dir()
     win._log_max_bytes = 2 * 1024 * 1024
     win._log_max_seconds = 30 * 60
-    win._autosave_dlg.set_values(enabled=False, max_mb=2, max_minutes=30, folder=win._log_dir)
+    win._log_quota_bytes = 0
+    win._autosave_dlg.set_values(enabled=False, max_mb=2, max_minutes=30, quota_mb=0, folder=win._log_dir)
     win._apply_autosave_settings()
     win.autoscroll_check.setChecked(True)
     win.ts_check.setChecked(True)          # U96: timestamps are on by default

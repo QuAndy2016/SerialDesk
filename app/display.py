@@ -16,6 +16,24 @@ MARK_TX = "-> "
 RX_ASCII = 0
 RX_HEX = 1
 RX_HEX_ASCII = 2
+RX_COLUMN_HEX = 3     # U163c: classic hexdump columns (offset + 16 bytes + ASCII)
+
+COL_WIDTH = 16
+
+
+def column_hex(data: bytes, offset: int = 0, width: int = COL_WIDTH):
+    """Hexdump rows: offset, spaced hex bytes, ASCII gutter.
+
+    Returns (text, next_offset) so a caller can keep the offset running across
+    chunks (U163c). Pads the hex column so the ASCII gutter stays aligned.
+    """
+    rows = []
+    for i in range(0, len(data), width):
+        chunk = data[i:i + width]
+        hex_part = " ".join("%02X" % b for b in chunk).ljust(width * 3 - 1)
+        gutter = "".join(chr(b) if 32 <= b < 127 else "." for b in chunk)
+        rows.append("%08X  %s  |%s|" % (offset + i, hex_part, gutter))
+    return "\n".join(rows), offset + len(data)
 
 
 def format_payload(data: bytes, mode: int, encoding: str = "ascii") -> str:
@@ -24,6 +42,8 @@ def format_payload(data: bytes, mode: int, encoding: str = "ascii") -> str:
         return bytes_to_hex_str(data)
     if mode == RX_ASCII:
         return decode_text(data, encoding)
+    if mode == RX_COLUMN_HEX:
+        return column_hex(data, 0)[0]
     return "%s | %s" % (bytes_to_hex_str(data), decode_text(data, encoding))
 
 

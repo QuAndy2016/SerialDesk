@@ -161,7 +161,7 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._rx_fmt_lbl = QLabel(tr("rxfmt.label"))
     bar.addWidget(win._rx_fmt_lbl)
     win.rx_fmt_combo = QComboBox()
-    win.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII"])
+    win.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII", "HEX cols"])   # U163c: column hexdump
     win.rx_fmt_combo.setCurrentIndex(RX_HEX)
     win.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
     bar.addWidget(win.rx_fmt_combo)

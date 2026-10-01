@@ -88,6 +88,12 @@ class AutoSaveDialog(QDialog):
         self.max_min_edit.setValidator(QIntValidator(1, 1440, self))
         self.max_min_edit.textChanged.connect(lambda *_: self.settingsChanged.emit())
         form.addRow(self._min_lbl, self.max_min_edit)
+
+        self._quota_lbl = QLabel(tr("as.quota_mb"))    # U163d: folder total cap
+        self.quota_mb_edit = QLineEdit("0")
+        self.quota_mb_edit.setValidator(QIntValidator(0, 1000000, self))
+        self.quota_mb_edit.textChanged.connect(lambda *_: self.settingsChanged.emit())
+        form.addRow(self._quota_lbl, self.quota_mb_edit)
         root.addLayout(form)
 
         self.note_lbl = QLabel(tr("as.note"))
@@ -108,14 +114,18 @@ class AutoSaveDialog(QDialog):
             self.dir_edit.setText(path)
             self.settingsChanged.emit()
 
-    def set_values(self, *, enabled: bool, max_mb: int, max_minutes: int, folder: str) -> None:
+    def set_values(self, *, enabled: bool, max_mb: int, max_minutes: int,
+                   folder: str, quota_mb: int = 0) -> None:
         """Seed the widgets (blocking signals so seeding does not re-apply)."""
-        for widget in (self.enable_check, self.max_mb_edit, self.max_min_edit):
+        for widget in (self.enable_check, self.max_mb_edit, self.max_min_edit,
+                       self.quota_mb_edit):
             widget.blockSignals(True)
         self.enable_check.setChecked(bool(enabled))
         self.max_mb_edit.setText(str(int(max_mb)))
         self.max_min_edit.setText(str(int(max_minutes)))
-        for widget in (self.enable_check, self.max_mb_edit, self.max_min_edit):
+        self.quota_mb_edit.setText(str(max(0, int(quota_mb))))
+        for widget in (self.enable_check, self.max_mb_edit, self.max_min_edit,
+                       self.quota_mb_edit):
             widget.blockSignals(False)
         self.dir_edit.setText(folder)
 
@@ -127,10 +137,17 @@ class AutoSaveDialog(QDialog):
             except ValueError:
                 return default
 
+        def _num0(text: str, default: int = 0) -> int:
+            try:
+                return max(0, int((text or "").strip()))
+            except ValueError:
+                return default
+
         return {
             "enabled": self.enable_check.isChecked(),
             "max_mb": _num(self.max_mb_edit.text(), 2),
             "max_minutes": _num(self.max_min_edit.text(), 30),
+            "quota_mb": _num0(self.quota_mb_edit.text(), 0),
             "dir": self.dir_edit.text().strip(),
         }
 
@@ -142,6 +159,7 @@ class AutoSaveDialog(QDialog):
         self.enable_check.setText(tr("as.enable"))
         self._mb_lbl.setText(tr("as.max_mb"))
         self._min_lbl.setText(tr("as.max_minutes"))
+        self._quota_lbl.setText(tr("as.quota_mb"))
         self._dir_lbl.setText(tr("as.dir"))
         self.browse_btn.setText(tr("as.browse"))
         self.note_lbl.setText(tr("as.note"))

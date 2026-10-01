@@ -36,7 +36,7 @@ QGroupBox::title {
     left: 10px;
     padding: 0 4px;
     color: $accent;
-    font-weight: $fw_title;
+    font-weight: $fw_medium;
 }
 QPushButton {
     background: $border_muted;
@@ -170,7 +170,7 @@ QGroupBox::title {
     left: 10px;
     padding: 0 4px;
     color: $accent;
-    font-weight: $fw_title;
+    font-weight: $fw_medium;
 }
 QPushButton {
     background: $surface_1;

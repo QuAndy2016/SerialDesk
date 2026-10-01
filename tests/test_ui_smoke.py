@@ -250,3 +250,27 @@ def test_rx_view_filter_hides_tx_or_rx(app, win):
     win._on_rx_filter_changed(0)          # back to all
     app.processEvents()
     assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()
+
+
+def test_column_hex_rows_and_offset():
+    # U163c: pure hexdump formatter - 16 bytes per row, running offset
+    from app.display import column_hex
+    text, off = column_hex(bytes(range(20)), 0)
+    lines = text.split("\n")
+    assert len(lines) == 2
+    assert lines[0].startswith("00000000  ") and lines[0].endswith("|")
+    assert lines[1].startswith("00000010  ")
+    assert off == 20
+
+
+def test_column_hex_mode_renders_rows(app, win):
+    # U163c: the HEX cols mode renders hexdump rows into the pane
+    win.rx_view.clear()
+    win._rx_store = []
+    win._col_off = 0
+    win.rx_fmt_combo.setCurrentIndex(3)          # HEX cols
+    win._append_rx_group(win._format_rx(b"ABCD"), 0.0, True)
+    app.processEvents()
+    text = win.rx_view.toPlainText()
+    assert "00000000" in text and "41 42 43 44" in text and "|ABCD|" in text
+    win.rx_fmt_combo.setCurrentIndex(1)          # restore HEX default

@@ -143,6 +143,7 @@ def init_language_and_log(win: MainWindow) -> None:
     _cfg0 = load_config()                       # U75: configurable auto-save
     win._log_max_bytes = max(1, int(_cfg0.get("autosave_max_mb", 2) or 2)) * 1024 * 1024
     win._log_max_seconds = max(1, int(_cfg0.get("autosave_max_minutes", 30) or 30)) * 60
+    win._log_quota_bytes = max(0, int(_cfg0.get("log_quota_mb", 0) or 0)) * 1024 * 1024
     win._log_dir = str(_cfg0.get("log_dir") or "") or LOG_DIR
     win._log_sink = LogSink(win._log_dir, win._log_max_bytes, win._log_max_seconds,
                              header=win._log_header_text)   # refactor step 2
@@ -201,6 +202,7 @@ def restore_settings(win: MainWindow) -> None:
         enabled=bool(_cfg.get("autosave_enabled", False)),
         max_mb=int(_cfg.get("autosave_max_mb", 2) or 2),
         max_minutes=int(_cfg.get("autosave_max_minutes", 30) or 30),
+        quota_mb=int(_cfg.get("log_quota_mb", 0) or 0),
         folder=win._log_dir)
 
     # send history (T5) from config

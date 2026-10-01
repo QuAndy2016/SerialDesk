@@ -49,3 +49,27 @@ def test_append_without_open_is_a_noop(tmp_path):
     sink = LogSink(str(tmp_path), header=None)
     sink.append("ignored")
     assert sink.bytes_written == 0
+
+
+def test_prune_log_dir_drops_oldest_until_under_quota(tmp_path):
+    # E4/U163d: the folder quota removes the oldest segments first
+    import os
+    from app.log_sink import prune_log_dir
+    for i in range(3):
+        p = os.path.join(str(tmp_path), "serial_%d.txt" % i)
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("x" * 100)
+        os.utime(p, (1000 + i, 1000 + i))
+    removed = prune_log_dir(str(tmp_path), 250)      # 300 bytes -> drop the oldest
+    assert removed == 1
+    assert sorted(os.listdir(str(tmp_path))) == ["serial_1.txt", "serial_2.txt"]
+
+
+def test_prune_log_dir_zero_means_unlimited(tmp_path):
+    import os
+    from app.log_sink import prune_log_dir
+    p = os.path.join(str(tmp_path), "serial_0.txt")
+    with open(p, "w", encoding="utf-8") as fh:
+        fh.write("x" * 100)
+    assert prune_log_dir(str(tmp_path), 0) == 0
+    assert os.path.exists(p)

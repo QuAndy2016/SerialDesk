@@ -88,7 +88,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -240,6 +240,8 @@ def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> No
     - otherwise append to the running RX line, with a separator in HEX modes
       (previously '39 30' + '31 32' collapsed into '39 3031 32').
     """
+    if win.rx_fmt_combo.currentIndex() == RX_COLUMN_HEX:
+        new_line = True      # U163c: every hexdump row set starts on its own line
     has_text = win.rx_view.document().characterCount() > 1
     if new_line or win._line_is_tx:
         if has_text:
@@ -362,6 +364,7 @@ def on_clear(win: MainWindow):
     win._rx_pause_buf = []      # U160: a pause buffer must not survive a clear
     win._rx_store = []          # U163b: the filter store goes with the display
     win._cur_line_tx = False
+    win._col_off = 0            # U163c: the hexdump offset starts over with the pane
     win.rx_view.clear()
     win._line_is_tx = False
     win._cap_warned = False

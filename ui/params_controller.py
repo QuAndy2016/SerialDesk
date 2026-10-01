@@ -91,7 +91,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, column_hex)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -161,6 +161,9 @@ def format_rx(win: MainWindow, data: bytes) -> str:
         return bytes_to_hex_str(data)
     if mode == RX_ASCII:
         return decode_text(data, win._encoding())
+    if mode == RX_COLUMN_HEX:                       # U163c: hexdump rows, running offset
+        text, win._col_off = column_hex(data, getattr(win, "_col_off", 0))
+        return text
     hex_s = bytes_to_hex_str(data)
     text_s = decode_text(data, win._encoding())
     return f"{hex_s} | {text_s}"

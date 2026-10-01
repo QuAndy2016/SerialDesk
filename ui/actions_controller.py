@@ -97,7 +97,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -213,7 +213,7 @@ def pause_autoscroll(win: MainWindow, _action: int = 0) -> None:
 def rx_separator(win: MainWindow) -> str:
     "rx separator"
     """Separator used when a HEX group continues an existing line (U59)."""
-    return "" if win.rx_fmt_combo.currentIndex() == RX_ASCII else " "
+    return "" if win.rx_fmt_combo.currentIndex() in (RX_ASCII, RX_COLUMN_HEX) else " "
 
 def on_autoscroll_toggled(win: MainWindow, checked: bool) -> None:
     "on autoscroll toggled"

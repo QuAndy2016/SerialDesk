@@ -188,6 +188,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "as.enable": {"zh": "启用自动保存（打开串口后持续写入）", "en": "Enable auto-save (writes while the port is open)"},
     "as.max_mb": {"zh": "单个文件上限 (MB)", "en": "Max size per file (MB)"},
     "as.max_minutes": {"zh": "最长时间 (分钟)", "en": "Max duration (minutes)"},
+    "as.quota_mb": {"zh": "日志目录总量上限 (MB，0=不限)", "en": "Log folder quota (MB, 0 = unlimited)"},
     "as.dir": {"zh": "保存目录", "en": "Folder"},
     "as.dir.pick": {"zh": "选择日志保存目录", "en": "Choose the log folder"},
     "as.browse": {"zh": "浏览…", "en": "Browse…"},

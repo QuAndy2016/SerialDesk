@@ -21,6 +21,50 @@ if TYPE_CHECKING:
 SEGMENT_PATTERN = "serial_%Y%m%d_%H%M%S.txt"
 
 
+def prune_log_dir(directory: str, quota_bytes: int, keep: str = "") -> int:
+    """Delete the oldest segments until the folder is under quota (E4/U163d).
+
+    Only *.txt segments are candidates, oldest first; the currently open segment
+    (``keep``) is never removed. ``quota_bytes <= 0`` means unlimited. Returns the
+    number of files deleted.
+    """
+    if quota_bytes <= 0:
+        return 0
+    keep_abs = os.path.abspath(keep) if keep else ""
+    files = []
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return 0
+    for name in names:
+        if not name.endswith(".txt"):
+            continue
+        path = os.path.join(directory, name)
+        if os.path.abspath(path) == keep_abs:
+            continue
+        try:
+            files.append((os.path.getmtime(path), os.path.getsize(path), path))
+        except OSError:
+            continue
+    total = sum(size for _, size, _ in files)
+    if keep_abs:
+        try:
+            total += os.path.getsize(keep_abs)
+        except OSError:
+            pass
+    removed = 0
+    for _, size, path in sorted(files):
+        if total <= quota_bytes:
+            break
+        try:
+            os.remove(path)
+            total -= size
+            removed += 1
+        except OSError:
+            continue
+    return removed
+
+
 class LogSink:
     """Append-only log writer with size/age rotation and a session header."""
 

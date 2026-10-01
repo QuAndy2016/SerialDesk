@@ -48,3 +48,20 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName} / 运行 Se
 
 [UninstallDelete]
 ; user data (config.json / logs) lives in %APPDATA%\SerialDesk and is intentionally kept
+
+[Code]
+; U163d: on uninstall, ask whether the per-user settings and logs should go too.
+; They live in %APPDATA%\SerialDesk and are otherwise intentionally kept.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Choice: Integer;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    Choice := MsgBox('Also delete your settings and logs (config.json, logs)?'
+                     + #13#10 + '同时删除配置与日志吗？',
+                     mbConfirmation, MB_YESNO);
+    if Choice = IDYES then
+      DelTree(ExpandConstant('{userappdata}\SerialDesk'), True, True, True);
+  end;
+end;

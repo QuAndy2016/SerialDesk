@@ -110,4 +110,5 @@ FONT_TOKENS: dict[str, str] = {
     "fs_action": "15px",    # the round delete glyph
     "ff_mono": 'Consolas, "Courier New", monospace',
     "fw_title": "bold",
+    "fw_medium": "500",     # U163e/T2: group titles sit between body (400) and bold
 }

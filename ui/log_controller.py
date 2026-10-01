@@ -72,7 +72,7 @@ from app.config import (
     log_dir,
     save_config,
 )
-from app.log_sink import LogSink
+from app.log_sink import LogSink, prune_log_dir
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
@@ -110,6 +110,8 @@ def log_open(win: MainWindow) -> None:
     win._log_sink.configure(win._log_dir, win._log_max_bytes, win._log_max_seconds)
     try:
         win._log_path = win._log_sink.open()
+        prune_log_dir(win._log_dir, getattr(win, "_log_quota_bytes", 0),
+                      keep=win._log_path)       # U163d: folder quota, oldest first
         win._log_fp = True                      # legacy flag: "a segment is open"
         win._notify(tr("log.autosave.on", path=win._log_path), ms=5000)
     except OSError as exc:
@@ -177,14 +179,18 @@ def apply_autosave_settings(win: MainWindow) -> None:
     values = win._autosave_dlg.values()
     win._log_max_bytes = max(1, int(values["max_mb"])) * 1024 * 1024
     win._log_max_seconds = max(1, int(values["max_minutes"])) * 60
+    win._log_quota_bytes = max(0, int(values.get("quota_mb", 0))) * 1024 * 1024
     if values["dir"]:
         win._log_dir = values["dir"]
     config = load_config()
     config["autosave_enabled"] = bool(values["enabled"])
     config["autosave_max_mb"] = int(values["max_mb"])
     config["autosave_max_minutes"] = int(values["max_minutes"])
+    config["log_quota_mb"] = max(0, int(values.get("quota_mb", 0)))
     config["log_dir"] = win._log_dir
     save_config(config)
+    prune_log_dir(win._log_dir, win._log_quota_bytes,
+                  keep=win._log_path if win._log_fp else "")   # U163d
     if values["enabled"]:
         if win._log_fp is None:
             win._log_open()
