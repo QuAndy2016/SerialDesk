@@ -44,6 +44,33 @@ def log_dir() -> str:
 CONFIG_PATH = os.path.join(data_dir(), "config.json")
 
 
+def migrate_legacy_config() -> str | None:
+    """One-off migration for the data-root move (U102).
+
+    Before U34 the frozen build read and wrote ``config.json`` next to the
+    executable; U34 moved the data root to ``%APPDATA%/SerialDesk`` (or to the
+    portable folder). Upgrading users would silently lose their settings, so on
+    the first run of a new build: if the new location has no config and an old
+    file still sits beside the exe, copy it over. Returns the migrated path, or
+    ``None`` when there is nothing to do (source runs, portable mode, already
+    migrated, or no legacy file).
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    legacy = os.path.join(exe_dir, "config.json")
+    if os.path.exists(CONFIG_PATH) or not os.path.exists(legacy):
+        return None
+    try:
+        with open(legacy, "rb") as src:
+            data = src.read()
+        with open(CONFIG_PATH, "wb") as dst:
+            dst.write(data)
+        return CONFIG_PATH
+    except OSError:
+        return None
+
+
 def load_config() -> dict:
     """Load config.json; return {} if missing or malformed."""
     try:

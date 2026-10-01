@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.15.0] - 2026-10-01
+
+### Added
+
+- **Settings survive the data-root move (U102)**: builds before v0.6.0 kept `config.json` beside the executable; the data
+  root now lives in `%APPDATA%\SerialDesk` (or next to the exe when a `portable.txt` is present), so upgrading users were
+  silently starting from defaults. On first run a new build now copies a legacy `config.json` found beside the exe into the
+  new location. Source runs, portable copies and already-migrated installs are untouched.
+
+### Verified
+
+- **The status bar already carries the connection summary**: the connection indicator reads `已连接 COM3 @ 115200` once a
+  port is open, so the open item "add a port@baud summary to the status bar" needed no code and is closed.
+
 ## [v0.14.0] - 2026-10-01
 
 ### Fixed
