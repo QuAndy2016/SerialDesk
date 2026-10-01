@@ -1,5 +1,36 @@
 # Changelog
 
+## [v1.6.2] - 2026-10-01
+
+### Added
+
+- **Open logs folder** (config menu): one click opens the log directory in the file manager.
+- **Manual update check** (settings menu, "Check for updates now"): always reports back -
+  a newer version opens the download page, otherwise it tells you "up to date" or that the
+  check failed (network). The startup check keeps its quiet behaviour.
+- **Remember the last port**: the port that opened successfully is saved and pre-selected
+  on the next launch (only when it still exists).
+
+### Changed
+
+- **UI batch 3**: type scale, metered palette budget, echo colour split from the brand
+  colour, unified icons.
+- **English copy is plural-safe**: strings no longer read "1 entries", "1 bytes" or
+  "1 times"; they use unit-agnostic phrasing ({n} B, sent x{n}, {n} total, {n} pending).
+- **Import hygiene (internal)**: 14 controller files had their top-level imports split
+  into separate blocks by an early migration tool; they are merged back (56 statements
+  removed, import region only) - no behaviour change.
+
+### Internal quality (no user-visible change)
+
+- Docstrings and parameter annotations for every public function (478/478 annotated).
+- The nine functions over 60 lines were split into named builders (all <= 60 now).
+- Dead i18n keys removed (12); the review battery no longer misreports keys referenced
+  indirectly (shortcut table, tooltip dicts) as unused.
+- The review battery went from 249 informational findings to 14 (pre-existing broad
+  excepts only, each justified in place).
+
+
 ## [v1.6.1] - 2026-10-01
 
 ### Fixed
