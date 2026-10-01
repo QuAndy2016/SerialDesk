@@ -1,6 +1,6 @@
 """Settings menu construction (theme, language, config, panel, update, about, shortcuts)."""
-
 from __future__ import annotations
+
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
@@ -80,21 +80,39 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
-def build_menu(win) -> None:
-    "Settings menu construction (theme, language, config, panel, update, about, shortcuts)."
-    # U33: one "Settings" button in the top-right corner holds theme/language/config
-    view_menu = win._settings_menu
-    # U88: the panel can be folded away, so it needs an entry outside itself
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
+
+def build_menu(win: MainWindow) -> None:
+    """Settings menu construction (theme, language, config, panel, update, about, shortcuts)."""
+    _build_panel_entry(win)
+    _build_theme_menu(win)
+    _build_language_menu(win)
+    _build_config_menu(win)
+    _build_io_section(win)
+    _build_danger_section(win)
+
+
+def _build_panel_entry(win: MainWindow) -> None:
+    """U88: the panel can be folded away, so it needs an entry outside itself."""
+    menu = win._settings_menu
     win._quick_panel_act = QAction(tr("menu.quick_panel"), win)
     win._quick_panel_act.setCheckable(True)
     win._quick_panel_act.setChecked(True)
     win._quick_panel_act.triggered.connect(
         lambda: win._on_quick_panel_collapsed(not win._quick_panel_act.isChecked()))
-    view_menu.addAction(win._quick_panel_act)
-    view_menu.addSeparator()
-    view_menu.addSection(tr("menu.sec.appearance"))    # U110: give the menu structure
-    win._theme_menu = view_menu.addMenu(tr("theme.menu"))
-    view_menu = win._theme_menu
+    menu.addAction(win._quick_panel_act)
+    menu.addSeparator()
+    menu.addSection(tr("menu.sec.appearance"))    # U110: give the menu structure
+
+
+def _build_theme_menu(win: MainWindow) -> None:
+    """Theme submenu with an exclusive system/dark/light group."""
+    menu = win._settings_menu.addMenu(tr("theme.menu"))
+    win._theme_menu = menu
     win._theme_group = QActionGroup(win)
     win._theme_group.setExclusive(True)
 
@@ -106,7 +124,7 @@ def build_menu(win) -> None:
 
     for act in (win._theme_system, win._theme_dark, win._theme_light):
         win._theme_group.addAction(act)
-        view_menu.addAction(act)
+        menu.addAction(act)
 
     if choice == "dark":
         win._theme_dark.setChecked(True)
@@ -119,7 +137,9 @@ def build_menu(win) -> None:
     win._theme_dark.triggered.connect(win._set_theme_dark)
     win._theme_light.triggered.connect(win._set_theme_light)
 
-    # language submenu (U19) - sibling of the theme submenu inside Settings
+
+def _build_language_menu(win: MainWindow) -> None:
+    """Language submenu (U19) - sibling of the theme submenu inside Settings."""
     win._lang_menu = win._settings_menu.addMenu(tr("menu.language"))
     win._lang_group = QActionGroup(win)
     win._lang_group.setExclusive(True)
@@ -135,7 +155,9 @@ def build_menu(win) -> None:
     win._lang_zh.triggered.connect(lambda: win._set_language("zh"))
     win._lang_en.triggered.connect(lambda: win._set_language("en"))
 
-    # config import / export (T15)
+
+def _build_config_menu(win: MainWindow) -> None:
+    """Config import / export (T15)."""
     win._settings_menu.addSection(tr("menu.sec.config"))
     win._cfg_menu = win._settings_menu.addMenu(tr("cfg.menu"))
 
@@ -146,12 +168,15 @@ def build_menu(win) -> None:
     win._cfg_menu.addAction(win._cfg_export_act)
     win._cfg_menu.addAction(win._cfg_import_act)
 
-    # U44: about box (version is otherwise invisible in the UI)
-    win._settings_menu.addSection(tr("menu.sec.io"))
+
+def _build_io_section(win: MainWindow) -> None:
+    """Auto-save, auto-reply rules, auto-reconnect, shortcuts and the about box."""
+    menu = win._settings_menu
+    menu.addSection(tr("menu.sec.io"))
     win._autosave_act = QAction(tr("as.menu"), win)
     win._autosave_act.setToolTip(tr("as.note"))
     win._autosave_act.triggered.connect(win._show_autosave_settings)
-    win._settings_menu.addAction(win._autosave_act)
+    menu.addAction(win._autosave_act)
 
     # U98: the auto-reply switch and its rules belong with the settings, not in
     # the middle of the send row next to the file button where they used to sit.
@@ -159,28 +184,30 @@ def build_menu(win) -> None:
     win.auto_reply_act.setToolTip(tr("rb.enable.tip"))
     win.auto_reply_act.setChecked(bool(load_config().get("auto_reply_enabled", False)))
     win.auto_reply_act.toggled.connect(win._on_auto_reply_toggled)
-    win._settings_menu.addAction(win.auto_reply_act)
+    menu.addAction(win.auto_reply_act)
 
     win.rules_act = QAction(tr("rb.rules.menu"), win)
     win.rules_act.triggered.connect(win._edit_rules)
-    win._settings_menu.addAction(win.rules_act)
+    menu.addAction(win.rules_act)
 
-    win._settings_menu.addSeparator()
+    menu.addSeparator()
     win._reconnect_act = QAction(tr("conn.auto"), win, checkable=True)
     win._reconnect_act.setToolTip(tr("conn.auto.tip"))
     win._reconnect_act.setChecked(bool(load_config().get("auto_reconnect", False)))
     win._reconnect_act.toggled.connect(win._on_reconnect_toggled)
-    win._settings_menu.addAction(win._reconnect_act)
+    menu.addAction(win._reconnect_act)
 
     win._shortcuts_act = QAction(tr("menu.shortcuts"), win)   # U123
     win._shortcuts_act.triggered.connect(win._show_shortcuts)
-    win._settings_menu.addAction(win._shortcuts_act)
+    menu.addAction(win._shortcuts_act)
 
     win._about_act = QAction(tr("about.menu"), win)
     win._about_act.triggered.connect(win._show_about)
-    win._settings_menu.addAction(win._about_act)
+    menu.addAction(win._about_act)
 
-    # U110/D: the destructive entry lives at the very bottom, under its own heading
+
+def _build_danger_section(win: MainWindow) -> None:
+    """U110/D: the destructive entry lives at the very bottom, under its own heading."""
     win._settings_menu.addSeparator()
     win._settings_menu.addSection(tr("menu.sec.danger"))
     win._reset_act = QAction(tr("cfg.reset"), win)

@@ -1,8 +1,7 @@
 """Serial parameter controller: framing/encoding resolution, validation, threshold and the payload hint."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -90,11 +89,16 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 BYTESIZE_KEYS = [5, 6, 7, 8]
 FLOW_KEYS = ["none", "xonxoff", "rtscts"]
 PARITY_KEYS = ["N", "O", "E", "M", "S"]
 STOPBITS_KEYS = [1, 1.5, 2]
-def serial_params(win) -> dict:
+def serial_params(win: MainWindow) -> dict:
     "serial params"
     """Collect the parameter widgets into pyserial open_port kwargs (T1)."""
     flow = FLOW_KEYS[win.flow_combo.currentIndex()]
@@ -106,14 +110,14 @@ def serial_params(win) -> dict:
         "xonxoff": flow == "xonxoff",
     }
 
-def baud_value(win) -> int:
+def baud_value(win: MainWindow) -> int:
     "baud value"
     try:
         return int(win.baud_combo.currentText().strip())
     except ValueError:
         return 115200
 
-def check_baud(win, text: str) -> None:
+def check_baud(win: MainWindow, text: str) -> None:
     "check baud"
     """Mark the baud box invalid (red border) when the typed value is not usable."""
     s = (text or "").strip()
@@ -123,7 +127,7 @@ def check_baud(win, text: str) -> None:
         win.baud_combo.style().unpolish(win.baud_combo)
         win.baud_combo.style().polish(win.baud_combo)
 
-def check_hex_input(win) -> None:
+def check_hex_input(win: MainWindow) -> None:
     "check hex input"
     """Live-validate the TX box in HEX mode: red border + tooltip (U36)."""
     if win.tx_fmt_combo.currentIndex() != 0:
@@ -139,13 +143,13 @@ def check_hex_input(win) -> None:
     win.tx_edit.setStyleSheet("")
     win.tx_edit.setToolTip(tr("tx.hex.tip"))
 
-def encoding(win) -> str:
+def encoding(win: MainWindow) -> str:
     "encoding"
     """Currently selected text encoding (T7)."""
     idx = win.encoding_combo.currentIndex()
     return TEXT_ENCODINGS[idx] if 0 <= idx < len(TEXT_ENCODINGS) else "ascii"
 
-def format_rx(win, data: bytes) -> str:
+def format_rx(win: MainWindow, data: bytes) -> str:
     "format rx"
     mode = win.rx_fmt_combo.currentIndex()
     if mode == RX_HEX:
@@ -156,7 +160,7 @@ def format_rx(win, data: bytes) -> str:
     text_s = decode_text(data, win._encoding())
     return f"{hex_s} | {text_s}"
 
-def ts_prefix(win, ts: float) -> str:
+def ts_prefix(win: MainWindow, ts: float) -> str:
     "ts prefix"
     """'[04:02:10.456] ' when the timestamp switch is on, '' when it is off (U96)."""
     if not win.ts_check.isChecked():
@@ -165,7 +169,7 @@ def ts_prefix(win, ts: float) -> str:
     ms = int((wall - int(wall)) * 1000)
     return time.strftime(f"[%H:%M:%S.{ms:03d}] ", time.localtime(wall))
 
-def split_threshold_ms(win) -> float | None:
+def split_threshold_ms(win: MainWindow) -> float | None:
     "split threshold ms"
     """Return current split threshold in ms, or None if splitting off."""
     mode = win.split_combo.currentIndex()
@@ -185,7 +189,7 @@ def split_threshold_ms(win) -> float | None:
     # 10 ms floor: below that, USB chunk delivery (not the wire) decides (U57)
     return max(3.5 * char_ms, 10.0)
 
-def on_split_mode_changed(win, index: int):
+def on_split_mode_changed(win: MainWindow, index: int):
     "on split mode changed"
     win._flush_rx_frames()   # don't lose a half-collected frame (U57)
     if index == SPLIT_MANUAL:
@@ -200,34 +204,34 @@ def on_split_mode_changed(win, index: int):
         win.split_slot.setCurrentIndex(0)
         win.split_slot.setVisible(False)
 
-def on_header_changed(win, text: str):
+def on_header_changed(win: MainWindow, text: str):
     "on header changed"
     if text.strip() and win.split_combo.currentIndex() != SPLIT_HEADER:
         win.split_combo.setCurrentIndex(SPLIT_HEADER)
 
-def on_tx_fmt_changed(win, index: int):
+def on_tx_fmt_changed(win: MainWindow, index: int):
     "on tx fmt changed"
     win._tx_mod_group.setVisible(index == 1)
     win._update_input_placeholder()   # U86: hint follows the send format
 
-def newline_bytes(win) -> bytes:
+def newline_bytes(win: MainWindow) -> bytes:
     "newline bytes"
     """U112: the bytes the "line ending" picker appends (ASCII mode only)."""
     index = min(max(0, win.nl_combo.currentIndex()), len(win.NEWLINE_KEYS) - 1)
     return win.NEWLINE_BYTES[win.NEWLINE_KEYS[index]]
 
-def persist_newline(win, _index: int = 0) -> None:
+def persist_newline(win: MainWindow, _index: int = 0) -> None:
     "persist newline"
     key = win.NEWLINE_KEYS[min(max(0, win.nl_combo.currentIndex()), 3)]
     save_config({"newline": key})      # U109: save_config merges, other keys survive
 
-def refresh_tx_settings_chip(win) -> None:
+def refresh_tx_settings_chip(win: MainWindow) -> None:
     "refresh tx settings chip"
     """U121: keep the "HEX · 无" chip in step with the two pickers it hides."""
     fmt = "HEX" if win.tx_fmt_combo.currentIndex() == 0 else "ASCII"
     win.tx_settings_btn.setText("%s · %s" % (fmt, win.checksum_combo.currentText()))
 
-def update_input_placeholder(win) -> None:
+def update_input_placeholder(win: MainWindow) -> None:
     "update input placeholder"
     """Keep the send box and the frame-header box hints in step with the format (U86/U93/U94)."""
     if not hasattr(win, "tx_edit"):

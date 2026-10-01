@@ -1,8 +1,7 @@
 """Connection controller: port list and tooltip, open/close, worker errors, signal read-out and the status light."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -89,7 +88,12 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
-def on_reconnect_toggled(win, checked: bool) -> None:
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
+def on_reconnect_toggled(win: MainWindow, checked: bool) -> None:
     "on reconnect toggled"
     """Persist and apply the auto-reconnect preference (T14)."""
     win.worker.set_auto_reconnect(checked)
@@ -98,7 +102,7 @@ def on_reconnect_toggled(win, checked: bool) -> None:
     save_config(config)
     win._notify(tr("conn.auto.on") if checked else tr("conn.auto.off"), "info", ms=3000)
 
-def update_port_tooltip(win) -> None:
+def update_port_tooltip(win: MainWindow) -> None:
     "update port tooltip"
     """Full device description of the selected port, in the tooltip (U83)."""
     idx = win.port_combo.currentIndex()
@@ -106,7 +110,7 @@ def update_port_tooltip(win) -> None:
     if full:
         win.port_combo.setToolTip(str(full))
 
-def notify(win, msg: str, level: str = 'info', ms: int | None = None) -> None:
+def notify(win: MainWindow, msg: str, level: str = 'info', ms: int | None = None) -> None:
     "notify"
     """Single exit for status-bar messages.
 
@@ -122,7 +126,7 @@ def notify(win, msg: str, level: str = 'info', ms: int | None = None) -> None:
     else:
         sb.showMessage(msg, ms)
 
-def recolor_status_light(win) -> None:
+def recolor_status_light(win: MainWindow) -> None:
     "recolor status light"
     """Re-apply the connection indicator colour (theme-aware, U38)."""
     cols = theme.status_colors()
@@ -130,7 +134,7 @@ def recolor_status_light(win) -> None:
     win.status_light.setStyleSheet(
         f"color: {cols[key]}; font-weight: bold; padding-right: 8px;")
 
-def ensure_port(win) -> bool:
+def ensure_port(win: MainWindow) -> bool:
     "ensure port"
     """Guard send actions: nothing is sent, echoed or counted while closed (U61)."""
     if win.worker.is_open():
@@ -138,7 +142,7 @@ def ensure_port(win) -> bool:
     win._notify(tr("err.tx.closed"), "error")
     return False
 
-def on_worker_error(win, text: str) -> None:
+def on_worker_error(win: MainWindow, text: str) -> None:
     "on worker error"
     """Turn a serial open/IO failure into an actionable message (U37)."""
     low = text.lower()
@@ -152,13 +156,13 @@ def on_worker_error(win, text: str) -> None:
         key = "err.open.other"
     win._notify(tr(key, e=text), "error")
 
-def poll_signals(win) -> None:
+def poll_signals(win: MainWindow) -> None:
     "poll signals"
     """Refresh the CTS/DSR/DCD/RI indicators (50 ms timer)."""
     sig = win.worker.signals()
     win.sig_lbl.setText(win._signals_html(sig if sig.get("open") else {}))
 
-def signals_html(win, sig: dict) -> str:
+def signals_html(win: MainWindow, sig: dict) -> str:
     "signals html"
     """Coloured 高/低 text for CTS/DSR/DCD/RI (U32: never colour alone)."""
     cols = theme.status_colors()
@@ -174,7 +178,7 @@ def signals_html(win, sig: dict) -> str:
             f"{name.upper()} {word}</span>")
     return "&nbsp;&nbsp;".join(parts)
 
-def refresh_ports(win):
+def refresh_ports(win: MainWindow):
     "refresh ports"
     current = win.port_combo.currentText()
     win.port_combo.blockSignals(True)
@@ -195,7 +199,7 @@ def refresh_ports(win):
     win.port_combo.blockSignals(False)
     win._update_port_tooltip()
 
-def toggle_open(win):
+def toggle_open(win: MainWindow):
     "toggle open"
     if win.worker.is_open():
         win.worker.close_port()
@@ -214,7 +218,7 @@ def toggle_open(win):
         if ok:
             win.refresh_timer.stop()  # keep port list stable while open
 
-def on_opened_changed(win, opened: bool):
+def on_opened_changed(win: MainWindow, opened: bool):
     "on opened changed"
     if opened:
         win.open_btn.setText(tr("port.close"))

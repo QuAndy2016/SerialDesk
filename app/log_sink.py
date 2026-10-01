@@ -7,11 +7,16 @@ segment at a time and rotates when the configured byte or time limit is reached.
 The header exists because a captured log without port settings, framing and a
 start time cannot be reproduced by the person you send it to.
 """
-
 from __future__ import annotations
+
 
 import os
 import time
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Callable
 
 SEGMENT_PATTERN = "serial_%Y%m%d_%H%M%S.txt"
 
@@ -20,7 +25,7 @@ class LogSink:
     """Append-only log writer with size/age rotation and a session header."""
 
     def __init__(self, directory: str, max_bytes: int = 2 * 1024 * 1024,
-                 max_seconds: int = 30 * 60, header=None, clock=time.time) -> None:
+                 max_seconds: int = 30 * 60, header: str=None, clock: Callable[[], float]=time.time) -> None:
         self._dir = directory
         self._max_bytes = max(1, int(max_bytes))
         self._max_seconds = max(1, int(max_seconds))
@@ -35,10 +40,12 @@ class LogSink:
 
     @property
     def directory(self) -> str:
+        """Directory the log file is written to."""
         return self._dir
 
     def configure(self, directory: str | None = None, max_bytes: int | None = None,
                   max_seconds: int | None = None) -> None:
+        """Update directory and rotation limits (settings changed)."""
         if directory:
             self._dir = directory
         if max_bytes:
@@ -48,14 +55,17 @@ class LogSink:
 
     @property
     def is_open(self) -> bool:
+        """True while a log segment is open for writing."""
         return self._fp is not None
 
     @property
     def path(self) -> str:
+        """Path of the open segment, or an empty string."""
         return self._path
 
     @property
     def bytes_written(self) -> int:
+        """Bytes written into the current segment."""
         return self._written
 
     # -- writing -------------------------------------------------------------
@@ -95,6 +105,7 @@ class LogSink:
         self._write(text)
 
     def close(self) -> None:
+        """Flush and close the current segment."""
         if self._fp is not None:
             try:
                 self._fp.close()

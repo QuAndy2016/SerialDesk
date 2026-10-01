@@ -1,8 +1,7 @@
 """Dialogs controller: about, shortcut reference, diagnostics text, port settings, reply rules and the first-run hint."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -94,7 +93,12 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
-def show_about(win) -> None:
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
+def show_about(win: MainWindow) -> None:
     "show about"
     """About box: version, runtime versions and the project link (U44)."""
     import PySide6
@@ -113,7 +117,7 @@ def show_about(win) -> None:
         QApplication.clipboard().setText(win._diagnostics_text())
         win._notify(tr("about.copied"), "info", ms=3000)
 
-def show_shortcuts(win) -> None:
+def show_shortcuts(win: MainWindow) -> None:
     "show shortcuts"
     """U123: the shortcut list the app never showed anywhere."""
     rows = "\n".join("%-12s %s" % (key, tr(label))
@@ -125,7 +129,7 @@ def show_shortcuts(win) -> None:
     box.setIcon(QMessageBox.Icon.Information)
     box.exec()
 
-def diagnostics_text(win) -> str:
+def diagnostics_text(win: MainWindow) -> str:
     "diagnostics text"
     """U123/E3: what a bug report needs, in one copyable block."""
     import platform
@@ -146,7 +150,7 @@ def diagnostics_text(win) -> str:
         "Last error log: %s" % os.path.join(data_dir(), "logs", "lasterror.log"),
     ))
 
-def show_port_settings(win) -> None:
+def show_port_settings(win: MainWindow) -> None:
     "show port settings"
     """Show the port-settings dialog (U35-P3), reflecting the current lock state."""
     win._port_dlg.set_port_open(win.worker.is_open())   # U73
@@ -154,7 +158,7 @@ def show_port_settings(win) -> None:
     win._port_dlg.raise_()
     win._port_dlg.activateWindow()
 
-def edit_rules(win) -> None:
+def edit_rules(win: MainWindow) -> None:
     "edit rules"
     dlg = AutoReplyDialog(win._auto_rules, win)
     if not dlg.exec():
@@ -165,7 +169,7 @@ def edit_rules(win) -> None:
     save_config(config)
     win._notify(tr("rb.saved", n=len(win._auto_rules)), ms=5000)
 
-def first_run_hint(win) -> None:
+def first_run_hint(win: MainWindow) -> None:
     "first run hint"
     """One restrained hint on the very first launch (U48)."""
     cfg = load_config()

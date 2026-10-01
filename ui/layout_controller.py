@@ -1,8 +1,7 @@
 """Layout controller: measured minimum widths, control-row audit and the size fitting that keeps the window honest."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -91,13 +90,19 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QLayout
+    from ui.main_window import MainWindow
 LEGACY_SPLIT_DEFAULTS = {
     "v_split_sizes": ([420, 260], DATA_FIRST_V),
     "split_sizes": ([820, 340], DATA_FIRST_H),
 }
 QUICK_PANEL_MIN_W = 332   # the quick-send rows need this (U69)
 TX_PANE_MIN_H = 190       # the send pane keeps its rows usable (U63)
-def fit_minimum_width(win) -> None:
+def fit_minimum_width(win: MainWindow) -> None:
     "fit minimum width"
     try:
         need = win._tx_group.layout().minimumSize().height() + 10
@@ -135,7 +140,7 @@ def fit_minimum_width(win) -> None:
                  + max(0, win.width() - win._splitter.width()))
     win.setMinimumWidth(max(980, connect_need, pair_need))
 
-def fit_pane_minimums(win) -> None:
+def fit_pane_minimums(win: MainWindow) -> None:
     "fit pane minimums"
     """Hard width floor per pane so a divider drag can never squeeze its rows (U81).
 
@@ -159,7 +164,7 @@ def fit_pane_minimums(win) -> None:
         pad = max(0, group.width() - holder.width())   # group frame + margins
         group.setMinimumWidth(widest + pad)
 
-def lock_control_widths(win) -> None:
+def lock_control_widths(win: MainWindow) -> None:
     "lock control widths"
     """Text controls never shrink below their label (U101).
 
@@ -183,7 +188,7 @@ def lock_control_widths(win) -> None:
             # U101: height stays put as well - a button must not grow with the row
             wdg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
-def fit_tx_edit_height(win) -> None:
+def fit_tx_edit_height(win: MainWindow) -> None:
     "fit tx edit height"
     """U111/U119/U121: the input owns the send pane's vertical space.
 
@@ -222,7 +227,7 @@ def fit_tx_edit_height(win) -> None:
     finally:
         win._fitting_tx = False
 
-def give_data_area_the_room(win) -> None:
+def give_data_area_the_room(win: MainWindow) -> None:
     "give data area the room"
     """First run: hand every spare pixel to the receive pane (U79).
 
@@ -239,7 +244,7 @@ def give_data_area_the_room(win) -> None:
     if w > QUICK_PANEL_MIN_W + 80:
         win._splitter.setSizes([w - QUICK_PANEL_MIN_W, QUICK_PANEL_MIN_W])
 
-def control_rows(win) -> list:
+def control_rows(win: MainWindow) -> list:
     "control rows"
     """Every horizontal control row whose width must fit (U81)."""
     rows = []
@@ -257,7 +262,7 @@ def control_rows(win) -> list:
                 rows.append(wid.layout())
     return rows
 
-def row_need(win, layout) -> int:
+def row_need(win: MainWindow, layout: QLayout) -> int:
     "row need"
     """Minimum width one row needs.
 
@@ -267,7 +272,7 @@ def row_need(win, layout) -> int:
     """
     return int(layout.minimumSize().width())
 
-def widest_row(win) -> tuple:
+def widest_row(win: MainWindow) -> tuple:
     "widest row"
     """(need, row widget) of the widest control row (U81)."""
     best = (0, None)
@@ -278,7 +283,7 @@ def widest_row(win) -> tuple:
             best = (need, wid)
     return best
 
-def saved_sizes(win, key: str, default: list) -> list:
+def saved_sizes(win: MainWindow, key: str, default: list) -> list:
     "saved sizes"
     """Restore a persisted splitter size list, falling back to the default (U35)."""
     value = load_config().get(key)
@@ -295,7 +300,7 @@ def saved_sizes(win, key: str, default: list) -> list:
         return sizes
     return list(default)
 
-def fit_settings_btn(win) -> None:
+def fit_settings_btn(win: MainWindow) -> None:
     "fit settings btn"
     """Size the Settings button to its label plus padding (U60: "Settings" must fit)."""
     text = win._settings_btn.text()

@@ -1,8 +1,7 @@
 """Log and auto-save controller: session segments, rotation, manual save and the auto-save dialog."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -86,7 +85,12 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
-def log_header_text(win) -> str:
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
+def log_header_text(win: MainWindow) -> str:
     "log header text"
     """Context for the log segment, so a shared capture can be reproduced (N3)."""
     port = win.port_combo.currentData() or "-"
@@ -95,7 +99,7 @@ def log_header_text(win) -> str:
               fmt=win.tx_fmt_combo.currentText(), rx=win.rx_fmt_combo.currentText(),
               when=time.strftime("%Y-%m-%d %H:%M:%S"))
 
-def log_open(win) -> None:
+def log_open(win: MainWindow) -> None:
     "log open"
     """Open a new log segment under logs/ (auto-save mode)."""
     win._log_sink.configure(win._log_dir, win._log_max_bytes, win._log_max_seconds)
@@ -107,12 +111,12 @@ def log_open(win) -> None:
         win._log_fp = None
         win.on_log_line(tr("log.save_fail", e=exc))   # noqa: BLE001 - surfaced to the user
 
-def log_close(win) -> None:
+def log_close(win: MainWindow) -> None:
     "log close"
     win._log_sink.close()
     win._log_fp = None
 
-def log_append(win, text: str) -> None:
+def log_append(win: MainWindow, text: str) -> None:
     "log append"
     """Append a chunk of received text to the auto-save file, rotating when needed."""
     if win._log_fp is None:
@@ -126,7 +130,7 @@ def log_append(win, text: str) -> None:
         win._log_close()
         win.on_log_line(tr("log.save_fail", e=exc))   # noqa: BLE001 - surfaced to the user
 
-def on_save_log_quick(win) -> None:
+def on_save_log_quick(win: MainWindow) -> None:
     "on save log quick"
     """One-click save of the receive pane into logs/ (U25-D)."""
     try:
@@ -139,7 +143,7 @@ def on_save_log_quick(win) -> None:
     except OSError as exc:
         win.on_log_line(tr("log.save_fail", e=exc))
 
-def on_save_log_as(win) -> None:
+def on_save_log_as(win: MainWindow) -> None:
     "on save log as"
     """Save the receive pane to a user-chosen path (U25-D)."""
     try:
@@ -158,11 +162,11 @@ def on_save_log_as(win) -> None:
     except OSError as exc:
         win.on_log_line(tr("log.save_fail", e=exc))
 
-def on_log_line(win, line: str):
+def on_log_line(win: MainWindow, line: str):
     "on log line"
     win._notify(line, ms=5000)
 
-def apply_autosave_settings(win) -> None:
+def apply_autosave_settings(win: MainWindow) -> None:
     "apply autosave settings"
     """Apply the auto-save dialog values live and remember them (U75)."""
     values = win._autosave_dlg.values()
@@ -190,7 +194,7 @@ def apply_autosave_settings(win) -> None:
     else:
         win._log_close()
 
-def show_autosave_settings(win) -> None:
+def show_autosave_settings(win: MainWindow) -> None:
     "show autosave settings"
     """Open the auto-save settings dialog (U75)."""
     win._autosave_dlg.show()

@@ -1,6 +1,6 @@
 """Auto-reply rule editor dialog (T10)."""
-
 from __future__ import annotations
+
 
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -21,7 +21,7 @@ from app.i18n import tr
 class AutoReplyDialog(QDialog):
     """Edit the auto-reply rules: when a match string arrives, send the reply."""
 
-    def __init__(self, rules: list[dict], parent=None):
+    def __init__(self, rules: list[dict], parent: QWidget | None=None):
         super().__init__(parent)
         self.setWindowTitle(tr("rb.title"))
         self.resize(720, 440)
@@ -63,6 +63,7 @@ class AutoReplyDialog(QDialog):
 
     def add_row(self, match: str = "", reply: str = "", is_hex: bool = False,
                 enabled: bool = True) -> None:
+        """Append one auto-reply rule as an editable row."""
         row = QWidget()
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)

@@ -51,13 +51,25 @@ def read(path):
     return open(path, encoding="utf-8").read()
 
 
-def check_i18n_keys():
+def check_i18n_keys() -> tuple[list[str], list[str]]:
+    """Keys used but missing from the table, and table keys nothing references.
+
+    A key counts as used when it appears in a ``tr("...")`` call *or* as a plain
+    string literal outside the table: the shortcut help loads its labels from
+    app.shortcuts, tips come from dicts and some keys sit inside a conditional
+    expression. Counting only ``tr("...")`` reported live keys as "unused".
+    """
     from app.i18n import STRINGS
-    used = set()
-    pattern = re.compile(r'tr\(\s*"([^"]+)"')
+
+    i18n_path = os.path.join(ROOT, "app", "i18n.py")
+    direct, indirect = set(), set()
     for path in sources():
-        used |= set(pattern.findall(read(path)))
-    missing = sorted(k for k in used if k not in STRINGS)
+        text = read(path)
+        direct |= set(re.findall(r'tr\(\s*"([^"]+)"', text))
+        if path != i18n_path:
+            indirect |= set(re.findall(r'"([a-z][a-z0-9_.]*)"', text))
+    used = direct | indirect
+    missing = sorted(k for k in direct if k not in STRINGS)
     unused = sorted(k for k in STRINGS if k not in used)
     return missing, unused
 

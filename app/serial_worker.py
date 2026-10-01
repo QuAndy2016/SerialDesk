@@ -10,8 +10,8 @@ U52/U64 design notes - the GUI thread never performs serial I/O:
   still completing a write can block for seconds, which used to freeze the window
   and prevent the app from exiting.
 """
-
 from __future__ import annotations
+
 
 import threading
 import time
@@ -21,6 +21,11 @@ from PySide6.QtCore import QThread, Signal
 
 import serial
 from serial.tools import list_ports
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
 
 WRITE_TIMEOUT = 0.3         # seconds; a stuck write must not hang the app
 READ_TIMEOUT = 0.1          # seconds
@@ -51,7 +56,7 @@ class SerialWorker(QThread):
     reconnecting = Signal(int)        # attempt number (T14)
     reconnected = Signal()            # came back on its own (T14)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
         self._port: serial.Serial | None = None
         self._running = False
@@ -69,6 +74,7 @@ class SerialWorker(QThread):
     # -- control (UI thread; never blocks on serial I/O) ---------------------
 
     def open_port(self, device: str, baudrate: int, **kwargs) -> bool:
+        """Open the port (UI thread; never blocks on serial I/O)."""
         try:
             self._port = serial.Serial(
                 port=device,
@@ -139,6 +145,7 @@ class SerialWorker(QThread):
             return len(self._tx_queue)
 
     def is_open(self) -> bool:
+        """True while the serial port is open."""
         return self._port is not None and self._port.is_open
 
     # -- modem control lines (T9) -------------------------------------------
@@ -184,6 +191,7 @@ class SerialWorker(QThread):
             state = {"open": False, "cts": False, "dsr": False, "dcd": False, "ri": False}
         else:
             def read(name: str) -> bool:
+                """Read one modem-status line, treating a missing line as not asserted."""
                 try:
                     return bool(getattr(port, name))
                 except Exception:  # noqa: BLE001 - some USB-serial chips do not expose
@@ -295,6 +303,7 @@ class SerialWorker(QThread):
     # -- thread body ----------------------------------------------------------
 
     def run(self):
+        """Thread body: drain the TX queue and read incoming bytes."""
         last_sig = 0.0
         while self._running:
             if self._port is None or not self._port.is_open:

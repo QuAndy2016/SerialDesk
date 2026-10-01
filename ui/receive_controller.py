@@ -1,8 +1,7 @@
 """Receive/view controller: frame flush, text emission into the display, colourising and clear."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -87,8 +86,13 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
-def on_received(win, ts: float, data: bytes):
+def on_received(win: MainWindow, ts: float, data: bytes):
     "on received"
     win._check_auto_reply(data)
     win.rx_bytes += len(data)
@@ -105,7 +109,7 @@ def on_received(win, ts: float, data: bytes):
     if not win._frame_timer.isActive():
         win._frame_timer.start(int(win._frames.settle_ms))
 
-def flush_rx_frames(win) -> None:
+def flush_rx_frames(win: MainWindow) -> None:
     "flush rx frames"
     """Emit assembled frames: USB fragments merged, real gaps split (U57)."""
     now = time.monotonic()
@@ -120,7 +124,7 @@ def flush_rx_frames(win) -> None:
     if win._frames.has_pending():
         win._frame_timer.start(int(win._frames.settle_ms))
 
-def emit_rx_text(win, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:
+def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:
     "emit rx text"
     """Insert text into the receive pane and mirror it to the log.
 
@@ -145,7 +149,7 @@ def emit_rx_text(win, text: str, tx: bool = False, meta: bool = False, log: bool
     if log:
         win._log_append(text)
 
-def append_rx_group(win, text: str, ts: float, new_line: bool) -> None:
+def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> None:
     "append rx group"
     """Emit one RX group without gluing it onto the previous text (U59).
 
@@ -169,7 +173,7 @@ def append_rx_group(win, text: str, ts: float, new_line: bool) -> None:
         win._cap_warned = True          # U45: one clear warning, not per line
         win._notify(tr("rx.cap", n=RECEIVE_MAX_LINES), "warn", ms=8000)
 
-def append_header_split(win, data: bytes, ts: float):
+def append_header_split(win: MainWindow, data: bytes, ts: float):
     "append header split"
     """Split raw bytes by frame header (e.g. 'fw:'), one line per frame.
 
@@ -193,7 +197,7 @@ def append_header_split(win, data: bytes, ts: float):
 
     win._scroll_rx_bottom()          # U43
 
-def recolor_rx_view(win) -> None:
+def recolor_rx_view(win: MainWindow) -> None:
     "recolor rx view"
     """Re-apply theme colours to already-displayed lines (U27).
 
@@ -229,7 +233,7 @@ def recolor_rx_view(win) -> None:
             it += 1
         block = block.next()
 
-def snapshot_rx_fragments(win) -> list:
+def snapshot_rx_fragments(win: MainWindow) -> list:
     "snapshot rx fragments"
     """Capture (text, kind) for every fragment so clearing can be undone (U42).
 
@@ -257,7 +261,7 @@ def snapshot_rx_fragments(win) -> list:
         block = block.next()
     return out
 
-def on_clear(win):
+def on_clear(win: MainWindow):
     "on clear"
     """Clear the display and the counters together, with an undo window (U56/U42)."""
     has_text = win.rx_view.document().characterCount() > 1

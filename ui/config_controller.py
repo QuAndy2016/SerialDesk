@@ -1,8 +1,7 @@
 """Config controller: apply/export/import/reset settings and the theme + language selection."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -92,8 +91,13 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 HISTORY_MAX = 50
-def apply_config(win) -> None:
+def apply_config(win: MainWindow) -> None:
     "apply config"
     """Re-apply settings loaded from config.json (used after an import)."""
     cfg = load_config()
@@ -125,7 +129,7 @@ def apply_config(win) -> None:
     win.auto_reply_act.setChecked(bool(cfg.get("auto_reply_enabled", False)))
     win._reply_buf = b""
 
-def apply_defaults(win) -> None:
+def apply_defaults(win: MainWindow) -> None:
     "apply defaults"
     """Put every user-facing option back to its default value (U76)."""
     win._set_theme_system()
@@ -155,7 +159,7 @@ def apply_defaults(win) -> None:
     win.quick_panel.reload_from_config()   # seeds the default rows when config is gone
     win._update_params_summary()
 
-def reset_settings(win) -> None:
+def reset_settings(win: MainWindow) -> None:
     "reset settings"
     """Restore factory defaults after backing the current config up (U76)."""
     box = QMessageBox(win)
@@ -182,7 +186,7 @@ def reset_settings(win) -> None:
     win.statusBar().setToolTip(tr("cfg.reset.done.tip", path=backup or "-"))
     win._notify(tr("cfg.reset.done"), "info", ms=8000)
 
-def on_import_config(win) -> None:
+def on_import_config(win: MainWindow) -> None:
     "on import config"
     """Merge a previously exported config file back into the current settings."""
     path, _ = QFileDialog.getOpenFileName(win, tr("cfg.import.title"), "", tr("cfg.filter"))
@@ -210,7 +214,7 @@ def on_import_config(win) -> None:
     win._apply_config()
     win._notify(tr("cfg.imported", path=path), ms=5000)
 
-def on_export_config(win) -> None:
+def on_export_config(win: MainWindow) -> None:
     "on export config"
     """Write the current settings (quick send, theme, history, rules...) to a JSON file."""
     default = os.path.join(os.path.expanduser("~"),
@@ -231,7 +235,7 @@ def on_export_config(win) -> None:
     except OSError as exc:
         win.on_log_line(tr("cfg.export_fail", e=exc))
 
-def set_language(win, lang: str):
+def set_language(win: MainWindow, lang: str):
     "set language"
     """Switch UI language, persist the choice, rebuild every visible string."""
     i18n.set_language(lang)
@@ -240,7 +244,7 @@ def set_language(win, lang: str):
     save_config(config)
     win.retranslate()
 
-def set_theme_system(win):
+def set_theme_system(win: MainWindow):
     "set theme system"
     theme.set_override(None)
     theme.apply_theme(QApplication.instance())
@@ -249,7 +253,7 @@ def set_theme_system(win):
     win._recolor_rx_view()
     win._persist_theme("system")
 
-def set_theme_dark(win):
+def set_theme_dark(win: MainWindow):
     "set theme dark"
     theme.set_override(True)
     theme.apply_theme(QApplication.instance())
@@ -258,7 +262,7 @@ def set_theme_dark(win):
     win._recolor_rx_view()
     win._persist_theme("dark")
 
-def set_theme_light(win):
+def set_theme_light(win: MainWindow):
     "set theme light"
     theme.set_override(False)
     theme.apply_theme(QApplication.instance())
@@ -267,7 +271,7 @@ def set_theme_light(win):
     win._recolor_rx_view()
     win._persist_theme("light")
 
-def persist_theme(win, choice: str):
+def persist_theme(win: MainWindow, choice: str):
     "persist theme"
     config = load_config()
     config["theme"] = choice

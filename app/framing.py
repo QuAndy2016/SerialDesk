@@ -49,9 +49,11 @@ class FrameAssembler:
     # -- output --------------------------------------------------------------
 
     def has_pending(self) -> bool:
+        """True while a partial frame is waiting for more bytes."""
         return self._first_ts is not None
 
     def pending_bytes(self) -> int:
+        """Bytes currently held in the partial frame."""
         return len(self._buf)
 
     def due(self, now: float) -> bool:

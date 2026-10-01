@@ -1,6 +1,6 @@
 """Quick send panel: editable command shortcuts, up to 99 entries, persisted."""
-
 from __future__ import annotations
+
 
 import json
 import os
@@ -48,7 +48,7 @@ class RailStrip(QWidget):
 
     clicked = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
         self._text = ""
         self.setObjectName("qsRail")
@@ -56,10 +56,12 @@ class RailStrip(QWidget):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def set_label(self, text: str) -> None:
+        """Set the visible label (compact and icon states)."""
         self._text = text
         self.update()
 
-    def paintEvent(self, event):  # noqa: N802 - Qt naming
+    def paintEvent(self, event: QPaintEvent):  # noqa: N802 - Qt naming
+        """Paint the collapsed rail's chevron."""
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
@@ -80,11 +82,18 @@ class RailStrip(QWidget):
         painter.restore()
         painter.end()
 
-    def mouseReleaseEvent(self, event):  # noqa: N802 - Qt naming
+    def mouseReleaseEvent(self, event: QMouseEvent):  # noqa: N802 - Qt naming
+        """Reopen the panel when the collapsed rail is clicked."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mouseReleaseEvent(event)
 from app.config import CONFIG_PATH   # U34: one data dir for the whole app
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import QObject
+    from PySide6.QtGui import QMouseEvent, QPaintEvent
 
 
 class QuickSendPanel(QWidget):
@@ -100,7 +109,7 @@ class QuickSendPanel(QWidget):
     log = Signal(str)
     collapsed_changed = Signal(bool)   # U88: fold the panel away
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
         self._rows: list[dict] = []   # [{text, hex, delay}]
         self._seq_timer = QTimer(self)
@@ -119,8 +128,7 @@ class QuickSendPanel(QWidget):
     # -- UI -----------------------------------------------------------------
 
     def _build_ui(self):
-        # U106: the panel owns both of its states - the normal column, and a narrow rail
-        # that stays on screen while folded (so the way back is always visible).
+        """U106: the panel owns both of its states - the normal column and a rail."""
         outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -128,7 +136,13 @@ class QuickSendPanel(QWidget):
         outer.addWidget(self._content, 1)
         layout = QVBoxLayout(self._content)
         layout.setContentsMargins(6, 6, 6, 6)
+        self._build_head(layout)
+        self._build_sequence_row(layout)
+        self._build_row_area(layout)
+        self._build_rail(outer)
 
+    def _build_head(self, layout: QVBoxLayout) -> None:
+        """Title row with the entry count and the fold button"""
         head = QHBoxLayout()
         self._title_lbl = QLabel(tr("qs.title"))
         head.addWidget(self._title_lbl)
@@ -147,7 +161,8 @@ class QuickSendPanel(QWidget):
         head.addWidget(self._collapse_btn)
         layout.addLayout(head)
 
-        # sequence mode (T13)
+    def _build_sequence_row(self, layout: QVBoxLayout) -> None:
+        """Sequence-mode toggle, Run and the delete-selected action"""
         seq_row = QHBoxLayout()
         self.seq_check = QCheckBox(tr("qs.seq"))
         self.seq_check.setToolTip(tr("qs.seq.tip"))
@@ -167,6 +182,8 @@ class QuickSendPanel(QWidget):
         seq_row.addWidget(self.del_btn)
         layout.addLayout(seq_row)
 
+    def _build_row_area(self, layout: QVBoxLayout) -> None:
+        """Scrollable row container and the add-row button"""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setMinimumWidth(332)   # U69: rows need ~318px or the buttons clip
@@ -184,6 +201,8 @@ class QuickSendPanel(QWidget):
         self.add_btn.clicked.connect(lambda: self.add_row())
         layout.addWidget(self.add_btn)
 
+    def _build_rail(self, outer: QHBoxLayout) -> None:
+        """The narrow strip that stays on screen while the panel is folded"""
         self._rail = RailStrip()
         self._rail.set_label(tr("qs.title"))
         self._rail.setToolTip(tr("qs.rail.tip"))
@@ -195,22 +214,46 @@ class QuickSendPanel(QWidget):
 
     def add_row(self, text: str = "", is_hex: bool = True, delay_ms: int = 500,
                 selected: bool = False):
+        """Append one quick-send row together with its property chip."""
         if len(self._rows) >= MAX_ENTRIES:
             self.log.emit(tr("qs.max", n=MAX_ENTRIES))
             return
-        row = QFrame()                     # U68 plan A: a frame paints the selection
-        row.setObjectName("qsRow")
-        row.setProperty("selected", False)
-        row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        row.setToolTip(tr("qs.row.tip"))
-        row.installEventFilter(self)
+        row = self._make_row_frame()
         # U118: one line per row again - the command keeps the whole width and the
         # row's properties moved into a small chip at the trailing edge.
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 2, 0, 2)
         h.setSpacing(6)
+        sel, ord_lbl = self._build_row_select(h, row)
+        edit = self._build_row_edit(h, text)
+        chip, fmt, delay, unit = self._build_row_chip(h, is_hex, delay_ms)
+        send = self._build_row_send(h, row)
 
-        # U66: pick which rows the sequence runs, with a small order badge
+        self._row_layout.insertWidget(self._row_layout.count() - 1, row)
+        edit.installEventFilter(self)      # clicking into the text selects the row
+        entry = {"widget": row, "edit": edit, "fmt": fmt, "send": send, "delay": delay,
+                 "sel": sel, "ord": ord_lbl, "unit": unit, "chip": chip}
+        self._rows.append(entry)
+        fmt.currentIndexChanged.connect(lambda *_: self._refresh_chip(entry))
+        delay.textChanged.connect(lambda *_: self._refresh_chip(entry))
+        self._refresh_chip(entry)
+        sel.setChecked(bool(selected))
+        sel.setEnabled(self.seq_check.isChecked())   # U114-D9
+        self._renumber_selection()
+        self._update_count()
+
+    def _make_row_frame(self) -> QFrame:
+        """U68 plan A: a frame paints the selection; the row owns the mouse filter."""
+        row = QFrame()
+        row.setObjectName("qsRow")
+        row.setProperty("selected", False)
+        row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        row.setToolTip(tr("qs.row.tip"))
+        row.installEventFilter(self)
+        return row
+
+    def _build_row_select(self, h: QHBoxLayout, row: QFrame) -> tuple:
+        """U66/U80: the sequence checkbox plus the tiny order badge pinned to it."""
         sel = QCheckBox()
         sel.setToolTip(tr("qs.sel.tip"))
         sel.setAccessibleName(tr("qs.sel.tip"))     # U122
@@ -223,14 +266,18 @@ class QuickSendPanel(QWidget):
         ord_lbl.setToolTip(tr("qs.sel.order.tip"))
         ord_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         ord_lbl.hide()
+        return sel, ord_lbl
 
+    def _build_row_edit(self, h: QHBoxLayout, text: str) -> QLineEdit:
+        """The command text; clicking into it selects the row (see eventFilter)."""
         edit = QLineEdit(text)
         edit.setPlaceholderText(tr("qs.placeholder"))
         edit.setAccessibleName(tr("qs.row.tip"))    # U122
         h.addWidget(edit, 1)
+        return edit
 
-        # U118: format + delay live in this chip's popup ("HEX · 500 ms" at a glance,
-        # one click to change) so the row stays a single, compact line.
+    def _build_row_chip(self, h: QHBoxLayout, is_hex: bool, delay_ms: int) -> tuple:
+        """U118: format + delay live in this chip's popup ("HEX / 500 ms" at a glance)."""
         chip = QToolButton()
         chip.setObjectName("qsChip")
         chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -247,7 +294,7 @@ class QuickSendPanel(QWidget):
         fmt.setCurrentIndex(0 if is_hex else 1)
         pl.addWidget(fmt)
 
-        delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
+        delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number
         delay.setValidator(QIntValidator(0, 60000, self))
         delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         delay.setStyleSheet("padding: 3px 4px;")
@@ -264,26 +311,17 @@ class QuickSendPanel(QWidget):
         chip_menu.addAction(holder)
         chip.setMenu(chip_menu)
         h.addWidget(chip)
+        return chip, fmt, delay, unit
 
+    def _build_row_send(self, h: QHBoxLayout, row: QFrame) -> QPushButton:
+        """The per-row Send button."""
         send = QPushButton(tr("qs.send"))
         send.setAccessibleName(tr("qs.send"))       # U122
         send.setMinimumWidth(52)
         send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
         send.clicked.connect(lambda: self._send_row(row))
         h.addWidget(send)
-
-        self._row_layout.insertWidget(self._row_layout.count() - 1, row)
-        edit.installEventFilter(self)      # clicking into the text selects the row
-        entry = {"widget": row, "edit": edit, "fmt": fmt, "send": send, "delay": delay,
-                 "sel": sel, "ord": ord_lbl, "unit": unit, "chip": chip}
-        self._rows.append(entry)
-        fmt.currentIndexChanged.connect(lambda *_: self._refresh_chip(entry))
-        delay.textChanged.connect(lambda *_: self._refresh_chip(entry))
-        self._refresh_chip(entry)
-        sel.setChecked(bool(selected))
-        sel.setEnabled(self.seq_check.isChecked())   # U114-D9
-        self._renumber_selection()
-        self._update_count()
+        return send
 
     # -- folded state (U106) -------------------------------------------------
 
@@ -319,11 +357,12 @@ class QuickSendPanel(QWidget):
             self.setMaximumWidth(0)
 
     def is_folded(self) -> bool:
+        """True while the panel is collapsed."""
         return self._folded
 
     # -- row selection + deletion (U68 plan A) -------------------------------
 
-    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+    def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
         """Click selects a row; Delete removes the selection (3 s undo stays)."""
         if event.type() == QEvent.Type.MouseButtonPress:
             # U115: a click outside the panel (or on its empty area) drops the selection;
@@ -390,7 +429,7 @@ class QuickSendPanel(QWidget):
             return False
         return focus is self or self.isAncestorOf(focus)
 
-    def _row_at(self, event):
+    def _row_at(self, event: QMouseEvent):
         """The row under the press, if any (U118: the whole row is the hit target)."""
         point = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else None
         if point is None:
@@ -409,9 +448,11 @@ class QuickSendPanel(QWidget):
         self.del_btn.setToolTip(tr("qs.del_selected.tip"))
 
     def selected_entries(self) -> list:
+        """Payloads of every selected row, in list order."""
         return [e for e in self._rows if bool(e["widget"].property("selected"))]
 
     def selected_entry(self) -> dict | None:
+        """Payload of the single selected row, or None."""
         got = self.selected_entries()
         return got[0] if got else None
 
@@ -435,7 +476,7 @@ class QuickSendPanel(QWidget):
         self._update_del_btn()
         return changed
 
-    def _click_keeps_selection(self, obj, event) -> bool:
+    def _click_keeps_selection(self, obj: QObject, event: QEvent) -> bool:
         """True when the press should not clear the selection."""
         widget = obj if isinstance(obj, QWidget) else None
         if widget is None:
@@ -704,6 +745,7 @@ class QuickSendPanel(QWidget):
                          int(item.get("delay", 500) or 0), bool(item.get("sel", False)))
 
     def save(self):
+        """Persist the quick-send rows into the config file."""
         items = [
             {"text": e["edit"].text(), "hex": e["fmt"].currentIndex() == 0,
              "delay": self._row_delay(e), "sel": bool(e["sel"].isChecked())}

@@ -7,8 +7,8 @@ v0.10.0 P0+P1 (2026-10-01): monospace rows, live count line, a filter box,
 per-entry meta (format / byte count / relative time), clear needs a second click,
 the destructive button is set apart, and the dialog remembers its size.
 """
-
 from __future__ import annotations
+
 
 import time
 
@@ -33,6 +33,13 @@ from app.config import load_config, save_config
 from app.i18n import tr
 from ui import theme
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import QModelIndex
+    from PySide6.QtGui import QCloseEvent, QPainter
+    from PySide6.QtWidgets import QWidget
+
 TEXT_ROLE = Qt.ItemDataRole.UserRole
 META_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -46,7 +53,8 @@ class _HistoryDelegate(QStyledItemDelegate):
     a measured contrast (>4.5:1) in both themes (plan D5).
     """
 
-    def paint(self, painter, option, index):  # noqa: D102 - Qt override
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):  # noqa: D102 - Qt override
+        """Draw one history row with the selection and alternating background."""
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         opt.text = ""                                  # background only, we draw text
@@ -87,7 +95,8 @@ class _HistoryDelegate(QStyledItemDelegate):
             return 0
         return QFontMetrics(font).horizontalAdvance(meta)
 
-    def sizeHint(self, option, index):  # noqa: D102 - Qt override
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex):  # noqa: D102 - Qt override
+        """Row size that keeps the full command text readable."""
         size = super().sizeHint(option, index)
         size.setHeight(max(size.height(), 26))
         return size
@@ -100,7 +109,7 @@ class HistoryDialog(QDialog):
     delete_requested = Signal(int)   # drop the entry at this row
     clear_requested = Signal()       # forget everything
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle(tr("tx.history.title"))
         self.setModal(False)                 # never block the main window (U87)
@@ -113,7 +122,18 @@ class HistoryDialog(QDialog):
         self._arm_timer.timeout.connect(self._disarm_clear)
 
         layout = QVBoxLayout(self)
+        self._build_header(layout)
+        self._build_list(layout)
+        self._build_buttons(layout)
 
+        QShortcut(QKeySequence(Qt.Key.Key_Delete), self, activated=self._delete_current)
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self, activated=self.close)
+
+        self._restore_size()
+        self._apply_filter()
+
+    def _build_header(self, layout: QVBoxLayout) -> None:
+        """Explanatory hint plus the filter box and the match counter."""
         self.hint = QLabel(tr("tx.history.hint"))
         self.hint.setWordWrap(True)
         layout.addWidget(self.hint)
@@ -128,6 +148,8 @@ class HistoryDialog(QDialog):
         head.addWidget(self.count_lbl)
         layout.addLayout(head)
 
+    def _build_list(self, layout: QVBoxLayout) -> None:
+        """The monospace history list and the empty-state label."""
         self.list = QListWidget()
         mono = QFont()
         mono.setFamily(MONO_FAMILIES)
@@ -143,6 +165,8 @@ class HistoryDialog(QDialog):
         self.empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.empty_lbl)
 
+    def _build_buttons(self, layout: QVBoxLayout) -> None:
+        """Fill / delete on the left, the destructive clear set apart on the right."""
         row = QHBoxLayout()
         self.fill_btn = QPushButton(tr("tx.history.fill"))
         self.fill_btn.setDefault(True)                 # primary action (P0.3)
@@ -168,12 +192,6 @@ class HistoryDialog(QDialog):
         row.addWidget(self.close_btn)
         layout.addLayout(row)
 
-        QShortcut(QKeySequence(Qt.Key.Key_Delete), self, activated=self._delete_current)
-        QShortcut(QKeySequence(Qt.Key.Key_Escape), self, activated=self.close)
-
-        self._restore_size()
-        self._apply_filter()
-
     # -- geometry ------------------------------------------------------------
 
     def _restore_size(self) -> None:
@@ -194,7 +212,8 @@ class HistoryDialog(QDialog):
         except (OSError, TypeError, ValueError):
             pass
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
+    def closeEvent(self, event: QCloseEvent):  # noqa: N802 - Qt naming
+        """Remember the column widths before the dialog closes."""
         self._remember_size()
         self._disarm_clear()
         super().closeEvent(event)

@@ -3,10 +3,15 @@
 Language state is one of "system" (follow OS locale), "zh" or "en", and is
 persisted by the caller into config.json under the "language" key.
 """
-
 from __future__ import annotations
 
+
 from PySide6.QtCore import QLocale
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.protocol import HexFormatError
 
 SYSTEM = "system"
 SUPPORTED = (SYSTEM, "zh", "en")
@@ -37,7 +42,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "cfg.export_fail": {"zh": "导出配置失败: {e}", "en": "Export failed: {e}"},
     "cfg.import_fail": {"zh": "导入配置失败: {e}", "en": "Import failed: {e}"},
     "cfg.import_bad": {"zh": "文件格式不正确（不是 SerialDesk 配置）", "en": "Unsupported file (not a SerialDesk config)"},
-    "menu.view": {"zh": "视图", "en": "View"},
     "conn.auto": {"zh": "断线自动重连", "en": "Auto-reconnect"},
     "conn.auto.tip": {
         "zh": "串口意外断开（拔线、驱动异常）时按 0.5~5 秒退避自动重连；手动关闭串口不会触发",
@@ -57,16 +61,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "These settings apply when the port opens; the signal lines can be driven at any time.",
     },
     "portset.title": {"zh": "串口设置", "en": "Port settings"},
-    "portset.open": {"zh": "串口设置…", "en": "Port settings…"},
     "portset.tip": {
         "zh": "串口参数：数据位 / 校验位 / 停止位 / 流控 / 编码\n点击这里修改（等价于「串口设置」）",
         "en": "Serial parameters: data bits / parity / stop bits / flow control / encoding\nClick to change them",
     },
-    "portset.summary.tip": {
-        "zh": "当前串口参数；点右侧「串口设置…」修改",
-        "en": "Current port parameters - use Port settings… to change them",
-    },
-    "portset.menu": {"zh": "串口设置(&P)…", "en": "&Port settings…"},
     "about.menu": {"zh": "关于 SerialDesk(&A)…", "en": "&About SerialDesk…"},
     "about.title": {"zh": "关于 SerialDesk", "en": "About SerialDesk"},
     "about.text": {
@@ -95,7 +93,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "sc.clear.tip": {"zh": "清空显示与计数（Ctrl+L，可撤销）", "en": "Clear display and counters (Ctrl+L, undoable)"},
     "sc.save.tip": {"zh": "保存接收日志（Ctrl+S）", "en": "Save receive log (Ctrl+S)"},
     "sc.open.tip": {"zh": "打开/关闭串口（F5）", "en": "Open/close the port (F5)"},
-    "sc.find.tip": {"zh": "查找（Ctrl+F）", "en": "Find (Ctrl+F)"},
     "rx.cap": {
         "zh": "接收区已达显示上限（{n} 行），更早的数据不再显示；自动保存的日志文件不受影响",
         "en": "The receive pane hit its display limit ({n} lines); older data is no longer shown. Auto-saved logs are unaffected",
@@ -159,7 +156,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Echo sent data into the receive pane: TX lines are marked with -> and coloured, RX lines with <-; equal-width markers keep HEX columns aligned. Untick to show received data only",
     },
     # ---- receive log to file (T4) ----
-    "btn.save_log": {"zh": "保存日志", "en": "Save log"},
     "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},
     "btn.save_log_as": {"zh": "另存为…", "en": "Save as…"},
     "log.quick.tip": {
@@ -318,11 +314,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "ASCII 模式下发完内容后追加的字节：无 / 回车 0D / 换行 0A / 回车+换行 0D 0A（AT 指令常用）",
         "en": "Bytes appended after the payload in ASCII mode: none / CR 0D / LF 0A / CR+LF 0D 0A (the usual choice for AT commands)",
     },
-    "tx.crlf": {"zh": "追加 \\r\\n", "en": "Append \\r\\n"},   # U112: legacy key, unused
-    "tx.crlf.tip": {
-        "zh": "ASCII 模式下发送时自动追加回车换行（AT 指令常用）",
-        "en": "Append CRLF when sending in ASCII mode (handy for AT commands)",
-    },
     # ---- repeat send (T2) / send history (T5) ----
     "tx.interval.label": {"zh": "间隔(ms)", "en": "Interval (ms)"},
     "split.auto.hint": {
@@ -360,11 +351,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.history.ago.day": {"zh": "{n} 天前", "en": "{n} d ago"},
     "tx.history.removed": {"zh": "已删除历史：{text}", "en": "Removed from history: {text}"},
     "tx.history.cleared": {"zh": "已清空发送历史", "en": "Send history cleared"},
-    "tx.history": {"zh": "发送历史:", "en": "History:"},
-    "tx.history.tip": {
-        "zh": "最近发送过的指令（最多 {n} 条），选中即回填；在下拉列表里右键可删除单条或清空历史（也可按 Delete 键删除高亮项）",
-        "en": "Recently sent commands (up to {n}); pick one to fill the box. Right-click an entry to delete it or clear the list (Delete removes the highlighted one)",
-    },
     # ---- file send (T6) ----
     "btn.send_file": {"zh": "发送文件", "en": "Send file"},
     "btn.cancel_send": {"zh": "取消发送", "en": "Cancel send"},
@@ -410,7 +396,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "发送超时：设备没有读取数据（发送缓冲已满）。请检查设备是否在线、波特率与流控设置",
         "en": "Send timed out: the device is not draining its buffer. Check that it is online and that baud rate / flow control match",
     },
-    "tx.need_port": {"zh": "请先打开串口", "en": "Open the serial port first"},
     "err.tx.closed": {"zh": "发送失败：串口未打开", "en": "Send failed: port is not open"},
     "err.tx.cts": {
         "zh": "设备 CTS 未就绪（硬件流控），该帧已丢弃。若设备不支持硬件流控，请把「流控」改为「无」",
@@ -481,7 +466,6 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "qs.undo.done": {"zh": "已恢复该指令", "en": "Command restored"},
     "qs.undo": {"zh": "撤销删除", "en": "Undo delete"},
-    "qs.delete.tip": {"zh": "删除此条", "en": "Delete this row"},
     "qs.empty": {"zh": "指令内容为空", "en": "Command is empty"},
     "hex.empty": {
         "zh": "十六进制内容为空（只有分隔符）",
@@ -558,7 +542,7 @@ def tr(key: str, **kw) -> str:
     return text
 
 
-def hex_error_message(exc) -> str:
+def hex_error_message(exc: HexFormatError) -> str:
     """Localized, actionable text for a HexFormatError (falls back to str)."""
     kind = getattr(exc, "kind", None)
     if kind == "empty":

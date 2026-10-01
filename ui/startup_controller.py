@@ -1,8 +1,7 @@
 """Startup controller: the six window phases (worker, state, language/log, timers, build, restore)."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -96,9 +95,14 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 HISTORY_MAX = 50
 LOG_DIR = log_dir()   # U34: per-user (or portable) logs, not next to the bundle
-def init_worker(win) -> None:
+def init_worker(win: MainWindow) -> None:
     "init worker"
     """Create the serial worker and connect its signals."""
     win.worker = SerialWorker(win)
@@ -112,7 +116,7 @@ def init_worker(win) -> None:
     win.worker.reconnected.connect(lambda: win._notify(tr("conn.reconnected"), "info"))
     win.worker.disconnected.connect(lambda _r: win._notify(tr("conn.lost"), "error"))
 
-def init_state(win) -> None:
+def init_state(win: MainWindow) -> None:
     "init state"
     """Session state: counters, display flags and the wall-clock offset."""
     win._stats = SessionStats()      # refactor step 1: counters live in app/stats.py
@@ -122,7 +126,7 @@ def init_state(win) -> None:
     win._last_ts: float | None = None
     win._clock_offset = time.time() - time.monotonic()
 
-def init_language_and_log(win) -> None:
+def init_language_and_log(win: MainWindow) -> None:
     "init language and log"
     """Initial language plus the auto-save sink and its limits."""
     # initial language from config (default: follow system)
@@ -138,7 +142,7 @@ def init_language_and_log(win) -> None:
     win._log_sink = LogSink(win._log_dir, win._log_max_bytes, win._log_max_seconds,
                              header=win._log_header_text)   # refactor step 2
 
-def init_timers(win) -> None:
+def init_timers(win: MainWindow) -> None:
     "init timers"
     """The timers and the frame assembler that drive sending and reception."""
     win._send_history: list[str] = []
@@ -167,7 +171,7 @@ def init_timers(win) -> None:
     win._file_pos = 0
     win._file_path = ""
 
-def build_everything(win) -> None:
+def build_everything(win: MainWindow) -> None:
     "build everything"
     """Build every region once the state exists (UI, menu, shortcuts, checks)."""
     win._build_settings_button()   # U72: the connect row hosts this button
@@ -182,7 +186,7 @@ def build_everything(win) -> None:
     win._setup_shortcuts()
     win._first_run_hint()
 
-def restore_settings(win) -> None:
+def restore_settings(win: MainWindow) -> None:
     "restore settings"
     """Apply the persisted settings: auto-save, history, rules, theme, reconnect."""
     win._autosave_dlg = AutoSaveDialog(win)              # U75

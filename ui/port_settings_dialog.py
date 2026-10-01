@@ -5,8 +5,8 @@ are configured once and then rarely touched, so they live here instead of eating
 a permanent row of the main window. The main window keeps a one-line summary and
 a button that opens this dialog.
 """
-
 from __future__ import annotations
+
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -22,6 +22,11 @@ from PySide6.QtWidgets import (
 
 from app.i18n import tr
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
+
 BYTESIZE_ITEMS = ["5", "6", "7", "8"]
 STOPBITS_ITEMS = ["1", "1.5", "2"]
 
@@ -29,7 +34,7 @@ STOPBITS_ITEMS = ["1", "1.5", "2"]
 class PortSettingsDialog(QDialog):
     """Modeless dialog holding the low-frequency port settings (U35-P3)."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setModal(False)
         self.setMinimumWidth(360)
@@ -43,6 +48,18 @@ class PortSettingsDialog(QDialog):
         self.hint_lbl.setObjectName("portsetHint")
         root.addWidget(self.hint_lbl)
 
+        self._build_form(root)
+        self._build_signal_rows(root)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(self.hide)
+        root.addWidget(buttons)
+
+        self.setWindowTitle(tr("portset.title"))
+        self._port_open = False
+
+    def _build_form(self, root: QVBoxLayout) -> None:
+        """Data bits / parity / stop bits / flow control / text encoding."""
         form = QFormLayout()
 
         self._dbit_lbl = QLabel(tr("params.databits"))
@@ -75,6 +92,8 @@ class PortSettingsDialog(QDialog):
 
         root.addLayout(form)
 
+    def _build_signal_rows(self, root: QVBoxLayout) -> None:
+        """Outgoing (DTR/RTS) and incoming (CTS/DSR/DCD/RI) signal lines."""
         out_row = QHBoxLayout()
         self._sig_out_lbl = QLabel(tr("sig.out"))
         self._sig_out_lbl.setEnabled(False)
@@ -100,13 +119,6 @@ class PortSettingsDialog(QDialog):
         in_row.addWidget(self.sig_lbl)
         in_row.addStretch(1)
         root.addLayout(in_row)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.hide)
-        root.addWidget(buttons)
-
-        self.setWindowTitle(tr("portset.title"))
-        self._port_open = False
 
     def set_port_open(self, opened: bool) -> None:
         """Lock the wire-format controls while the port is open, and explain why (U73)."""

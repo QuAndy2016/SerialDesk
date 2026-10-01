@@ -1,6 +1,6 @@
 """Theme management: dark/light QSS palettes, follow system color scheme."""
-
 from __future__ import annotations
+
 
 from string import Template
 
@@ -12,6 +12,12 @@ import sys
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
+    from typing import Callable
 
 _DARK_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
@@ -354,7 +360,7 @@ def history_list_colors() -> dict:
             "text": "#111111", "meta": "#6d6d78"}
 
 
-def watch_system_theme(app: QApplication, callback) -> None:
+def watch_system_theme(app: QApplication, callback: Callable[[str], None]) -> None:
     """Notify callback(dark: bool) when OS theme changes, unless overridden.
 
     When a manual override is active, system changes are ignored so the
@@ -362,7 +368,7 @@ def watch_system_theme(app: QApplication, callback) -> None:
     """
     hints = QGuiApplication.styleHints()
     try:
-        def _on_system_change(scheme):
+        def _on_system_change(scheme: str):
             if get_override() is None:
                 callback(scheme == Qt.ColorScheme.Dark)
         hints.colorSchemeChanged.connect(_on_system_change)
@@ -393,7 +399,7 @@ def level_color(level: str) -> str:
     return text_color()
 
 
-def apply_native_dark(widget, dark: bool) -> None:
+def apply_native_dark(widget: QWidget, dark: bool) -> None:
     """Match the OS window frame to the app theme (U51).
 
     Windows: DWMWA_USE_IMMERSIVE_DARK_MODE (attribute 20 on Win10 1809+, 19 on

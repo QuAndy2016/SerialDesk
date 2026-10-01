@@ -1,4 +1,5 @@
 """Entry point: python main.py"""
+from __future__ import annotations
 
 import faulthandler
 import os
@@ -11,6 +12,11 @@ from app.config import log_dir, migrate_legacy_config
 from ui.main_window import MainWindow
 
 import ui.theme as theme
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 def install_crash_log() -> str:
@@ -26,7 +32,8 @@ def install_crash_log() -> str:
         return path
     faulthandler.enable(stream)
 
-    def hook(exc_type, exc, tb):
+    def hook(exc_type: type[BaseException], exc: BaseException, tb: TracebackType | None):
+        """Send uncaught Python exceptions to the crash log, then defer to the default hook."""
         traceback.print_exception(exc_type, exc, tb, file=stream)
         stream.flush()
         sys.__excepthook__(exc_type, exc, tb)
@@ -36,6 +43,7 @@ def install_crash_log() -> str:
 
 
 def main() -> int:
+    """Create the application, apply the theme and run the main window."""
     app = QApplication(sys.argv)
     app.setApplicationName("SerialDesk")   # taskbar / window grouping
     migrate_legacy_config()                # U102: inherit a pre-U34 config.json

@@ -1,8 +1,7 @@
 """Send path controller: payload size, checksum, sending, file chunks, history recall and the history popup."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -88,6 +87,11 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 CHECKSUM_KEYS = ["none", "crc16-modbus", "crc16-ccitt", "crc32", "sum8"]
 FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
 FILE_CHUNK_MS = 20          # interval between chunks
@@ -99,7 +103,7 @@ def _human_bytes(n: int) -> str:
     if n < 1024 * 1024:
         return f"{n / 1024:.1f} KB"
     return f"{n / (1024 * 1024):.2f} MB"
-def update_payload_size(win) -> None:
+def update_payload_size(win: MainWindow) -> None:
     "update payload size"
     """Show how many bytes the current input would send (U74)."""
     text = win.tx_edit.toPlainText().strip()
@@ -119,12 +123,12 @@ def update_payload_size(win) -> None:
         payload += win._newline_bytes()
     win.tx_size_lbl.setText(tr("tx.payload", n=len(payload)))
 
-def schedule_history_save(win) -> None:
+def schedule_history_save(win: MainWindow) -> None:
     "schedule history save"
     """Debounce history persistence: one write per 2 s instead of per click (U52)."""
     win._cfg_save_timer.start(2000)
 
-def flush_history_save(win) -> None:
+def flush_history_save(win: MainWindow) -> None:
     "flush history save"
     """Write the send history to config.json (called by the debounce timer)."""
     win._cfg_save_timer.stop()
@@ -133,7 +137,7 @@ def flush_history_save(win) -> None:
     config["history_meta"] = win._prune_history_meta(win._history_meta)
     save_config(config)
 
-def on_send_file(win):
+def on_send_file(win: MainWindow):
     "on send file"
     """Start (or cancel) sending a file in chunks with progress feedback."""
     if win._file_timer.isActive():
@@ -165,7 +169,7 @@ def on_send_file(win):
     win.send_file_btn.setText(tr("btn.cancel_send"))
     win._file_timer.start(FILE_CHUNK_MS)
 
-def send_file_chunk(win):
+def send_file_chunk(win: MainWindow):
     "send file chunk"
     if not win.worker.is_open():
         win._abort_file_send()
@@ -184,7 +188,7 @@ def send_file_chunk(win):
     win.file_info_lbl.setText(tr("file.progress", sent=_human_bytes(win._file_pos),
                                   total=_human_bytes(total), pct=pct))
 
-def finish_file_send(win):
+def finish_file_send(win: MainWindow):
     "finish file send"
     size = _human_bytes(len(win._file_data))
     name = os.path.basename(win._file_path)
@@ -194,7 +198,7 @@ def finish_file_send(win):
     win.file_progress.hide()
     win._notify(tr("file.done", name=name, size=size), ms=5000)
 
-def abort_file_send(win):
+def abort_file_send(win: MainWindow):
     "abort file send"
     win._file_timer.stop()
     win.send_file_btn.setText(tr("btn.send_file"))
@@ -202,7 +206,7 @@ def abort_file_send(win):
     win.file_progress.setValue(0)
     win.file_progress.hide()
 
-def show_history(win) -> None:
+def show_history(win: MainWindow) -> None:
     "show history"
     """Open (or raise) the non-modal history popup (U87)."""
     if win._history_dlg is None:
@@ -215,7 +219,7 @@ def show_history(win) -> None:
     win._history_dlg.raise_()
     win._history_dlg.activateWindow()
 
-def on_history_fill(win, text: str) -> None:
+def on_history_fill(win: MainWindow, text: str) -> None:
     "on history fill"
     """Recall a stored command into the send box (U87)."""
     win.tx_edit.setPlainText(text)
@@ -224,7 +228,7 @@ def on_history_fill(win, text: str) -> None:
     if win._history_dlg is not None:
         win._history_dlg.close()
 
-def recall_history(win, step: int) -> None:
+def recall_history(win: MainWindow, step: int) -> None:
     "recall history"
     """Walk the send history with Ctrl+Up / Ctrl+Down (U87).
 
@@ -246,7 +250,7 @@ def recall_history(win, step: int) -> None:
     win._recall_index = min(win._recall_index, len(win._send_history) - 1)
     win.tx_edit.setPlainText(win._send_history[win._recall_index])
 
-def prune_history_meta(win, raw) -> dict:
+def prune_history_meta(win: MainWindow, raw: list) -> dict:
     "prune history meta"
     """Keep only the metadata of commands that are still in the history (v0.10.0)."""
     if not isinstance(raw, dict):
@@ -258,7 +262,7 @@ def prune_history_meta(win, raw) -> dict:
             out[str(text)] = meta
     return out
 
-def remember_send(win, text: str, fmt: str = '', nbytes: int | None = None):
+def remember_send(win: MainWindow, text: str, fmt: str = '', nbytes: int | None = None):
     "remember send"
     """Push a sent command into the dedup history (max HISTORY_MAX) and persist it."""
     text = text.strip()
@@ -274,7 +278,7 @@ def remember_send(win, text: str, fmt: str = '', nbytes: int | None = None):
     win._update_history_button()
     win._schedule_history_save()
 
-def update_history_button(win) -> None:
+def update_history_button(win: MainWindow) -> None:
     "update history button"
     """Keep the History button (label, tooltip, enabled state) in sync (U87)."""
     n = len(win._send_history)
@@ -284,7 +288,7 @@ def update_history_button(win) -> None:
     if win._history_dlg is not None:
         win._history_dlg.set_history(win._send_history, win._history_meta)
 
-def remove_history_entry(win, row: int) -> None:
+def remove_history_entry(win: MainWindow, row: int) -> None:
     "remove history entry"
     """Drop one entry from the send history and persist (U77)."""
     if not (0 <= row < len(win._send_history)):
@@ -295,7 +299,7 @@ def remove_history_entry(win, row: int) -> None:
     win._schedule_history_save()
     win._notify(tr("tx.history.removed", text=removed), "info", ms=3000)
 
-def clear_history(win) -> None:
+def clear_history(win: MainWindow) -> None:
     "clear history"
     """Forget every remembered command (U77)."""
     if not win._send_history:
@@ -306,12 +310,12 @@ def clear_history(win) -> None:
     win._schedule_history_save()
     win._notify(tr("tx.history.cleared"), "info", ms=3000)
 
-def apply_checksum(win, payload: bytes) -> bytes:
+def apply_checksum(win: MainWindow, payload: bytes) -> bytes:
     "apply checksum"
     mode = CHECKSUM_KEYS[win.checksum_combo.currentIndex()]
     return append_checksum(payload, mode)
 
-def on_send(win):
+def on_send(win: MainWindow):
     "on send"
     text = win.tx_edit.toPlainText().strip()
     if not text:
@@ -343,7 +347,7 @@ def on_send(win):
         len(payload))
     win.update_counts()
 
-def on_quick_send(win, payload: bytes):
+def on_quick_send(win: MainWindow, payload: bytes):
     "on quick send"
     if not win.worker.is_open():     # U61: quick send / sequence obey the same rule
         win.quick_panel.stop_sequence()

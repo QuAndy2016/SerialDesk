@@ -1,8 +1,7 @@
 """Update controller: the quiet startup check, its worker and the result dialogs."""
-
 from __future__ import annotations
 
-from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -93,11 +92,16 @@ from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ui.main_window import MainWindow
 class _UpdateProbe(QObject):
     """U127: carries the worker thread's answer back onto the GUI thread."""
 
     found = Signal(str)
-def init_update_check(win) -> None:
+def init_update_check(win: MainWindow) -> None:
     "init update check"
     """A quiet look at the latest release; nothing is sent about the user."""
     win._update_probe = _UpdateProbe(win)
@@ -122,12 +126,12 @@ def init_update_check(win) -> None:
     if win._update_check_act.isChecked():
         QTimer.singleShot(2500, win._probe_updates)      # let the window settle
 
-def probe_updates(win) -> None:
+def probe_updates(win: MainWindow) -> None:
     "probe updates"
     import threading
     threading.Thread(target=win._probe_updates_worker, daemon=True).start()
 
-def probe_updates_worker(win) -> None:
+def probe_updates_worker(win: MainWindow) -> None:
     "probe updates worker"
     """Worker thread: one GET, five-second timeout, no exceptions escape."""
     try:
@@ -137,7 +141,7 @@ def probe_updates_worker(win) -> None:
     if tag:
         win._update_probe.found.emit(tag)      # queued onto the GUI thread
 
-def on_update_found(win, tag: str) -> None:
+def on_update_found(win: MainWindow, tag: str) -> None:
     "on update found"
     if not update_check.is_newer(tag, __version__):
         return
@@ -145,7 +149,7 @@ def on_update_found(win, tag: str) -> None:
     save_config({"update_available": tag, "update_notified": tag})
     win._show_update(tag, notify=first_time)
 
-def show_update(win, tag: str, notify: bool) -> None:
+def show_update(win: MainWindow, tag: str, notify: bool) -> None:
     "show update"
     win._update_act.setText(tr("update.menu", v=tag))
     win._update_act.setVisible(True)

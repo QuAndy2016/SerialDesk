@@ -1,6 +1,6 @@
 """Main window: port selection, baudrate, format dropdowns, quick send panel."""
-
 from __future__ import annotations
+
 
 import json
 import os
@@ -142,6 +142,11 @@ LOG_MAX_SECONDS = 30 * 60
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QCloseEvent, QResizeEvent, QShowEvent
 FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
 FILE_CHUNK_MS = 20          # interval between chunks
 
@@ -292,7 +297,7 @@ class MainWindow(QMainWindow):
 
     def _set_language(self, lang: str): return set_language(self, lang)
 
-    def _reload_combo(self, combo, items):
+    def _reload_combo(self, combo: QComboBox, items: list[str]):
         """Repopulate a combo box while keeping the current selection."""
         idx = combo.currentIndex()
         combo.blockSignals(True)
@@ -321,10 +326,10 @@ class MainWindow(QMainWindow):
     def _build_send_group(self) -> None:
         """send group region (builder lives in ui.regions)."""
         build_send_group(self)
-    def _build_connection_row(self, root) -> None:
+    def _build_connection_row(self, root: QWidget) -> None:
         """connection row region (builder lives in ui.regions)."""
         build_connection_row(self, root)
-    def _build_data_panes(self, root) -> None:
+    def _build_data_panes(self, root: QWidget) -> None:
         """data panes region (builder lives in ui.regions)."""
         build_data_panes(self, root)
     def _build_ui(self):
@@ -341,7 +346,7 @@ class MainWindow(QMainWindow):
 
     def _control_rows(self) -> list: return control_rows(self)
 
-    def _row_need(self, layout) -> int: return row_need(self, layout)
+    def _row_need(self, layout: QHBoxLayout) -> int: return row_need(self, layout)
 
     def _widest_row(self) -> tuple: return widest_row(self)
 
@@ -362,7 +367,7 @@ class MainWindow(QMainWindow):
 
     def _persist_newline(self, _index: int = 0) -> None: return persist_newline(self, _index)
 
-    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+    def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
         """U120: while the panel is folded, hovering the right edge brings the rail back."""
         if (event.type() == QEvent.Type.MouseMove and hasattr(self, "quick_panel")
                 and self.quick_panel.is_folded()):
@@ -376,12 +381,12 @@ class MainWindow(QMainWindow):
                 pass
         return super().eventFilter(obj, event)
 
-    def resizeEvent(self, event):  # noqa: N802 - Qt naming
+    def resizeEvent(self, event: QResizeEvent):  # noqa: N802 - Qt naming
         """U119: the input follows the pane when the window is resized."""
         super().resizeEvent(event)
         QTimer.singleShot(0, self._fit_tx_edit_height)
 
-    def changeEvent(self, event):  # noqa: N802 - Qt naming
+    def changeEvent(self, event: QEvent):  # noqa: N802 - Qt naming
         """U117: a DPI or screen change alters every metric we measured the floors
         from, so recompute them instead of letting the panes clip their contents."""
         if event.type() in (QEvent.Type.ScreenChangeInternal,
@@ -407,7 +412,7 @@ class MainWindow(QMainWindow):
 
     def _recolor_status_light(self) -> None: return recolor_status_light(self)
 
-    def _on_row_deleted(self, payloads) -> None: return on_row_deleted(self, payloads)
+    def _on_row_deleted(self, payloads: list[str]) -> None: return on_row_deleted(self, payloads)
 
     def _undo_delete(self) -> None: return undo_delete(self)
 
@@ -445,9 +450,13 @@ class MainWindow(QMainWindow):
 
     # -- config import / export (T15) ----------------------------------------
 
-    def on_export_config(self) -> None: return on_export_config(self)
+    def on_export_config(self) -> None:
+                                        """Qt slot: export the configuration (ui/config_controller)."""
+                                        return on_export_config(self)
 
-    def on_import_config(self) -> None: return on_import_config(self)
+    def on_import_config(self) -> None:
+                                        """Qt slot: import a configuration file (ui/config_controller)."""
+                                        return on_import_config(self)
 
     def _apply_config(self) -> None: return apply_config(self)
 
@@ -473,7 +482,9 @@ class MainWindow(QMainWindow):
 
     def _load_file(self, path: str) -> bytes: return load_file(self, path)
 
-    def on_send_file(self): return on_send_file(self)
+    def on_send_file(self):
+                            """Qt slot: send the file picked in the dialog (ui/send_controller)."""
+                            return on_send_file(self)
 
     def _send_file_chunk(self): return send_file_chunk(self)
 
@@ -491,9 +502,13 @@ class MainWindow(QMainWindow):
 
     def _log_append(self, text: str) -> None: return log_append(self, text)
 
-    def on_save_log_quick(self) -> None: return on_save_log_quick(self)
+    def on_save_log_quick(self) -> None:
+                                         """Qt slot: save the receive log into the log folder (ui/log_controller)."""
+                                         return on_save_log_quick(self)
 
-    def on_save_log_as(self) -> None: return on_save_log_as(self)
+    def on_save_log_as(self) -> None:
+                                      """Qt slot: save the receive log to a chosen path (ui/log_controller)."""
+                                      return on_save_log_as(self)
 
     # -- quick helpers --------------------------------------------------------
 
@@ -501,7 +516,7 @@ class MainWindow(QMainWindow):
         """See ui/receive_controller.py."""
         return emit_rx_text(self, text, tx, meta, log)
 
-    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+    def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
         """Delete the highlighted history entry with the keyboard (U77)."""
         return super().eventFilter(obj, event)
 
@@ -525,7 +540,7 @@ class MainWindow(QMainWindow):
 
     def _recall_history(self, step: int) -> None: return recall_history(self, step)
 
-    def _prune_history_meta(self, raw) -> dict: return prune_history_meta(self, raw)
+    def _prune_history_meta(self, raw: list) -> dict: return prune_history_meta(self, raw)
 
     def _remember_send(self, text: str, fmt: str = '', nbytes: int | None = None):  # moved to ui/send_controller.py
         """See ui/send_controller.py."""
@@ -565,44 +580,64 @@ class MainWindow(QMainWindow):
 
     # -- actions -----------------------------------------------------------------
 
-    def refresh_ports(self): return refresh_ports(self)
+    def refresh_ports(self):
+                             """Qt slot: repopulate the port list (ui/connection_controller)."""
+                             return refresh_ports(self)
 
-    def toggle_open(self): return toggle_open(self)
+    def toggle_open(self):
+                           """Qt slot: open or close the serial port (ui/connection_controller)."""
+                           return toggle_open(self)
 
-    def on_opened_changed(self, opened: bool): return on_opened_changed(self, opened)
+    def on_opened_changed(self, opened: bool):
+                                               """Qt slot: reflect a port open/close in the UI (ui/connection_controller)."""
+                                               return on_opened_changed(self, opened)
 
     def _check_baud(self, text: str) -> None: return check_baud(self, text)
 
     def _apply_checksum(self, payload: bytes) -> bytes: return apply_checksum(self, payload)
 
-    def on_send(self): return on_send(self)
+    def on_send(self):
+                       """Qt slot: send the input box contents (ui/send_controller)."""
+                       return on_send(self)
 
-    def on_quick_send(self, payload: bytes): return on_quick_send(self, payload)
+    def on_quick_send(self, payload: bytes):
+                                             """Qt slot: send one quick-send payload (ui/send_controller)."""
+                                             return on_quick_send(self, payload)
 
-    def on_received(self, ts: float, data: bytes): return on_received(self, ts, data)
+    def on_received(self, ts: float, data: bytes):
+                                                   """Qt slot: handle a chunk of received bytes (ui/receive_controller)."""
+                                                   return on_received(self, ts, data)
 
     def _flush_rx_frames(self) -> None: return flush_rx_frames(self)
     def _append_header_split(self, data: bytes, ts: float): return append_header_split(self, data, ts)
 
-    def on_log_line(self, line: str): return on_log_line(self, line)
+    def on_log_line(self, line: str):
+                                      """Qt slot: append a line to the log sink (ui/log_controller)."""
+                                      return on_log_line(self, line)
 
-    def on_clear(self): return on_clear(self)
+    def on_clear(self):
+                        """Qt slot: clear the receive pane and counters (ui/receive_controller)."""
+                        return on_clear(self)
     # -- counters (refactor step 1: thin views onto app.stats.SessionStats) -----
 
     @property
     def rx_bytes(self) -> int:
+        """Received byte count, a view onto SessionStats."""
         return self._stats.rx_bytes
 
     @rx_bytes.setter
     def rx_bytes(self, value: int) -> None:
+        """Set the received byte count."""
         self._stats.rx_bytes = int(value)
 
     @property
     def tx_bytes(self) -> int:
+        """Transmitted byte count, a view onto SessionStats."""
         return self._stats.tx_bytes
 
     @tx_bytes.setter
     def tx_bytes(self, value: int) -> None:
+        """Set the transmitted byte count."""
         self._stats.tx_bytes = int(value)
 
     @property
@@ -613,9 +648,12 @@ class MainWindow(QMainWindow):
     def _sent_count(self, value: int) -> None:
         self._stats.sends = int(value)
 
-    def update_counts(self): return update_counts(self)
+    def update_counts(self):
+                             """Qt slot: refresh the status-bar counters (ui/actions_controller)."""
+                             return update_counts(self)
 
-    def showEvent(self, event):  # noqa: N802 - Qt naming
+    def showEvent(self, event: QShowEvent):  # noqa: N802 - Qt naming
+        """On first show, let the data area claim its room before the user sees a jump."""
         super().showEvent(event)
         theme.apply_native_dark(self, bool(theme.resolved_dark()))   # U51 (frame exists now)
         if not getattr(self, "_split_room_done", False):
@@ -627,7 +665,8 @@ class MainWindow(QMainWindow):
 
             QTimer.singleShot(0, _first_layout)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent):
+        """Persist the layout, stop the timers and shut the worker down without hanging."""
         self._sig_timer.stop()
         self._flush_history_save()
         try:   # U35: remember the layout the user dragged

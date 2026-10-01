@@ -8,8 +8,8 @@ Two groups, because the folder is shared while the rest is auto-save specific:
 * **Auto-save** - whether it runs, how large a segment may grow and how long it
   may stay open.
 """
-
 from __future__ import annotations
+
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIntValidator
@@ -28,6 +28,11 @@ from PySide6.QtWidgets import (
 
 from app.i18n import tr
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
+
 
 def _heading(label: QLabel) -> QLabel:
     """Make a plain label read as a section heading (no stylesheet needed)."""
@@ -42,7 +47,7 @@ class AutoSaveDialog(QDialog):
 
     settingsChanged = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
         self.setModal(False)
         self.setMinimumWidth(440)
@@ -115,6 +120,7 @@ class AutoSaveDialog(QDialog):
         self.dir_edit.setText(folder)
 
     def values(self) -> dict:
+        """The dialog's current values as a settings dict."""
         def _num(text: str, default: int) -> int:
             try:
                 return max(1, int((text or "").strip()))
@@ -129,6 +135,7 @@ class AutoSaveDialog(QDialog):
         }
 
     def retranslate(self) -> None:
+        """Re-apply localized texts after a language change."""
         self.setWindowTitle(tr("as.title"))
         self.target_lbl.setText(tr("as.group.target"))
         self.auto_lbl.setText(tr("as.group.auto"))
