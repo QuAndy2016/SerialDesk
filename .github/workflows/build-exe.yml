@@ -27,10 +27,17 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Run the test suite
+      - name: Review battery (blockers only)
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
-          pip install pytest
-          python -m pytest -q
+          pip install pytest pytest-cov
+          python tools/review_check.py --strict
+
+      - name: UI gate (contrast + overflow + tests)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/check_ui.py
 
       - name: Get version
         id: ver
