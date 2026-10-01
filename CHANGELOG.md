@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.2.1] - 2026-10-01
+
+### Fixed
+
+- **The send area could be laid out below its own rows (U117)**: the pane floors were measured once at startup, so
+  anything that changes the metrics afterwards - a display at 125 % / 150 %, a window moved between monitors, or a
+  format switch that shows the line-ending row - left the splitter free to squeeze the send pane until its rows
+  overlapped. The floors are recomputed on a screen or DPI change, and the send pane's floor now comes from its layout
+  (`minimumSize().height() + 10`, at least 120 px) instead of a hardcoded number.
+
+
 ## [v1.2.0] - 2026-10-01
 
 A design pass over the send area and the quick-send panel, driven by a review of the shipped UI.

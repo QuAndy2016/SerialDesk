@@ -1308,6 +1308,13 @@ class MainWindow(QMainWindow):
                 wdg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
     def _fit_minimum_width(self) -> None:
+        # U117: the send pane must never be squeezed into its own rows - measure what
+        # the layout actually needs (font, language and format all change it).
+        try:
+            need = self._tx_group.layout().minimumSize().height() + 10
+            self._tx_group.setMinimumHeight(max(120, need))
+        except (AttributeError, TypeError):
+            pass
         """Window floor = the connection bar (spans the window) or both panes side by side.
 
         Derived at start-up and after a language switch, because the needed width
@@ -1381,6 +1388,14 @@ class MainWindow(QMainWindow):
     def _persist_newline(self, _index: int = 0) -> None:
         key = self.NEWLINE_KEYS[min(max(0, self.nl_combo.currentIndex()), 3)]
         save_config({"newline": key})      # U109: save_config merges, other keys survive
+
+    def changeEvent(self, event):  # noqa: N802 - Qt naming
+        """U117: a DPI or screen change alters every metric we measured the floors
+        from, so recompute them instead of letting the panes clip their contents."""
+        if event.type() in (QEvent.Type.ScreenChangeInternal,
+                            QEvent.Type.DevicePixelRatioChange):
+            QTimer.singleShot(0, self._fit_minimum_width)
+        super().changeEvent(event)
 
     def _fit_tx_edit_height(self) -> None:
         """U111: one line by default, four at most - a short command should not cost
