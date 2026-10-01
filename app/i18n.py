@@ -423,6 +423,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Collapse the quick-send panel to free width for the log (Ctrl+B reopens it)",
     },
     "menu.quick_panel": {"zh": "显示快速发送面板", "en": "Show the quick-send panel"},
+    "menu.quick_panel.tip": {"zh": "显示/隐藏快速发送面板 (Ctrl+B)", "en": "Show or hide the quick-send panel (Ctrl+B)"},
     "qs.collapsed": {
         "zh": "已折叠快速发送面板，显示区已加宽（Ctrl+B 或「设置」菜单可恢复）",
         "en": "Quick-send panel collapsed - the log is wider now (Ctrl+B or the Settings menu restores it)",
@@ -435,6 +436,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.placeholder": {"zh": "指令内容", "en": "Command"},
     "qs.send": {"zh": "发送", "en": "Send"},
     "qs.del_selected": {"zh": "删除选中", "en": "Delete selected"},
+"tx.settings.tip": {"zh": "发送格式与校验（点击修改）", "en": "Send format and checksum (click to change)"},
+    "qs.chip.tip": {"zh": "本行的格式与延迟（点击修改）", "en": "This row's format and delay (click to change)"},
+    "qs.del_selected.n": {"zh": "删除选中 ({n})", "en": "Delete selected ({n})"},
     "qs.del_selected.tip": {
         "zh": "删除选中的指令（也可以按 Delete 键）；删除后 3 秒内可撤销",
         "en": "Delete the selected command (or press Delete); undo is available for 3 seconds",

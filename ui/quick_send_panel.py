@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QScrollArea,
     QStyle,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QWidgetAction,
 )
 
 import ui.theme as theme
@@ -92,7 +94,7 @@ class QuickSendPanel(QWidget):
 
     send_payload = Signal(bytes)   # parsed payload, no checksum applied yet
     error = Signal(str)            # user-facing format error text (U36)
-    deleted = Signal(dict)         # removed row payload + index (U58: undo)
+    deleted = Signal(list)         # removed row payloads (U58/U118: batch undo)
     log = Signal(str)
     collapsed_changed = Signal(bool)   # U88: fold the panel away
 
@@ -200,14 +202,11 @@ class QuickSendPanel(QWidget):
         row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         row.setToolTip(tr("qs.row.tip"))
         row.installEventFilter(self)
-        v = QVBoxLayout(row)
-        v.setContentsMargins(0, 2, 0, 2)
-        v.setSpacing(2)
-
-        # U105: the first line is the command itself and gets the whole width - it used
-        # to share the row with four other controls and was left with ~105 px.
-        h = QHBoxLayout()
-        h.setContentsMargins(0, 0, 0, 0)
+        # U118: one line per row again - the command keeps the whole width and the
+        # row's properties moved into a small chip at the trailing edge.
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 2, 0, 2)
+        h.setSpacing(6)
 
         # U66: pick which rows the sequence runs, with a small order badge
         sel = QCheckBox()
@@ -226,45 +225,55 @@ class QuickSendPanel(QWidget):
         edit.setPlaceholderText(tr("qs.placeholder"))
         h.addWidget(edit, 1)
 
+        # U118: format + delay live in this chip's popup ("HEX · 500 ms" at a glance,
+        # one click to change) so the row stays a single, compact line.
+        chip = QToolButton()
+        chip.setObjectName("qsChip")
+        chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        chip.setToolTip(tr("qs.chip.tip"))
+        props = QWidget()
+        pl = QHBoxLayout(props)
+        pl.setContentsMargins(8, 6, 8, 6)
+        pl.setSpacing(6)
+
+        fmt = QComboBox()
+        fmt.addItems(["HEX", "ASCII"])
+        fmt.setCurrentIndex(0 if is_hex else 1)
+        pl.addWidget(fmt)
+
+        delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
+        delay.setValidator(QIntValidator(0, 60000, self))
+        delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        delay.setStyleSheet("padding: 3px 4px;")
+        delay.setFixedWidth(self._delay_width())
+        delay.setToolTip(tr("qs.delay.tip"))
+        pl.addWidget(delay)
+        unit = QLabel(tr("qs.delay.unit"))
+        unit.setObjectName("qsMeta")
+        pl.addWidget(unit)
+
+        chip_menu = QMenu(chip)
+        holder = QWidgetAction(chip_menu)
+        holder.setDefaultWidget(props)
+        chip_menu.addAction(holder)
+        chip.setMenu(chip_menu)
+        h.addWidget(chip)
+
         send = QPushButton(tr("qs.send"))
         send.setMinimumWidth(52)
         send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
         send.clicked.connect(lambda: self._send_row(row))
         h.addWidget(send)
-        v.addLayout(h)
-
-        # U105/U104: the second line carries the row's properties, indented under the
-        # text box, with the unit written out - "500" explained itself to nobody.
-        meta = QHBoxLayout()
-        meta.setContentsMargins(0, 0, 0, 0)     # U114-D5: aligned to the text box below
-        meta.setSpacing(4)
-        fmt = QComboBox()
-        fmt.addItems(["HEX", "ASCII"])
-        fmt.setCurrentIndex(0 if is_hex else 1)
-        meta.addWidget(fmt)
-
-        delay = QLineEdit(str(max(0, min(60000, int(delay_ms)))))   # U31: bare number, no arrows
-        delay.setValidator(QIntValidator(0, 60000, self))
-        delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        delay.setStyleSheet("padding: 3px 4px;")   # U80: no room to waste in a tight row
-        delay.setFixedWidth(self._delay_width())   # U80: just wide enough for 60000
-        delay.setToolTip(tr("qs.delay.tip"))
-        meta.addWidget(delay)
-        unit = QLabel(tr("qs.delay.unit"))
-        unit.setObjectName("qsMeta")
-        meta.addWidget(unit)
-        meta.addStretch(1)
-        v.addLayout(meta)
-
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         edit.installEventFilter(self)      # clicking into the text selects the row
-        self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send,
-                           "delay": delay, "sel": sel, "ord": ord_lbl, "unit": unit,
-                           "meta": meta})
-        # U114-D5: the property line starts where the text box starts - measured after
-        # the layout has placed the widgets, so it survives language/font changes.
-        QTimer.singleShot(0, self._align_meta_rows)
+        entry = {"widget": row, "edit": edit, "fmt": fmt, "send": send, "delay": delay,
+                 "sel": sel, "ord": ord_lbl, "unit": unit, "chip": chip}
+        self._rows.append(entry)
+        fmt.currentIndexChanged.connect(lambda *_: self._refresh_chip(entry))
+        delay.textChanged.connect(lambda *_: self._refresh_chip(entry))
+        self._refresh_chip(entry)
         sel.setChecked(bool(selected))
         sel.setEnabled(self.seq_check.isChecked())   # U114-D9
         self._renumber_selection()
@@ -272,27 +281,36 @@ class QuickSendPanel(QWidget):
 
     # -- folded state (U106) -------------------------------------------------
 
-    def _align_meta_rows(self) -> None:
-        """U114-D5: keep every property line flush with its text box."""
-        for entry in self._rows:
-            meta = entry.get("meta")
-            if meta is not None:
-                meta.setContentsMargins(max(0, entry["edit"].x()), 0, 0, 0)
-
     def set_folded(self, folded: bool) -> None:
         """Show the rail instead of the panel contents, and let the splitter shrink."""
         self._folded = bool(folded)
         if self._folded:
             self.clear_selection()
         self._content.setVisible(not self._folded)
-        self._rail.setVisible(self._folded)
         if self._folded:
-            self.setMinimumWidth(RAIL_W)
-            self.setMaximumWidth(RAIL_W)
+            # U120: folded costs nothing at rest - the rail is brought back by hovering
+            # the window's right edge (or the toolbar button / Ctrl+B).
+            self._rail.hide()
+            self.setMinimumWidth(0)
+            self.setMaximumWidth(0)
         else:
+            self._rail.hide()
             self.setMinimumWidth(0)
             self.setMaximumWidth(16777215)      # QWIDGETSIZE_MAX
         self.updateGeometry()
+
+    def set_rail_visible(self, on: bool) -> None:
+        """U120: show the folded-state rail while the pointer is near the right edge."""
+        if not self._folded or bool(on) == self._rail.isVisible():
+            return
+        if on:
+            self.setMinimumWidth(RAIL_W)
+            self.setMaximumWidth(RAIL_W)
+            self._rail.show()
+        else:
+            self._rail.hide()
+            self.setMinimumWidth(0)
+            self.setMaximumWidth(0)
 
     def is_folded(self) -> bool:
         return self._folded
@@ -304,12 +322,19 @@ class QuickSendPanel(QWidget):
         if event.type() == QEvent.Type.MouseButtonPress:
             # U115: a click outside the panel (or on its empty area) drops the selection;
             # clicking the toolbar controls that act on the selection keeps it.
-            if self.selected_entry() is not None and not self._click_keeps_selection(obj, event):
+            if self.selected_entries() and not self._click_keeps_selection(obj, event):
                 self.clear_selection()
-            for entry in self._rows:
-                if entry["widget"] is obj or entry["edit"] is obj:
-                    self._select_row(entry)
-                    break
+            # U118: the row is the selection unit - a press anywhere inside its rect
+            # selects it (Ctrl toggles, Shift extends), the widgets keep working.
+            hit = self._row_at(event)
+            if hit is not None:
+                mods = event.modifiers()
+                if mods & Qt.KeyboardModifier.ControlModifier:
+                    self._select_row(hit, "toggle")
+                elif mods & Qt.KeyboardModifier.ShiftModifier:
+                    self._select_row(hit, "range")
+                else:
+                    self._select_row(hit, "replace")
         elif event.type() == QEvent.Type.Resize and any(
                 entry["widget"] is obj for entry in self._rows):
             self._place_order_badges()
@@ -319,31 +344,79 @@ class QuickSendPanel(QWidget):
         elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
             if self.clear_selection():
                 return True
+        elif (event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_A
+              and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            for entry in self._rows:
+                self._paint_row(entry, True)
+            self._update_del_btn()
+            return True
         return super().eventFilter(obj, event)
 
-    def _select_row(self, entry: dict) -> None:
-        """Highlight one row so the toolbar delete knows its target."""
-        for other in self._rows:
-            want = other is entry
-            if bool(other["widget"].property("selected")) != want:
-                other["widget"].setProperty("selected", want)
-                other["widget"].style().unpolish(other["widget"])
-                other["widget"].style().polish(other["widget"])
-        self.del_btn.setEnabled(True)
+    def _paint_row(self, entry: dict, on: bool) -> None:
+        widget = entry["widget"]
+        if bool(widget.property("selected")) != bool(on):
+            widget.setProperty("selected", bool(on))
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
+    def _select_row(self, entry: dict, mode: str = "replace") -> None:
+        """U118: replace / toggle / range - the usual list semantics."""
+        if mode == "toggle":
+            self._paint_row(entry, not bool(entry["widget"].property("selected")))
+            self._anchor = entry
+        elif mode == "range" and self._anchor in self._rows:
+            lo, hi = sorted((self._rows.index(self._anchor), self._rows.index(entry)))
+            for i, other in enumerate(self._rows):
+                self._paint_row(other, lo <= i <= hi)
+        else:
+            for other in self._rows:
+                self._paint_row(other, other is entry)
+            self._anchor = entry
+        self._update_del_btn()
+
+    def _row_at(self, event):
+        """The row under the press, if any (U118: the whole row is the hit target)."""
+        point = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else None
+        if point is None:
+            return None
+        for entry in self._rows:
+            row = entry["widget"]
+            if row.isVisible() and row.rect().contains(row.mapFromGlobal(point)):
+                return entry
+        return None
+
+    def _update_del_btn(self) -> None:
+        count = len(self.selected_entries())
+        self.del_btn.setEnabled(count > 0)
+        self.del_btn.setText(tr("qs.del_selected.n", n=count) if count
+                             else tr("qs.del_selected"))
+        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+
+    def selected_entries(self) -> list:
+        return [e for e in self._rows if bool(e["widget"].property("selected"))]
 
     def selected_entry(self) -> dict | None:
-        return next((e for e in self._rows if e["widget"].property("selected")), None)
+        got = self.selected_entries()
+        return got[0] if got else None
+
+    def _chip_text(self, entry: dict) -> str:
+        fmt = "HEX" if entry["fmt"].currentIndex() == 0 else "ASCII"
+        return "%s · %s %s" % (fmt, entry["delay"].text().strip() or "0",
+                               tr("qs.delay.unit"))
+
+    def _refresh_chip(self, entry: dict) -> None:
+        chip = entry.get("chip")
+        if chip is not None:
+            chip.setText(self._chip_text(entry))
 
     def clear_selection(self) -> bool:
         """U115: drop the highlight (outside click, Esc, folding, starting a sequence)."""
         changed = False
         for entry in self._rows:
             if bool(entry["widget"].property("selected")):
-                entry["widget"].setProperty("selected", False)
-                entry["widget"].style().unpolish(entry["widget"])
-                entry["widget"].style().polish(entry["widget"])
+                self._paint_row(entry, False)
                 changed = True
-        self.del_btn.setEnabled(False)
+        self._update_del_btn()
         return changed
 
     def _click_keeps_selection(self, obj, event) -> bool:
@@ -365,12 +438,30 @@ class QuickSendPanel(QWidget):
         return False
 
     def delete_selected(self) -> None:
-        """Delete the highlighted row; main window offers a 3 s undo (U68)."""
-        entry = self.selected_entry()
-        if entry is None:
-            return
-        self._delete_row(entry["widget"])
-        self.del_btn.setEnabled(False)
+        """U118: delete every selected row; the main window offers a 3 s batch undo."""
+        entries = self.selected_entries()
+        if entries:
+            self.delete_entries(entries)
+
+    def _row_payload(self, entry: dict) -> dict:
+        return {"text": entry["edit"].text(), "hex": entry["fmt"].currentIndex() == 0,
+                "delay": self._row_delay(entry), "index": self._rows.index(entry)}
+
+    def delete_entries(self, entries: list) -> None:
+        """Remove the given rows and report them as one batch (U118)."""
+        payloads = sorted((self._row_payload(e) for e in entries),
+                          key=lambda item: item["index"])
+        for entry in entries:
+            row = entry["widget"]
+            if entry in self._rows:
+                self._rows.remove(entry)
+            row.setParent(None)
+            row.deleteLater()
+        self._update_del_btn()
+        self._update_count()
+        if payloads:
+            self.deleted.emit(payloads)
+        self.save()
 
     def _renumber_selection(self) -> None:
         """Show 1..n on the ticked rows so the run order is obvious (U66)."""
@@ -508,20 +599,15 @@ class QuickSendPanel(QWidget):
         self._seq_queue = []
 
     def _delete_row(self, row: QWidget):
-        """Remove a row, but report enough context to undo it (U58)."""
+        """Remove a single row (kept for the row-level callers)."""
         entry = next((e for e in self._rows if e["widget"] is row), None)
-        if entry is None:
-            return
-        index = self._rows.index(entry)
-        payload = {"text": entry["edit"].text(), "hex": entry["fmt"].currentIndex() == 0,
-                   "delay": self._row_delay(entry), "index": index}
-        self._rows.remove(entry)
-        row.setParent(None)
-        row.deleteLater()
-        self.del_btn.setEnabled(False)
-        self._update_count()
-        self.deleted.emit(payload)
-        self.save()
+        if entry is not None:
+            self.delete_entries([entry])
+
+    def restore_rows(self, payloads: list) -> None:
+        """Re-insert rows removed by delete_entries, in their original order (U118)."""
+        for payload in sorted(payloads, key=lambda item: int(item.get("index", 0))):
+            self.restore_row(payload)
 
     def restore_row(self, payload: dict) -> None:
         """Re-insert a row removed by _delete_row (U58 undo)."""
@@ -571,7 +657,6 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setToolTip(tr("qs.seq.tip"))
         self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
         self._rail.set_label(tr("qs.title"))
-        QTimer.singleShot(0, self._align_meta_rows)     # U114-D5: widths changed
         self._rail.setToolTip(tr("qs.rail.tip"))
         for entry in self._rows:
             entry["edit"].setPlaceholderText(tr("qs.placeholder"))

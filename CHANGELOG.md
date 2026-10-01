@@ -1,5 +1,34 @@
 # Changelog
 
+## [v1.3.0] - 2026-10-01
+
+A space-and-interaction pass over the quick-send panel and the send area.
+
+### Changed
+
+- **Quick-send rows are one line again (U118)**: format and delay moved into a small chip at the trailing edge
+  (`HEX · 500 ms` - click it to change either). The row is ~31 px instead of ~56 px, so ten rows no longer scroll, and
+  the command keeps the whole width.
+- **The send options collapsed into a chip (U121)**: "格式: HEX" + "校验: 无" and their two labels used ~200 px of a row
+  that had nothing else in it; they are now one chip ("HEX · 无") with a popup. The "N bytes to send" hint moved from
+  the far end of that row to just under the input it counts.
+- **The input box owns the send area's vertical space (U119/U121)**: it is one line at the default pane height and grows
+  when the pane is dragged, when the window grows, or when HEX mode hides the line-ending row - measured 37 px at the
+  default pane and 287 px after dragging it tall, instead of a fixed 30 px with the rest left blank.
+- **The actions column sits on the options row's baseline (U119)**: it used to float in the middle of a tall pane.
+- **Folding the quick-send panel costs nothing now (U120)**: the 28 px rail is gone at rest. There is a fixed toggle
+  button beside Settings (with the usual `Ctrl+B` and menu entry), and the rail reappears when the pointer is near the
+  window's right edge.
+
+### Fixed
+
+- **Selecting rows to delete was single-row only (U118)**: `删除选中` takes the usual list semantics now - click to
+  select, Ctrl+click to add or remove, Shift+click for a range, Ctrl+A for all, Esc or a click outside to clear - and the
+  button carries the count (`删除选中 (3)`). Deleting several rows undoes as one batch.
+- **Only the row's background or its text box counted as a click on the row (U118)**: the whole row is the hit target
+  now, so clicking its checkbox, chip or send button selects it too.
+
+
 ## [v1.2.1] - 2026-10-01
 
 ### Fixed

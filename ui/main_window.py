@@ -45,6 +45,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QToolButton,
     QStackedWidget,
+    QWidgetAction,
     QVBoxLayout,
     QWidget,
 )
@@ -221,6 +222,7 @@ class MainWindow(QMainWindow):
         self._build_settings_button()   # U72: the connect row hosts this button
         self._build_ui()
         self._build_menu()
+        QApplication.instance().installEventFilter(self)   # U120: hover the right edge
         if load_config().get("quick_panel_collapsed"):     # U88: restore the folded state
             self._on_quick_panel_collapsed(True)
         self._setup_tab_order()
@@ -393,6 +395,12 @@ class MainWindow(QMainWindow):
         self.quick_panel.set_folded(collapsed)
         if hasattr(self, "_quick_panel_act"):
             self._quick_panel_act.setChecked(not collapsed)
+        if hasattr(self, "_panel_btn"):
+            self._panel_btn.setChecked(not collapsed)
+            self._panel_btn.setIcon(QIcon(resource_path(
+                "assets/arrow_left_%s.png" % ("dark" if theme.resolved_dark() else "light")))
+                if not collapsed else QIcon(resource_path(
+                    "assets/arrow_right_%s.png" % ("dark" if theme.resolved_dark() else "light"))))
         save_config({"quick_panel_collapsed": bool(collapsed)})
         self._fit_minimum_width()
         self._notify(tr("qs.collapsed") if collapsed else tr("qs.expanded"),
@@ -848,6 +856,18 @@ class MainWindow(QMainWindow):
         conn_div.setFixedWidth(1)
         bar.addWidget(conn_div)
         bar.addWidget(self._settings_btn)   # U72: same line as Port / Baud / Open
+        # U120: folding used to leave a 28 px rail on screen. The toggle is a fixed,
+        # always-visible control next to Settings now (spatial mapping: it sits on the
+        # same edge as the panel it drives), and the rail only appears on hover.
+        self._panel_btn = QToolButton()
+        self._panel_btn.setObjectName("panelToggle")
+        self._panel_btn.setCheckable(True)
+        self._panel_btn.setChecked(True)
+        self._panel_btn.setMinimumSize(32, 32)
+        self._panel_btn.setToolTip(tr("menu.quick_panel.tip"))
+        self._panel_btn.clicked.connect(
+            lambda: self._on_quick_panel_collapsed(not self._panel_btn.isChecked()))
+        bar.addWidget(self._panel_btn)
         # U114-D4: one control height across the connection row
         for _w in (self.port_combo, self.refresh_btn, self.baud_combo, self.open_btn,
                    self.rx_fmt_combo, self.params_summary, self._settings_btn):
@@ -1020,18 +1040,39 @@ class MainWindow(QMainWindow):
         # layout squeezed the input to ~134 px (a control column ate ~83% of the
         # width) and capped its height at 90 px, so the send area looked like a toy.
         tx_fmt_row = QHBoxLayout()
+        # U121: "格式: HEX" + "校验: 无" and their two labels used ~200 px of a row that
+        # had nothing else in it, leaving half the row empty. They live in one chip
+        # ("HEX · 无") pointing at a small popup, and the width goes back to the input.
+        self.tx_settings_btn = QToolButton()
+        self.tx_settings_btn.setObjectName("qsChip")
+        self.tx_settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.tx_settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.tx_settings_btn.setToolTip(tr("tx.settings.tip"))
+        _fmt_holder = QWidget()
+        _fh = QHBoxLayout(_fmt_holder)
+        _fh.setContentsMargins(8, 6, 8, 6)
+        _fh.setSpacing(6)
         self._tx_fmt_lbl = QLabel(tr("txfmt.label"))
-        tx_fmt_row.addWidget(self._tx_fmt_lbl)
+        _fh.addWidget(self._tx_fmt_lbl)
         self.tx_fmt_combo = QComboBox()
         self.tx_fmt_combo.addItems(["HEX", "ASCII"])
         self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
-        tx_fmt_row.addWidget(self.tx_fmt_combo)
+        _fh.addWidget(self.tx_fmt_combo)
         self._crc_lbl = QLabel(tr("crc.label"))
-        tx_fmt_row.addWidget(self._crc_lbl)
+        _fh.addWidget(self._crc_lbl)
         self.checksum_combo = QComboBox()
         self.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
         self.checksum_combo.setToolTip(tr("crc.tip"))
-        tx_fmt_row.addWidget(self.checksum_combo)
+        _fh.addWidget(self.checksum_combo)
+        _fmt_menu = QMenu(self.tx_settings_btn)
+        _fmt_action = QWidgetAction(_fmt_menu)
+        _fmt_action.setDefaultWidget(_fmt_holder)
+        _fmt_menu.addAction(_fmt_action)
+        self.tx_settings_btn.setMenu(_fmt_menu)
+        tx_fmt_row.addWidget(self.tx_settings_btn)
+        self.tx_fmt_combo.currentIndexChanged.connect(self._refresh_tx_settings_chip)
+        self.checksum_combo.currentIndexChanged.connect(self._refresh_tx_settings_chip)
+        self._refresh_tx_settings_chip()
 
         # U98: the text decorations only mean something for ASCII, so they live in one
         # group that disappears in HEX mode (same rule as U50). U99: measured in English
@@ -1074,13 +1115,13 @@ class MainWindow(QMainWindow):
         tx_fmt_row.addWidget(self.file_progress)
         self.file_info_lbl = QLabel("")
         tx_fmt_row.addWidget(self.file_info_lbl, 1)
-        # U99: the payload hint lives in the top-right corner, one size smaller.
+        # U121: the payload hint sits under the input it describes instead of the far
+        # end of the options row, which was ~400 px away from the text it counts.
         self.tx_size_lbl = QLabel("")
         self.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
         # the app stylesheet drives the widget font, so the smaller size is asked for
         # by object name (QLabel#payloadHint) instead of a QFont that QSS would override
         self.tx_size_lbl.setObjectName("payloadHint")
-        tx_fmt_row.addWidget(self.tx_size_lbl)
         tx_layout.addWidget(_fixed_row(tx_fmt_row))
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
         self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
@@ -1110,7 +1151,8 @@ class MainWindow(QMainWindow):
         act_col = QVBoxLayout(actions)
         act_col.setContentsMargins(0, 0, 0, 0)
         act_col.setSpacing(8)
-        act_col.addStretch(1)
+        # U119-P1: no leading/trailing stretch - the actions start on the same baseline
+        # as the options row instead of floating in the middle of a tall pane.
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
@@ -1159,12 +1201,18 @@ class MainWindow(QMainWindow):
         mod_holder.addWidget(self._tx_mod_group)
         mod_holder.addStretch(1)
         act_col.addLayout(mod_holder)
-        act_col.addStretch(1)
         tx_row.addWidget(actions)
         tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
+        _size_row = QHBoxLayout()               # U121: right-aligned under the input
+        _size_row.setContentsMargins(0, 0, 2, 0)
+        _size_row.addStretch(1)
+        _size_row.addWidget(self.tx_size_lbl)
+        tx_layout.addLayout(_size_row)
 
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 0)   # U111: data first
+        self._v_splitter.splitterMoved.connect(   # U119: the input takes the extra room
+            lambda *_: QTimer.singleShot(0, self._fit_tx_edit_height))
         tx_group.setMinimumHeight(120)                          # U63/U98/U99/U111
         self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
         self._v_splitter.setCollapsible(1, False)   #      the panes are added
@@ -1339,7 +1387,8 @@ class MainWindow(QMainWindow):
         self._left_column.setMinimumWidth(max(360, pane_need + pad))
         rows = self._control_rows()
         connect_need = self._row_need(rows[0]) if rows else 0
-        panel_min = (RAIL_W if self.quick_panel.is_folded() else
+        # U120: a folded panel costs nothing now - the rail only exists on hover
+        panel_min = (0 if self.quick_panel.is_folded() else
                      max(QUICK_PANEL_MIN_W, self.quick_panel.minimumSizeHint().width()))
         pair_need = (self._rx_group.minimumWidth() + panel_min + self._splitter.handleWidth()
                      + max(0, self.width() - self._splitter.width()))
@@ -1389,6 +1438,25 @@ class MainWindow(QMainWindow):
         key = self.NEWLINE_KEYS[min(max(0, self.nl_combo.currentIndex()), 3)]
         save_config({"newline": key})      # U109: save_config merges, other keys survive
 
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
+        """U120: while the panel is folded, hovering the right edge brings the rail back."""
+        if (event.type() == QEvent.Type.MouseMove and hasattr(self, "quick_panel")
+                and self.quick_panel.is_folded()):
+            try:
+                pos = event.globalPosition().toPoint()
+                frame = self.frameGeometry()
+                near = (0 <= frame.right() - pos.x() <= 12
+                        and frame.top() <= pos.y() <= frame.bottom())
+                self.quick_panel.set_rail_visible(near)
+            except (AttributeError, TypeError):
+                pass
+        return super().eventFilter(obj, event)
+
+    def resizeEvent(self, event):  # noqa: N802 - Qt naming
+        """U119: the input follows the pane when the window is resized."""
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._fit_tx_edit_height)
+
     def changeEvent(self, event):  # noqa: N802 - Qt naming
         """U117: a DPI or screen change alters every metric we measured the floors
         from, so recompute them instead of letting the panes clip their contents."""
@@ -1398,12 +1466,44 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
 
     def _fit_tx_edit_height(self) -> None:
-        """U111: one line by default, four at most - a short command should not cost
-        three lines of vertical space, which is what the fixed 90 px did."""
-        lines = max(1, min(4, self.tx_edit.document().blockCount()))
-        fm = self.tx_edit.fontMetrics()
-        height = int(fm.lineSpacing() * lines + 2 * self.tx_edit.frameWidth() + 10)
-        self.tx_edit.setFixedHeight(max(30, height))
+        """U111/U119/U121: the input owns the send pane's vertical space.
+
+        At the default pane height that is one line; when the user drags the divider,
+        when the window grows, or when HEX mode hides the line-ending row, the freed
+        pixels go to the input box instead of turning into blank space.
+        """
+        if getattr(self, "_fitting_tx", False):
+            return
+        chip = getattr(self, "tx_settings_btn", None)
+        actions = getattr(self, "send_btn", None)
+        if chip is None or actions is None:
+            return          # still building the send group
+        self._fitting_tx = True
+        try:
+            fm = self.tx_edit.fontMetrics()
+            line = max(1, fm.lineSpacing())
+            chrome = 2 * self.tx_edit.frameWidth() + 10
+            # the tallest fixed row beside the input (options row / action column);
+            # neither depends on the input's own height, so this cannot oscillate
+            # measure the bottom of the fixed rows themselves - the action column's
+            # container stretches, so its own geometry would report the row's bottom
+            probes = [self.tx_settings_btn, self.send_file_btn, self.send_btn, self.repeat_ms]
+            if self._tx_mod_group.isVisible():
+                probes.append(self.nl_combo)
+            bottoms = [w.mapTo(self._tx_group, w.rect().bottomLeft()).y()
+                       for w in probes if w.isVisible()]
+            others = (max(bottoms) if bottoms else 0) + 8
+            hint = self.tx_size_lbl.sizeHint().height() + 4      # the row under the input
+            avail = self._tx_group.height() - others - hint - 8
+            cap = 26 * line + chrome
+            self.tx_edit.setFixedHeight(int(max(line + chrome, min(avail, cap))))
+        finally:
+            self._fitting_tx = False
+
+    def _refresh_tx_settings_chip(self) -> None:
+        """U121: keep the "HEX · 无" chip in step with the two pickers it hides."""
+        fmt = "HEX" if self.tx_fmt_combo.currentIndex() == 0 else "ASCII"
+        self.tx_settings_btn.setText("%s · %s" % (fmt, self.checksum_combo.currentText()))
 
     def _fit_settings_btn(self) -> None:
         """Size the Settings button to its label plus padding (U60: "Settings" must fit)."""
@@ -1417,7 +1517,7 @@ class MainWindow(QMainWindow):
                  "split_combo", "split_ms_edit", "header_edit", "ts_check",
                  "echo_tx_check", "autoscroll_check",
                  "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
-                 "tx_fmt_combo", "checksum_combo", "nl_combo", "escape_check",
+                 "nl_combo", "escape_check",   # U121: the two pickers live in a popup
                  "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
                  "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
@@ -1448,9 +1548,11 @@ class MainWindow(QMainWindow):
         self.status_light.setStyleSheet(
             f"color: {cols[key]}; font-weight: bold; padding-right: 8px;")
 
-    def _on_row_deleted(self, payload: dict) -> None:
-        """Offer a short undo window for a deleted quick-send row (U58)."""
-        self._undo_payload = dict(payload)
+    def _on_row_deleted(self, payloads) -> None:
+        """Offer a short undo window for the deleted quick-send rows (U58/U118)."""
+        if isinstance(payloads, dict):
+            payloads = [payloads]
+        self._undo_payload = [dict(p) for p in payloads]
         self._undo_kind = "row"
         self._undo_btn.setText(tr("undo.label"))
         self._undo_btn.show()
@@ -1477,7 +1579,7 @@ class MainWindow(QMainWindow):
             self._notify(tr("rx.undo.done"), "info", ms=3000)
             return
         if payload:
-            self.quick_panel.restore_row(payload)
+            self.quick_panel.restore_rows(payload if isinstance(payload, list) else [payload])
             self._notify(tr("qs.undo.done"), "info", ms=3000)
 
     def _clear_undo(self) -> None:
