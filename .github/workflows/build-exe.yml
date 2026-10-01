@@ -27,6 +27,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Run the test suite
+        run: |
+          pip install pytest
+          python -m pytest -q
+
       - name: Get version
         id: ver
         shell: pwsh

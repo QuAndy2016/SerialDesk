@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)   # U120: hover the right edge
         if load_config().get("quick_panel_collapsed"):     # U88: restore the folded state
             self._on_quick_panel_collapsed(True)
+        self._apply_accessible_names()
         self._setup_tab_order()
         self._setup_shortcuts()
         self._first_run_hint()
@@ -377,6 +378,10 @@ class MainWindow(QMainWindow):
         self._reconnect_act.toggled.connect(self._on_reconnect_toggled)
         self._settings_menu.addAction(self._reconnect_act)
 
+        self._shortcuts_act = QAction(tr("menu.shortcuts"), self)   # U123
+        self._shortcuts_act.triggered.connect(self._show_shortcuts)
+        self._settings_menu.addAction(self._shortcuts_act)
+
         self._about_act = QAction(tr("about.menu"), self)
         self._about_act.triggered.connect(self._show_about)
         self._settings_menu.addAction(self._about_act)
@@ -443,6 +448,14 @@ class MainWindow(QMainWindow):
         self._stop_repeat()
         self.quick_panel.stop_sequence()
 
+    # U123: one source of truth for the shortcut list and the help dialog
+    SHORTCUT_HELP = (
+        ("Ctrl+Return", "sc.send"), ("Ctrl+L", "sc.clear_rx"), ("Ctrl+S", "sc.save_log"),
+        ("Ctrl+K", "sc.focus_input"), ("F5", "sc.toggle_open"), ("Ctrl+B", "sc.panel"),
+        ("Ctrl+Up", "sc.hist_prev"), ("Ctrl+Down", "sc.hist_next"), ("Ctrl+F", "sc.find"),
+        ("Ctrl+,", "sc.settings"), ("Esc", "sc.esc"), ("Delete", "sc.del_quick_row"),
+    )
+
     def _setup_shortcuts(self) -> None:
         """Daily-flow keyboard shortcuts (U39)."""
         for seq, handler in (
@@ -503,7 +516,7 @@ class MainWindow(QMainWindow):
         self._auto_rules = []
         self.auto_reply_act.setChecked(False)
         self._sent_count = 0
-        self.sent_lbl.setText(tr("tx.sent_count", n=0))
+        self.update_counts()
         # U82: restoring defaults must also restore the data-first proportions, and
         # they are re-measured so a maximised window gives the log every spare pixel
         self._custom_split_sizes = False
@@ -624,7 +637,43 @@ class MainWindow(QMainWindow):
         box.setText(tr("about.text", version=__version__,
                        pyside=PySide6.__version__, pyserial=_serial.__version__))
         box.setIcon(QMessageBox.Icon.Information)
+        # E3: hand the user something useful to paste into an issue
+        copy_btn = box.addButton(tr("about.copy"), QMessageBox.ButtonRole.ActionRole)
         box.exec()
+        if box.clickedButton() is copy_btn:
+            QApplication.clipboard().setText(self._diagnostics_text())
+            self._notify(tr("about.copied"), "info", ms=3000)
+
+    def _show_shortcuts(self) -> None:
+        """U123: the shortcut list the app never showed anywhere."""
+        rows = "\n".join("%-12s %s" % (key, tr(label))
+                          for key, label in self.SHORTCUT_HELP)
+        box = QMessageBox(self)
+        box.setWindowTitle(tr("menu.shortcuts"))
+        box.setTextFormat(Qt.TextFormat.PlainText)
+        box.setText(rows)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.exec()
+
+    def _diagnostics_text(self) -> str:
+        """U123/E3: what a bug report needs, in one copyable block."""
+        import platform
+        import sys
+        import PySide6
+        try:
+            import serial as _serial
+            pyserial = _serial.__version__
+        except ImportError:
+            pyserial = "-"
+        return "\n".join((
+            "SerialDesk %s" % __version__,
+            "OS: %s" % platform.platform(),
+            "Python %s / PySide6 %s / pyserial %s" % (sys.version.split()[0], PySide6.__version__, pyserial),
+            "Port: %s @ %s" % (self.port_combo.currentData() or "-", self.baud_combo.currentText().strip()),
+            "Format: %s / RX %s" % (self.tx_fmt_combo.currentText(), self.rx_fmt_combo.currentText()),
+            "Log folder: %s" % self._log_dir,
+            "Last error log: %s" % os.path.join(data_dir(), "logs", "lasterror.log"),
+        ))
 
     def _first_run_hint(self) -> None:
         """One restrained hint on the very first launch (U48)."""
@@ -757,6 +806,8 @@ class MainWindow(QMainWindow):
         self.checksum_combo.setToolTip(tr("crc.tip"))
         self.send_btn.setText(tr("btn.send"))
         self.quick_panel.retranslate()
+        self.rx_view.setPlaceholderText(tr("rx.empty.hint"))
+        self.update_counts()
         self._notify(tr("status.opened") if self.worker.is_open() else tr("status.idle"))
         if self.worker.is_open():
             port = self.port_combo.currentData() or ""
@@ -985,10 +1036,11 @@ class MainWindow(QMainWindow):
 
         # RX/TX counters live in the status bar (Z4): global state, and it frees
         # ~140 px of horizontal room for the single receive row (U35-P2).
-        self.sent_lbl = QLabel(tr("tx.sent_count", n=0))   # U98: out of the send area
+        # U124: one counter for the whole session - "TX 12 次 · 39 B | RX 39 B" - in a
+        # monospace face so the numbers cannot shift the layout as they change.
+        self.sent_lbl = QLabel(tr("tx.counter", n=0, tx=0, rx=0))
+        self.sent_lbl.setObjectName("statusCounters")
         self.statusBar().addPermanentWidget(self.sent_lbl)
-        self.rx_count_label = QLabel("RX: 0 B | TX: 0 B")
-        self.statusBar().addPermanentWidget(self.rx_count_label)
 
         # U41: find bar, hidden until Ctrl+F
         self._find_bar = QWidget()
@@ -1021,6 +1073,7 @@ class MainWindow(QMainWindow):
         self.rx_view.setReadOnly(True)
         self.rx_view.verticalScrollBar().actionTriggered.connect(self._pause_autoscroll)   # U43
         self.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
+        self.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why
         rx_layout.addWidget(self.rx_view, 1)   # U70: the view absorbs all spare height
         self._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
         self._v_splitter.setChildrenCollapsible(False)          # U63: never collapse a pane
@@ -1511,6 +1564,29 @@ class MainWindow(QMainWindow):
         width = self._settings_btn.fontMetrics().horizontalAdvance(text) + 70
         self._settings_btn.setMinimumWidth(max(96, width))   # U110: room for the gear
 
+    def _apply_accessible_names(self) -> None:
+        """U122: screen readers need a name per control; the tooltip is the best source."""
+        names = ("port_combo", "refresh_btn", "baud_combo", "open_btn", "rx_fmt_combo",
+                 "params_summary", "_settings_btn", "_panel_btn", "split_combo",
+                 "split_ms_edit", "header_edit", "ts_check", "echo_tx_check",
+                 "autoscroll_check", "save_log_btn", "save_log_as_btn", "clear_btn",
+                 "rx_view", "tx_edit", "nl_combo", "escape_check", "send_btn",
+                 "history_btn", "repeat_btn", "repeat_ms", "send_file_btn",
+                 "tx_settings_btn")
+        for name in names:
+            widget = getattr(self, name, None)
+            if widget is None or widget.accessibleName():
+                continue
+            label = widget.toolTip() or (widget.text() if hasattr(widget, "text") else "")
+            if not label:
+                from app.i18n import STRINGS
+                key = {"port_combo": "port.label", "rx_fmt_combo": "rxfmt.label",
+                       "split_combo": "split.label"}.get(name)
+                if key and key in STRINGS:
+                    label = tr(key)
+            if label:
+                widget.setAccessibleName(label.replace("&", ""))
+
     def _setup_tab_order(self) -> None:
         """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
         names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
@@ -1573,7 +1649,6 @@ class MainWindow(QMainWindow):
             for text, frag_kind in fragments:
                 self._emit_rx_text(text, tx=(frag_kind == 1),
                                    meta=(frag_kind == 2), log=False)
-            self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
             self.update_counts()
             self._cleared_state = None
             self._notify(tr("rx.undo.done"), "info", ms=3000)
@@ -2213,7 +2288,7 @@ class MainWindow(QMainWindow):
         self.repeat_btn.setText(tr("tx.repeat.stop") if checked else tr("tx.repeat"))
         if checked:
             self._sent_count = 0
-            self.sent_lbl.setText(tr("tx.sent_count", n=0))
+            self.update_counts()
             self._repeat_timer.start(self._repeat_value())
         else:
             self._repeat_timer.stop()
@@ -2430,7 +2505,6 @@ class MainWindow(QMainWindow):
         self._echo_tx(payload)
         self.tx_bytes += len(payload)
         self._sent_count += 1
-        self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
         self._remember_send(
             text,
             "hex" if self.tx_fmt_combo.currentIndex() == 0 else "ascii",
@@ -2452,7 +2526,6 @@ class MainWindow(QMainWindow):
         # while the TX byte counter kept climbing.
         self.tx_bytes += len(payload)
         self._sent_count += 1
-        self.sent_lbl.setText(tr("tx.sent_count", n=self._sent_count))
         self.update_counts()
 
     def on_received(self, ts: float, data: bytes):
@@ -2531,12 +2604,14 @@ class MainWindow(QMainWindow):
         self.rx_bytes = 0
         self.tx_bytes = 0
         self._sent_count = 0
-        self.sent_lbl.setText(tr("tx.sent_count", n=0))
+        self.update_counts()
         self.update_counts()
         if offer_undo:
             self._notify(tr("rx.cleared"), "warn", ms=5000)
     def update_counts(self):
-        self.rx_count_label.setText(f"RX: {self.rx_bytes} B | TX: {self.tx_bytes} B")
+        """U124: the single status-bar counter (sends, TX bytes, RX bytes)."""
+        self.sent_lbl.setText(tr("tx.counter", n=self._sent_count,
+                                 tx=self.tx_bytes, rx=self.rx_bytes))
 
     def showEvent(self, event):  # noqa: N802 - Qt naming
         super().showEvent(event)

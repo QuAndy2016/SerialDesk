@@ -211,6 +211,7 @@ class QuickSendPanel(QWidget):
         # U66: pick which rows the sequence runs, with a small order badge
         sel = QCheckBox()
         sel.setToolTip(tr("qs.sel.tip"))
+        sel.setAccessibleName(tr("qs.sel.tip"))     # U122
         sel.toggled.connect(self._renumber_selection)
         h.addWidget(sel)
         # U80: the sequence number is a tiny label pinned to the checkbox corner.
@@ -223,6 +224,7 @@ class QuickSendPanel(QWidget):
 
         edit = QLineEdit(text)
         edit.setPlaceholderText(tr("qs.placeholder"))
+        edit.setAccessibleName(tr("qs.row.tip"))    # U122
         h.addWidget(edit, 1)
 
         # U118: format + delay live in this chip's popup ("HEX · 500 ms" at a glance,
@@ -232,6 +234,7 @@ class QuickSendPanel(QWidget):
         chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         chip.setToolTip(tr("qs.chip.tip"))
+        chip.setAccessibleName(tr("qs.chip.tip"))   # U122
         props = QWidget()
         pl = QHBoxLayout(props)
         pl.setContentsMargins(8, 6, 8, 6)
@@ -261,6 +264,7 @@ class QuickSendPanel(QWidget):
         h.addWidget(chip)
 
         send = QPushButton(tr("qs.send"))
+        send.setAccessibleName(tr("qs.send"))       # U122
         send.setMinimumWidth(52)
         send.setStyleSheet("padding: 2px 6px;")  # override global QSS padding
         send.clicked.connect(lambda: self._send_row(row))

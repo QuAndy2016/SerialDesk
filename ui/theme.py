@@ -46,6 +46,12 @@ QComboBox, QLineEdit {
     padding: 3px 8px;
 }
 QComboBox:hover, QLineEdit:hover { border-color: #8be9fd; }
+/* U122: a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
+   which is distinguishable from :hover on the same controls */
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid #8be9fd; background: #33404f; }
+QPushButton:focus, QToolButton:focus { border: 1px solid #8be9fd; }
+QCheckBox:focus { color: #8be9fd; }
+QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
 QComboBox::drop-down { border: none; border-left: 1px solid #4a4a5a; width: 22px; }
 QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 10px; height: 6px; }
 QComboBox[invalid="true"] { border: 1px solid #ff4136; }
@@ -168,6 +174,11 @@ QComboBox, QLineEdit {
     padding: 3px 8px;
 }
 QComboBox:hover, QLineEdit:hover { border-color: #1e5aa8; }
+/* U122: see the dark theme */
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid #1e5aa8; background: #eaf2fb; }
+QPushButton:focus, QToolButton:focus { border: 1px solid #1e5aa8; }
+QCheckBox:focus { color: #1e5aa8; }
+QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
 QComboBox::drop-down { border: none; border-left: 1px solid #c8c8d0; width: 22px; }
 QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 10px; height: 6px; }
 QComboBox[invalid="true"] { border: 1px solid #ff4136; }

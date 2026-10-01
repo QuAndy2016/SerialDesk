@@ -1,5 +1,33 @@
 # Changelog
 
+## [v1.4.0] - 2026-10-01
+
+A quality pass: accessibility, diagnostics, one readable counter, and the shortcuts nobody could find.
+
+### Added
+
+- **A visible keyboard focus ring (U122)**: the stylesheet had no `:focus` rule at all, so keyboard users could not
+  see where they were (WCAG 2.4.7). Inputs, combos, text areas and buttons now take a tinted focus state, and every
+  control got an accessible name (tooltip first, then its label) so screen readers announce something useful.
+- **Diagnostics you can send in a bug report (E3)**: `main.py` installs `faulthandler` plus an `excepthook` that
+  append to `logs/lasterror.log`, and the About box has a **Copy diagnostics** button (version, OS, Python/PySide6/
+  pyserial, port, formats, log folder, error-log path).
+- **A shortcuts reference (U123)**: all twelve shortcuts, from the single table that also builds them, in
+  Settings → Keyboard shortcuts.
+- **An empty-state hint**: an empty receive pane now says that data will appear once a port is open.
+
+### Changed
+
+- **One counter in the status bar (U124)**: "已发送 N 次" and "RX / TX" were two widgets competing with the connection
+  indicator; they are one readout now - `TX 12 次 · 39 B | RX 512 B` - in a monospace face, so the numbers no longer
+  shift the layout as they change.
+
+### Fixed
+
+- **CI never ran the tests (E1)**: the build workflow packaged whatever was pushed, so a red test suite could ship an
+  installer. `python -m pytest -q` now runs before packaging and fails the build.
+
+
 ## [v1.3.0] - 2026-10-01
 
 A space-and-interaction pass over the quick-send panel and the send area.
