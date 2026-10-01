@@ -1,5 +1,30 @@
 # Changelog
 
+## [v1.6.0] - 2026-10-02
+
+### Changed
+
+- **The interface now runs on a colour-token system and every palette pair meets WCAG**: the 223 hard-coded colours
+  in the stylesheet became 33 dark / 35 light tokens rendered from templates, and all 22 known contrast violations
+  were fixed - disabled text, hover borders, and checkbox rings that were drawn in exactly the same colour as their
+  fill. The contrast gate is strict from now on: a new violation fails the build instead of being recorded as debt.
+- **The window was split into eighteen modules (2712 -> 645 lines of `ui/main_window.py`)**: the window keeps the
+  wiring, while the regions, the menu, retranslation and twelve controllers (log, receive, send, connection,
+  parameters, layout, configuration, actions, dialogs, startup, update) own the behaviour. Nothing user-visible is
+  meant to change; the split exists so a fix lands in one file instead of a 2700-line one.
+
+### Added
+
+- **Quality gates that run without being remembered**: a review battery plus a UI gate (contrast, eight-state
+  overflow audit, tests) run in CI, in a pre-commit hook and inside the test suite itself. Test count went 64 -> 100
+  and coverage 9% -> 66%, with the extracted logic covered before any of it moved.
+
+### Fixed
+
+- **Switching language could raise an error**: a stale call left behind by the refactoring only executed on a live
+  window (language/theme switch), which the audits never exercised. It is now covered by a smoke test.
+
+
 ## [v1.5.2] - 2026-10-01
 
 ### Fixed
