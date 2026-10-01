@@ -1238,6 +1238,11 @@ class MainWindow(QMainWindow):
         # the app stylesheet drives the widget font, so the smaller size is asked for
         # by object name (QLabel#payloadHint) instead of a QFont that QSS would override
         self.tx_size_lbl.setObjectName("payloadHint")
+        # U129: the line-ending and escape controls belong with the other payload
+        # options; the action column that used to hold them was eating the height the
+        # input needs.
+        tx_fmt_row.addStretch(1)
+        tx_fmt_row.addWidget(self._tx_mod_group)
         tx_layout.addWidget(_fixed_row(tx_fmt_row))
         self.tx_fmt_combo.currentIndexChanged.connect(self._on_tx_fmt_changed)
         self.tx_fmt_combo.currentIndexChanged.connect(self._check_hex_input)
@@ -1245,6 +1250,7 @@ class MainWindow(QMainWindow):
 
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
+        self.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)   # U129
         self._update_input_placeholder()   # U86: keep the format-specific hint
         self.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
         self.tx_edit.textChanged.connect(self._check_hex_input)
@@ -1264,9 +1270,9 @@ class MainWindow(QMainWindow):
         # line and the repeat controls right below them - so the left side of the row
         # is nothing but the input box.
         actions = QWidget()
-        act_col = QVBoxLayout(actions)
+        act_col = QHBoxLayout(actions)          # U129: a toolbar, not a column
         act_col.setContentsMargins(0, 0, 0, 0)
-        act_col.setSpacing(8)
+        act_col.setSpacing(10)
         # U119-P1: no leading/trailing stretch - the actions start on the same baseline
         # as the options row instead of floating in the middle of a tall pane.
 
@@ -1289,7 +1295,6 @@ class MainWindow(QMainWindow):
         self.history_btn.setEnabled(False)
         self.history_btn.clicked.connect(self._show_history)
         btn_row.addWidget(self.history_btn)
-        btn_row.addStretch(1)
         act_col.addLayout(btn_row)
 
         repeat_row = QHBoxLayout()
@@ -1310,20 +1315,14 @@ class MainWindow(QMainWindow):
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.repeat_ms.textChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
-        repeat_row.addStretch(1)
-        act_col.addLayout(repeat_row)
-
-        mod_holder = QHBoxLayout()
-        mod_holder.addWidget(self._tx_mod_group)
-        mod_holder.addStretch(1)
-        act_col.addLayout(mod_holder)
-        tx_row.addWidget(actions)
-        tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
-        _size_row = QHBoxLayout()               # U121: right-aligned under the input
-        _size_row.setContentsMargins(0, 0, 2, 0)
-        _size_row.addStretch(1)
-        _size_row.addWidget(self.tx_size_lbl)
-        tx_layout.addLayout(_size_row)
+        act_row = QHBoxLayout()
+        act_row.setContentsMargins(0, 2, 0, 0)
+        act_row.setSpacing(10)
+        act_row.addWidget(actions)
+        act_row.addStretch(1)
+        act_row.addWidget(self.tx_size_lbl)     # U121: next to the actions it describes
+        tx_layout.addLayout(tx_row, 1)          # U129: the input owns the middle
+        tx_layout.addLayout(act_row)
 
         self._v_splitter.addWidget(tx_group)
         self._v_splitter.setStretchFactor(1, 0)   # U111: data first
@@ -1603,16 +1602,19 @@ class MainWindow(QMainWindow):
             # neither depends on the input's own height, so this cannot oscillate
             # measure the bottom of the fixed rows themselves - the action column's
             # container stretches, so its own geometry would report the row's bottom
-            probes = [self.tx_settings_btn, self.send_file_btn, self.send_btn, self.repeat_ms]
+            # U129: the options row sits above the input, the action toolbar below it
+            above_probes = [self.tx_settings_btn, self.send_file_btn]
             if self._tx_mod_group.isVisible():
-                probes.append(self.nl_combo)
+                above_probes.append(self.nl_combo)
             bottoms = [w.mapTo(self._tx_group, w.rect().bottomLeft()).y()
-                       for w in probes if w.isVisible()]
-            others = (max(bottoms) if bottoms else 0) + 8
-            hint = self.tx_size_lbl.sizeHint().height() + 4      # the row under the input
-            avail = self._tx_group.height() - others - hint - 8
+                       for w in above_probes if w.isVisible()]
+            above = (max(bottoms) if bottoms else 0) + 6
+            below = max((w.height() for w in (self.send_btn, self.repeat_ms)
+                         if w.isVisible()), default=0) + 8
+            avail = self._tx_group.height() - above - below - 6
             cap = 26 * line + chrome
-            self.tx_edit.setFixedHeight(int(max(line + chrome, min(avail, cap))))
+            # at least three lines - one line was what made the box feel cramped
+            self.tx_edit.setFixedHeight(int(max(3 * line + chrome, min(avail, cap))))
         finally:
             self._fitting_tx = False
 
@@ -1661,7 +1663,9 @@ class MainWindow(QMainWindow):
                  "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
         for first, second in zip(widgets, widgets[1:]):
-            QWidget.setTabOrder(first, second)
+            # U129: a widget inside a popup menu has its own window; Qt refuses the pair
+            if first.window() is second.window():
+                QWidget.setTabOrder(first, second)
 
     # -- notifications (U30/U36/U37/U38) --------------------------------------
 

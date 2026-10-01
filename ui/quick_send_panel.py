@@ -8,6 +8,7 @@ import os
 from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QApplication,
     QCheckBox,
     QComboBox,
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QStyle,
@@ -342,18 +344,21 @@ class QuickSendPanel(QWidget):
         elif event.type() == QEvent.Type.Resize and any(
                 entry["widget"] is obj for entry in self._rows):
             self._place_order_badges()
-        elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Delete:
-            self.delete_selected()
-            return True
-        elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
-            if self.clear_selection():
+        elif event.type() == QEvent.Type.KeyPress and self._owns_keyboard():
+            # U129: these shortcuts belong to the panel only - they used to be app-wide,
+            # which meant Ctrl+A in the send box selected quick-send rows, and Delete in
+            # any text field deleted rows.
+            key, mods = event.key(), event.modifiers()
+            if key == Qt.Key.Key_Delete:
+                self.delete_selected()
                 return True
-        elif (event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_A
-              and event.modifiers() & Qt.KeyboardModifier.ControlModifier):
-            for entry in self._rows:
-                self._paint_row(entry, True)
-            self._update_del_btn()
-            return True
+            if key == Qt.Key.Key_Escape and self.clear_selection():
+                return True
+            if key == Qt.Key.Key_A and mods & Qt.KeyboardModifier.ControlModifier:
+                for entry in self._rows:
+                    self._paint_row(entry, True)
+                self._update_del_btn()
+                return True
         return super().eventFilter(obj, event)
 
     def _paint_row(self, entry: dict, on: bool) -> None:
@@ -377,6 +382,13 @@ class QuickSendPanel(QWidget):
                 self._paint_row(other, other is entry)
             self._anchor = entry
         self._update_del_btn()
+
+    def _owns_keyboard(self) -> bool:
+        """U129: True only when the focus is inside the panel and not in a text field."""
+        focus = QApplication.focusWidget()
+        if focus is None or isinstance(focus, (QLineEdit, QPlainTextEdit, QAbstractSpinBox)):
+            return False
+        return focus is self or self.isAncestorOf(focus)
 
     def _row_at(self, event):
         """The row under the press, if any (U118: the whole row is the hit target)."""

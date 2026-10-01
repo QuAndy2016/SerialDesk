@@ -1,5 +1,20 @@
 # Changelog
 
+## [v1.5.1] - 2026-10-01
+
+### Fixed
+
+- **Ctrl+A and Delete were stolen from every text field (U129)**: the quick-send panel installed its keyboard
+  handling application-wide, so Ctrl+A in the send box selected the panel's rows (and copied the wrong thing), and
+  Delete in any text field deleted quick-send rows. The shortcuts now only fire when the focus is inside the panel
+  and not in a text field.
+- **The input box was stuck at one line (U129)**: the action column beside it consumed nearly the whole pane, leaving
+  the input ~27 px. The send area is regrouped - payload options on top (line ending and escape moved up next to the
+  other options), the input owning the middle at full width (72 px at the default pane, 266 px when the pane is
+  dragged), and the actions (Send / History / Repeat) as a toolbar underneath - and the input wraps long text and
+  never goes below three lines.
+
+
 ## [v1.5.0] - 2026-10-01
 
 ### Added
