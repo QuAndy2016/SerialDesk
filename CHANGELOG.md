@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.5.0] - 2026-10-01
+
+### Added
+
+- **Update check (U127)**: SerialDesk now quietly asks GitHub for the latest release - 2.5 s after launch, on a worker
+  thread, 5 s timeout, standard library only. When a newer version exists the status bar mentions it once and Settings
+  gains a "Version X is available…" entry that opens the download page. Settings also has "Check for updates at
+  startup" if you would rather not; nothing about the machine is sent, and being offline, rate-limited or blocked all
+  fail silently. Version handling is pinned by tests (`tests/test_update.py`), so the comparison stays honest without a
+  network.
+
+
 ## [v1.4.0] - 2026-10-01
 
 A quality pass: accessibility, diagnostics, one readable counter, and the shortcuts nobody could find.

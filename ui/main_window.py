@@ -8,8 +8,11 @@ import shutil
 import sys
 import time
 
-from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (
+    QDesktopServices,
+    QIcon,
+)
 
 from PySide6.QtGui import (
     QAction,
@@ -63,6 +66,7 @@ from app.protocol import (
     HexFormatError,
 )
 from app import __version__
+from app import update as update_check
 from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -157,6 +161,12 @@ def _human_bytes(n: int) -> str:
     return f"{n / (1024 * 1024):.2f} MB"
 
 
+class _UpdateProbe(QObject):
+    """U127: carries the worker thread's answer back onto the GUI thread."""
+
+    found = Signal(str)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -222,6 +232,7 @@ class MainWindow(QMainWindow):
         self._build_settings_button()   # U72: the connect row hosts this button
         self._build_ui()
         self._build_menu()
+        self._init_update_check()                          # U127
         QApplication.instance().installEventFilter(self)   # U120: hover the right edge
         if load_config().get("quick_panel_collapsed"):     # U88: restore the folded state
             self._on_quick_panel_collapsed(True)
@@ -643,6 +654,58 @@ class MainWindow(QMainWindow):
         if box.clickedButton() is copy_btn:
             QApplication.clipboard().setText(self._diagnostics_text())
             self._notify(tr("about.copied"), "info", ms=3000)
+
+    # -- update check (U127) -------------------------------------------------
+
+    def _init_update_check(self) -> None:
+        """A quiet look at the latest release; nothing is sent about the user."""
+        self._update_probe = _UpdateProbe(self)
+        self._update_probe.found.connect(self._on_update_found)
+
+        self._update_act = QAction(tr("update.menu", v=""), self)   # U127
+        self._update_act.setVisible(False)
+        self._update_act.triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl(update_check.RELEASES_PAGE)))
+        self._settings_menu.addAction(self._update_act)
+
+        self._update_check_act = QAction(tr("update.check"), self, checkable=True)
+        self._update_check_act.setToolTip(tr("update.check.tip"))
+        self._update_check_act.setChecked(load_config().get("check_updates", True) is not False)
+        self._update_check_act.toggled.connect(
+            lambda on: save_config({"check_updates": bool(on)}))
+        self._settings_menu.addAction(self._update_check_act)
+
+        known = str(load_config().get("update_available") or "")
+        if known and update_check.is_newer(known, __version__):
+            self._show_update(known, notify=False)
+        if self._update_check_act.isChecked():
+            QTimer.singleShot(2500, self._probe_updates)      # let the window settle
+
+    def _probe_updates(self) -> None:
+        import threading
+        threading.Thread(target=self._probe_updates_worker, daemon=True).start()
+
+    def _probe_updates_worker(self) -> None:
+        """Worker thread: one GET, five-second timeout, no exceptions escape."""
+        try:
+            tag = update_check.fetch_latest_tag()
+        except Exception:            # noqa: BLE001 - a check must never break the app
+            return
+        if tag:
+            self._update_probe.found.emit(tag)      # queued onto the GUI thread
+
+    def _on_update_found(self, tag: str) -> None:
+        if not update_check.is_newer(tag, __version__):
+            return
+        first_time = str(load_config().get("update_notified") or "") != tag
+        save_config({"update_available": tag, "update_notified": tag})
+        self._show_update(tag, notify=first_time)
+
+    def _show_update(self, tag: str, notify: bool) -> None:
+        self._update_act.setText(tr("update.menu", v=tag))
+        self._update_act.setVisible(True)
+        if notify:
+            self._notify(tr("update.available", v=tag), "info", ms=8000)
 
     def _show_shortcuts(self) -> None:
         """U123: the shortcut list the app never showed anywhere."""

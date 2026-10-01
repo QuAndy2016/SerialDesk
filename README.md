@@ -115,6 +115,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.2.0** | 发送区与快速发送面板的设计改进：数据区优先的高度分配、换行符选择、设置入口、选中态生命周期、行内两段式细节 | ✅ 本次发布 |
 | **v1.3.0** | 快速发送面板与发送区空间优化：单行条目 + 属性芯片、多选删除、发送选项芯片、输入框吸收富余高度、面板折叠零占位 | ✅ 本次发布 |
 | **v1.4.0** | 质量批：键盘焦点环与无障碍名、诊断信息与崩溃日志、状态栏计数合并（等宽）、快捷键一览、CI 测试门禁 | ✅ 本次发布 |
+| **v1.5.0** | 启动时静默检查新版本（可关、失败静默、不发送本机信息），有新版本时状态栏提示 + 设置菜单直达下载页 | ✅ 本次发布 |
 | v1.1+ | 波形显示（pyqtgraph）、TCP / UDP 调试、协议解析面板 | 计划中（按用户反馈排优先级）|
 
 ## 快速开始
@@ -277,6 +278,7 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 | **v1.2.0** | Send-area and quick-send design pass: data-first heights, a line-ending picker, a real settings control, a selection that expires, and row detail fixes | ✅ This release |
 | **v1.3.0** | Quick-send and send area: one-line rows with a property chip, multi-select delete, an options chip, an input box that owns the pane's spare height, and a fold that costs no width | ✅ This release |
 | **v1.4.0** | Quality pass: focus rings and accessible names, diagnostics plus a crash log, one monospace counter, a shortcut reference, and a CI test gate | ✅ This release |
+| **v1.5.0** | A quiet startup update check (disable-able, fails silently, sends nothing about this machine) with a status-bar note and a Settings link to the download page | ✅ This release |
 | v1.1+ | Waveform view (pyqtgraph), TCP / UDP, protocol analyser panel | Planned (prioritised by user feedback) |
 
 ### Quick start
