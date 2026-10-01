@@ -71,12 +71,35 @@ def migrate_legacy_config() -> str | None:
         return None
 
 
+CONFIG_VERSION = 1
+
+
+def migrate_config(data: dict) -> dict:
+    """Bring an on-disk config up to CONFIG_VERSION (idempotent, pure-ish).
+
+    Every migration step is one `if version < N` block, so older files keep
+    working after a field changes shape (review finding M2 / E2).
+    """
+    version = int(data.get("config_version", 0) or 0)
+    if version < 1:
+        # v0 -> v1: the line ending used to be a boolean key ("crlf")
+        if "newline" not in data and "crlf" in data:
+            data["newline"] = "crlf" if data.get("crlf") else "none"
+        data.pop("crlf", None)
+    data["config_version"] = CONFIG_VERSION
+    return data
+
+
 def load_config() -> dict:
-    """Load config.json; return {} if missing or malformed."""
+    """Load config.json; return {} if missing or malformed.
+
+    The file is migrated in memory on every read, so callers always see the
+    current shape and save_config writes it back upgraded.
+    """
     try:
         with open(CONFIG_PATH, encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        return migrate_config(data) if isinstance(data, dict) else {}
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 

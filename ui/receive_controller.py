@@ -1,0 +1,285 @@
+"""Receive/view controller: frame flush, text emission into the display, colourising and clear."""
+
+from __future__ import annotations
+
+from __future__ import annotations
+import json
+import os
+import shutil
+import sys
+import time
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (
+    QDesktopServices,
+    QIcon,
+)
+from PySide6.QtGui import (
+    QAction,
+    QKeySequence,
+    QActionGroup,
+    QColor,
+    QIntValidator,
+    QShortcut,
+    QTextFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
+    QFont,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QMenu,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QSizePolicy,
+    QSplitter,
+    QToolButton,
+    QStackedWidget,
+    QWidgetAction,
+    QVBoxLayout,
+    QWidget,
+)
+from app.framing import DEFAULT_SETTLE_MS, FrameAssembler
+from app.protocol import (
+    TEXT_ENCODINGS,
+    append_checksum,
+    ascii_str_to_bytes,
+    bytes_to_ascii_str,
+    bytes_to_hex_str,
+    decode_text,
+    encode_text,
+    hex_str_to_bytes,
+    HexFormatError,
+)
+from app import __version__
+from app import update as update_check
+from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app.log_sink import LogSink
+from app.serial_worker import SerialWorker, list_serial_ports
+from ui import theme
+from ui.auto_reply_dialog import AutoReplyDialog
+from ui.autosave_dialog import AutoSaveDialog
+from ui.history_dialog import HistoryDialog
+from ui.port_settings_dialog import PortSettingsDialog
+from ui.quick_send_panel import RAIL_W, QuickSendPanel
+from ui.retranslate import retranslate_ui
+from ui.menus import build_menu
+from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
+from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
+                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
+                        SPLIT_MANUAL, _fixed_row, build_connection_row,
+                        build_data_panes, build_send_group, build_status_bar)
+from app import i18n
+from app.i18n import hex_error_message, tr
+from app.config import log_dir
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
+from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
+from app.stats import SessionStats
+CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
+def on_received(win, ts: float, data: bytes):
+    "on received"
+    win._check_auto_reply(data)
+    win.rx_bytes += len(data)
+    win.update_counts()
+
+    if win.split_combo.currentIndex() == SPLIT_HEADER:
+        win._append_header_split(data, ts)
+        win._last_ts = ts
+        return
+
+    # U57: collect chunks first; the line break is decided when the group settles
+    win._frames.set_threshold(win._split_threshold_ms())
+    win._frames.feed(ts, data)
+    if not win._frame_timer.isActive():
+        win._frame_timer.start(int(win._frames.settle_ms))
+
+def flush_rx_frames(win) -> None:
+    "flush rx frames"
+    """Emit assembled frames: USB fragments merged, real gaps split (U57)."""
+    now = time.monotonic()
+    while True:
+        got = win._frames.take(now)
+        if got is None:
+            break
+        new_line, ts, data = got
+        win._append_rx_group(win._format_rx(data), ts, new_line)
+    win._last_ts = now
+    win._scroll_rx_bottom()          # U43
+    if win._frames.has_pending():
+        win._frame_timer.start(int(win._frames.settle_ms))
+
+def emit_rx_text(win, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:
+    "emit rx text"
+    """Insert text into the receive pane and mirror it to the log.
+
+    kind: 0 = RX payload, 1 = TX payload, 2 = timestamp/marker (dimmed, U62).
+    The kind is stored on the format so a theme switch can recolour it correctly.
+    """
+    kind = 2 if meta else (1 if tx else 0)
+    cursor = win.rx_view.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.End)
+    fmt = QTextCharFormat()
+    if kind == 2:
+        fmt.setForeground(QColor(theme.meta_color()))
+    elif kind == 1:
+        fmt.setForeground(QColor(theme.tx_color()))
+    else:
+        fmt.setForeground(QColor(theme.text_color()))
+    try:
+        fmt.setProperty(QTextFormat.Property.UserProperty, kind)
+    except (AttributeError, TypeError):
+        pass
+    cursor.insertText(text, fmt)
+    if log:
+        win._log_append(text)
+
+def append_rx_group(win, text: str, ts: float, new_line: bool) -> None:
+    "append rx group"
+    """Emit one RX group without gluing it onto the previous text (U59).
+
+    - new line requested, or the current line belongs to a TX echo -> open a
+      fresh, timestamped line;
+    - otherwise append to the running RX line, with a separator in HEX modes
+      (previously '39 30' + '31 32' collapsed into '39 3031 32').
+    """
+    has_text = win.rx_view.document().characterCount() > 1
+    if new_line or win._line_is_tx:
+        if has_text:
+            win._emit_rx_text("\n")
+        win._emit_rx_text(win._ts_prefix(ts) + MARK_RX, meta=True)
+    elif has_text:
+        separator = win._rx_separator()
+        if separator:
+            win._emit_rx_text(separator)
+    win._emit_rx_text(text)
+    win._line_is_tx = False
+    if not win._cap_warned and win.rx_view.blockCount() >= RECEIVE_MAX_LINES - 5:
+        win._cap_warned = True          # U45: one clear warning, not per line
+        win._notify(tr("rx.cap", n=RECEIVE_MAX_LINES), "warn", ms=8000)
+
+def append_header_split(win, data: bytes, ts: float):
+    "append header split"
+    """Split raw bytes by frame header (e.g. 'fw:'), one line per frame.
+
+    Splitting on the byte level works regardless of HEX/ASCII display mode.
+    Leading bytes before the first header belong to the current line.
+    """
+    header = win.header_edit.text().strip()
+    header_b = header.encode("utf-8", errors="replace") if header else b""
+    if not header_b:
+        return
+    segs = data.split(header_b)
+    for i, seg in enumerate(segs):
+        if i == 0:
+            # bytes before the first header: continue the current frame (U59)
+            if seg:
+                win._append_rx_group(win._format_rx(seg), ts, False)
+            continue
+        if not seg:
+            continue  # adjacent headers, frame with empty body
+        win._append_rx_group(win._format_rx(header_b + seg), ts, True)
+
+    win._scroll_rx_bottom()          # U43
+
+def recolor_rx_view(win) -> None:
+    "recolor rx view"
+    """Re-apply theme colours to already-displayed lines (U27).
+
+    Text inserted under one theme keeps the colour it was given, which turns
+    black-on-dark (or worse) after a theme switch, so re-colour the document.
+    """
+    doc = win.rx_view.document()
+    cursor = QTextCursor(doc)
+    block = doc.begin()
+    while block.isValid():
+        fallback_tx = "-> " in block.text()[:34]   # older lines carry no kind tag
+        it = block.begin()
+        while not it.atEnd():
+            frag = it.fragment()
+            if frag.isValid():
+                fmt = frag.charFormat()
+                kind = None
+                try:
+                    kind = fmt.property(QTextFormat.Property.UserProperty)
+                except (AttributeError, TypeError):
+                    kind = None
+                if kind == 2:
+                    colour = theme.meta_color()
+                elif kind == 1 or (kind is None and fallback_tx):
+                    colour = theme.tx_color()
+                else:
+                    colour = theme.text_color()
+                fmt.setForeground(QColor(colour))
+                cursor.setPosition(frag.position())
+                cursor.setPosition(frag.position() + frag.length(),
+                                   QTextCursor.MoveMode.KeepAnchor)
+                cursor.setCharFormat(fmt)
+            it += 1
+        block = block.next()
+
+def snapshot_rx_fragments(win) -> list:
+    "snapshot rx fragments"
+    """Capture (text, kind) for every fragment so clearing can be undone (U42).
+
+    QPlainTextEdit refuses a cloned document (its layout class differs), so the
+    pane is rebuilt from the fragments with our own emitter instead.
+    """
+    out = []
+    block = win.rx_view.document().begin()
+    while block.isValid():
+        fallback_tx = "-> " in block.text()[:34]
+        it = block.begin()
+        while not it.atEnd():
+            frag = it.fragment()
+            if frag.isValid():
+                try:
+                    kind = frag.charFormat().property(QTextFormat.Property.UserProperty)
+                except (AttributeError, TypeError):
+                    kind = None
+                if kind is None:
+                    kind = 1 if fallback_tx else 0
+                out.append((frag.text(), int(kind)))
+            it += 1
+        if block.next().isValid():
+            out.append(("\n", 0))   # block separators are not fragments
+        block = block.next()
+    return out
+
+def on_clear(win):
+    "on clear"
+    """Clear the display and the counters together, with an undo window (U56/U42)."""
+    has_text = win.rx_view.document().characterCount() > 1
+    offer_undo = has_text and win.rx_view.blockCount() <= CLEAR_UNDO_MAX_LINES
+    if offer_undo:
+        win._cleared_fragments = win._snapshot_rx_fragments()   # keeps colours
+        win._cleared_state = (win._line_is_tx, win.rx_bytes,
+                               win.tx_bytes, win._sent_count)
+        win._undo_kind = "clear"
+        win._undo_btn.setText(tr("undo.label"))
+        win._undo_btn.show()
+        win._undo_timer.start(5000)
+    win._frame_timer.stop()
+    win._frames.reset()
+    win._last_ts = None
+    win.rx_view.clear()
+    win._line_is_tx = False
+    win._cap_warned = False
+    win.rx_bytes = 0
+    win.tx_bytes = 0
+    win._sent_count = 0
+    win.update_counts()
+    win.update_counts()
+    if offer_undo:
+        win._notify(tr("rx.cleared"), "warn", ms=5000)

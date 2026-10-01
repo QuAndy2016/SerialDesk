@@ -38,3 +38,8 @@ config.backup_*.json
 
 # Runtime logs
 logs/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/

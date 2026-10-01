@@ -148,7 +148,8 @@ class SerialWorker(QThread):
         if self._port is not None and self._port.is_open:
             try:
                 self._port.dtr = bool(value)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 - driver-specific; a control line
+                # must never take the UI down, the failure is reported instead
                 self.log.emit(f"dtr failed: {exc}")
 
     def set_rts(self, value: bool) -> None:
@@ -156,7 +157,7 @@ class SerialWorker(QThread):
         if self._port is not None and self._port.is_open:
             try:
                 self._port.rts = bool(value)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 - same as DTR: report, never raise
                 self.log.emit(f"rts failed: {exc}")
 
     def signals(self) -> dict:
@@ -171,7 +172,8 @@ class SerialWorker(QThread):
         if self._port is not None:
             try:
                 self._port.close()
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 - closing a half-dead handle can raise
+                # anything; swallowing it guarantees close() always completes
                 pass
             self._port = None
 
@@ -184,7 +186,8 @@ class SerialWorker(QThread):
             def read(name: str) -> bool:
                 try:
                     return bool(getattr(port, name))
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001 - some USB-serial chips do not expose
+                    # every modem line; "not asserted" is the truthful reading
                     return False
 
             state = {"open": True, "cts": read("cts"), "dsr": read("dsr"),
@@ -233,7 +236,8 @@ class SerialWorker(QThread):
             self._tx_degraded = True        # U65: stop feeding a stuck driver
             self.log.emit(f"send timeout: {exc}")
             self.send_error.emit("timeout", str(exc))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 - any other write failure is surfaced
+            # to the user with the driver's own text, then the caller decides
             self.log.emit(f"send failed: {exc}")
             self.send_error.emit("io", str(exc))
 
@@ -312,7 +316,8 @@ class SerialWorker(QThread):
                         self.received.emit(time.monotonic(), data)
                 else:
                     time.sleep(0.001)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 - a failing read means the device
+                # went away; report it and let the reconnect logic take over
                 self.log.emit(f"read error: {exc}")
                 self._handle_disconnect(str(exc))    # T14: try to come back
                 continue

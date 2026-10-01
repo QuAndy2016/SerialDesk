@@ -181,6 +181,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Save location is the log folder: the receive pane\u2019s Save log button, the starting folder of Save as\u2026 and auto-save all share it, so there is only one place to remember. Auto-save writes every received line (including TX echo) there and starts a new file once the size or duration above is reached, named like serial_20261001_0200.txt; the manual Save log writes a snapshot named like serial_RX_20261001_0200.txt.",
     },
     "log.autosave.on": {"zh": "自动保存到 {path}", "en": "Auto-saving to {path}"},
+    "log.header": {"zh": "# {app} {version} 日志 · {port} @ {baud} · {fmt} 发送 / {rx} 接收 · 开始于 {when}", "en": "# {app} {version} log - {port} @ {baud} - send {fmt} / receive {rx} - started {when}"},
+    "log.save.title": {"zh": "保存接收日志", "en": "Save the receive log"},
+    "log.save_fail": {"zh": "保存日志失败: {e}", "en": "Could not save the log: {e}"},
+    "log.saved": {"zh": "日志已保存到 {path}", "en": "Log saved to {path}"},
     # ---- send group ----
     "group.tx": {"zh": "发送", "en": "Send"},
     "txfmt.label": {"zh": "格式:", "en": "Format:"},
@@ -281,6 +285,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "sc.find": {"zh": "在接收区查找", "en": "Find in the receive pane"},
     "sc.settings": {"zh": "打开设置菜单", "en": "Open the settings menu"},
     "sc.esc": {"zh": "取消选中 / 关闭查找条", "en": "Clear the selection / close the find bar"},
+    "sc.scope.quick_panel": {"zh": "（焦点在快速发送面板时生效）", "en": " (active while the quick-send panel has focus)"},
     "sc.del_quick_row": {"zh": "删除选中的快速发送条目", "en": "Delete the selected quick-send rows"},
     "tx.payload": {"zh": "将发送 {n} 字节", "en": "{n} bytes to send"},
     "tx.payload.bad": {"zh": "内容格式有误", "en": "invalid input"},
@@ -534,7 +539,8 @@ def current() -> str:
         return _lang
     try:
         return "zh" if QLocale.system().language() == QLocale.Language.Chinese else "en"
-    except Exception:
+    except Exception:      # noqa: BLE001 - no Qt platform at all (headless CI or a
+        # broken locale): Chinese as the safe default rather than a crash
         return "zh"
 
 

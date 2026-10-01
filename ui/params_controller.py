@@ -1,0 +1,239 @@
+"""Serial parameter controller: framing/encoding resolution, validation, threshold and the payload hint."""
+
+from __future__ import annotations
+
+from __future__ import annotations
+import json
+import os
+import shutil
+import sys
+import time
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (
+    QDesktopServices,
+    QIcon,
+)
+from PySide6.QtGui import (
+    QAction,
+    QKeySequence,
+    QActionGroup,
+    QColor,
+    QIntValidator,
+    QShortcut,
+    QTextFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
+    QFont,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QMenu,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QSizePolicy,
+    QSplitter,
+    QToolButton,
+    QStackedWidget,
+    QWidgetAction,
+    QVBoxLayout,
+    QWidget,
+)
+from app.framing import DEFAULT_SETTLE_MS, FrameAssembler
+from app.protocol import (
+    TEXT_ENCODINGS,
+    append_checksum,
+    ascii_str_to_bytes,
+    bytes_to_ascii_str,
+    bytes_to_hex_str,
+    decode_text,
+    encode_text,
+    hex_str_to_bytes,
+    HexFormatError,
+)
+from app import __version__
+from app import update as update_check
+from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app.log_sink import LogSink
+from app.serial_worker import SerialWorker, list_serial_ports
+from ui import theme
+from ui.auto_reply_dialog import AutoReplyDialog
+from ui.autosave_dialog import AutoSaveDialog
+from ui.history_dialog import HistoryDialog
+from ui.port_settings_dialog import PortSettingsDialog
+from ui.quick_send_panel import RAIL_W, QuickSendPanel
+from ui.retranslate import retranslate_ui
+from ui.menus import build_menu
+from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
+from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_rx_frames, on_clear, on_received, recolor_rx_view, snapshot_rx_fragments
+from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
+from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
+from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
+                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
+                        SPLIT_MANUAL, _fixed_row, build_connection_row,
+                        build_data_panes, build_send_group, build_status_bar)
+from app import i18n
+from app.i18n import hex_error_message, tr
+from app.config import log_dir
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
+from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
+from app.stats import SessionStats
+BYTESIZE_KEYS = [5, 6, 7, 8]
+FLOW_KEYS = ["none", "xonxoff", "rtscts"]
+PARITY_KEYS = ["N", "O", "E", "M", "S"]
+STOPBITS_KEYS = [1, 1.5, 2]
+def serial_params(win) -> dict:
+    "serial params"
+    """Collect the parameter widgets into pyserial open_port kwargs (T1)."""
+    flow = FLOW_KEYS[win.flow_combo.currentIndex()]
+    return {
+        "bytesize": BYTESIZE_KEYS[win.dbits_combo.currentIndex()],
+        "parity": PARITY_KEYS[win.parity_combo.currentIndex()],
+        "stopbits": STOPBITS_KEYS[win.stopbits_combo.currentIndex()],
+        "rtscts": flow == "rtscts",
+        "xonxoff": flow == "xonxoff",
+    }
+
+def baud_value(win) -> int:
+    "baud value"
+    try:
+        return int(win.baud_combo.currentText().strip())
+    except ValueError:
+        return 115200
+
+def check_baud(win, text: str) -> None:
+    "check baud"
+    """Mark the baud box invalid (red border) when the typed value is not usable."""
+    s = (text or "").strip()
+    ok = s.isdigit() and 1 <= int(s) <= 12000000
+    if bool(win.baud_combo.property("invalid")) != (not ok):
+        win.baud_combo.setProperty("invalid", not ok)
+        win.baud_combo.style().unpolish(win.baud_combo)
+        win.baud_combo.style().polish(win.baud_combo)
+
+def check_hex_input(win) -> None:
+    "check hex input"
+    """Live-validate the TX box in HEX mode: red border + tooltip (U36)."""
+    if win.tx_fmt_combo.currentIndex() != 0:
+        win.tx_edit.setStyleSheet("")
+        win.tx_edit.setToolTip(tr("tx.input.tip.ascii"))   # U86
+        return
+    try:
+        hex_str_to_bytes(win.tx_edit.toPlainText())
+    except HexFormatError as exc:
+        win.tx_edit.setStyleSheet(f"border: 1px solid {theme.level_color('error')};")
+        win.tx_edit.setToolTip(hex_error_message(exc))
+        return
+    win.tx_edit.setStyleSheet("")
+    win.tx_edit.setToolTip(tr("tx.hex.tip"))
+
+def encoding(win) -> str:
+    "encoding"
+    """Currently selected text encoding (T7)."""
+    idx = win.encoding_combo.currentIndex()
+    return TEXT_ENCODINGS[idx] if 0 <= idx < len(TEXT_ENCODINGS) else "ascii"
+
+def format_rx(win, data: bytes) -> str:
+    "format rx"
+    mode = win.rx_fmt_combo.currentIndex()
+    if mode == RX_HEX:
+        return bytes_to_hex_str(data)
+    if mode == RX_ASCII:
+        return decode_text(data, win._encoding())
+    hex_s = bytes_to_hex_str(data)
+    text_s = decode_text(data, win._encoding())
+    return f"{hex_s} | {text_s}"
+
+def ts_prefix(win, ts: float) -> str:
+    "ts prefix"
+    """'[04:02:10.456] ' when the timestamp switch is on, '' when it is off (U96)."""
+    if not win.ts_check.isChecked():
+        return ""
+    wall = ts + win._clock_offset
+    ms = int((wall - int(wall)) * 1000)
+    return time.strftime(f"[%H:%M:%S.{ms:03d}] ", time.localtime(wall))
+
+def split_threshold_ms(win) -> float | None:
+    "split threshold ms"
+    """Return current split threshold in ms, or None if splitting off."""
+    mode = win.split_combo.currentIndex()
+    if mode != SPLIT_MANUAL and mode != SPLIT_AUTO:
+        return None
+    if mode == SPLIT_MANUAL:
+        try:
+            return max(0.0, float(win.split_ms_edit.text().strip()))
+        except ValueError:
+            return None
+    # auto: 3.5-char rule (Modbus RTU), with 2 ms USB clustering floor
+    try:
+        baud = int(win.baud_combo.currentText().strip())
+    except ValueError:
+        return None
+    char_ms = 10.0 / baud * 1000.0  # 8N1: one char = 10 bits
+    # 10 ms floor: below that, USB chunk delivery (not the wire) decides (U57)
+    return max(3.5 * char_ms, 10.0)
+
+def on_split_mode_changed(win, index: int):
+    "on split mode changed"
+    win._flush_rx_frames()   # don't lose a half-collected frame (U57)
+    if index == SPLIT_MANUAL:
+        win.split_slot.setCurrentIndex(1)
+        win.split_slot.setVisible(True)
+    elif index == SPLIT_HEADER:
+        win.split_slot.setCurrentIndex(2)
+        win.split_slot.setVisible(True)
+    else:
+        # U95: in auto/off mode the slot held a hint that repeated the combo's own
+        # label and read like stray text, so the slot simply goes away.
+        win.split_slot.setCurrentIndex(0)
+        win.split_slot.setVisible(False)
+
+def on_header_changed(win, text: str):
+    "on header changed"
+    if text.strip() and win.split_combo.currentIndex() != SPLIT_HEADER:
+        win.split_combo.setCurrentIndex(SPLIT_HEADER)
+
+def on_tx_fmt_changed(win, index: int):
+    "on tx fmt changed"
+    win._tx_mod_group.setVisible(index == 1)
+    win._update_input_placeholder()   # U86: hint follows the send format
+
+def newline_bytes(win) -> bytes:
+    "newline bytes"
+    """U112: the bytes the "line ending" picker appends (ASCII mode only)."""
+    index = min(max(0, win.nl_combo.currentIndex()), len(win.NEWLINE_KEYS) - 1)
+    return win.NEWLINE_BYTES[win.NEWLINE_KEYS[index]]
+
+def persist_newline(win, _index: int = 0) -> None:
+    "persist newline"
+    key = win.NEWLINE_KEYS[min(max(0, win.nl_combo.currentIndex()), 3)]
+    save_config({"newline": key})      # U109: save_config merges, other keys survive
+
+def refresh_tx_settings_chip(win) -> None:
+    "refresh tx settings chip"
+    """U121: keep the "HEX · 无" chip in step with the two pickers it hides."""
+    fmt = "HEX" if win.tx_fmt_combo.currentIndex() == 0 else "ASCII"
+    win.tx_settings_btn.setText("%s · %s" % (fmt, win.checksum_combo.currentText()))
+
+def update_input_placeholder(win) -> None:
+    "update input placeholder"
+    """Keep the send box and the frame-header box hints in step with the format (U86/U93/U94)."""
+    if not hasattr(win, "tx_edit"):
+        return          # the format row is built before the input box
+    hex_mode = win.tx_fmt_combo.currentIndex() == 0
+    win.tx_edit.setPlaceholderText(tr("tx.placeholder.hex" if hex_mode else "tx.placeholder.ascii"))
+    if hasattr(win, "header_edit"):
+        win.header_edit.setPlaceholderText(
+            tr("header.placeholder.hex" if hex_mode else "header.placeholder.ascii"))
