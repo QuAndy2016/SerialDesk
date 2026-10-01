@@ -12,7 +12,19 @@
 
 *Built on **PySide6 + PySerial**, for embedded, motor-control and industrial-control engineers.*
 
-> **Language:** This page is in Chinese by default — the English version is in the collapsible section at the bottom: click **English version — click to expand**.
+**下载 / Download:** [Windows x64 安装包 · installer](https://github.com/QuAndy2016/SerialDesk/releases/latest) · [便携 zip · portable zip](https://github.com/QuAndy2016/SerialDesk/releases/latest) · [源代码 · source](https://github.com/QuAndy2016/SerialDesk)
+
+**Language:** 中文（本页）· [English](#english-version) — the full English README is the collapsible block at the bottom.
+
+---
+
+## What is it (English)
+
+A cross-platform serial debugging tool for embedded, motor-control and industrial-control engineers, built on **PySide6 + PySerial**: HEX and ASCII views, framing, timestamps, CRC16 / CRC32 / SUM8, quick-send banks, command sequences, file transfer, receive logs that save themselves, and a UI in Chinese and English — shipped as a single-file Windows installer or a portable zip.
+
+**Download:** [Windows x64 · installer](https://github.com/QuAndy2016/SerialDesk/releases/latest) — no Python needed. The exe is unsigned, so Windows may warn on first run; the three-step fix is in ***Download for Windows*** below.
+
+**Full English README** → [click here](#english-version) (or scroll to the bottom of this page).
 
 ---
 
@@ -164,6 +176,8 @@ Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issu
 MIT — see [LICENSE](LICENSE).
 
 ---
+
+<a id="english-version" name="english-version"></a>
 
 <details>
 <summary><b>🇬🇧 English version — click to expand</b></summary>
