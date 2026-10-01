@@ -129,6 +129,45 @@ def flush_rx_frames(win: MainWindow) -> None:
     if win._frames.has_pending():
         win._frame_timer.start(int(win._frames.settle_ms))
 
+RX_STORE_MAX = 40000   # U163b: fragments kept so the RX/TX view filter can rebuild
+
+
+def _rx_store(win: MainWindow) -> list:
+    """The bounded (text, kind) stream that backs view filtering (U163b)."""
+    store = getattr(win, "_rx_store", None)
+    if store is None:
+        store = []
+        win._rx_store = store
+    return store
+
+
+def _insert_rx_fragment(win: MainWindow, text: str, kind: int) -> None:
+    """Insert one fragment with the colour its class calls for (U62/U163b)."""
+    cursor = win.rx_view.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.End)
+    fmt = QTextCharFormat()
+    if kind == 2:
+        fmt.setForeground(QColor(theme.meta_color()))
+    elif kind == 1:
+        fmt.setForeground(QColor(theme.tx_color()))
+    else:
+        fmt.setForeground(QColor(theme.text_color()))
+    try:
+        fmt.setProperty(QTextFormat.Property.UserProperty, kind)
+    except (AttributeError, TypeError):
+        pass
+    cursor.insertText(text, fmt)
+
+
+def _frag_visible(win: MainWindow, kind: int) -> bool:
+    """Whether a fragment survives the active view filter (U163b)."""
+    mode = getattr(win, "_rx_filter", 0)
+    if mode == 0:
+        return True
+    tx_line = bool(getattr(win, "_cur_line_tx", False))
+    return (not tx_line) if mode == 1 else tx_line
+
+
 def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:
     "emit rx text"
     """Insert text into the receive pane and mirror it to the log.
@@ -150,22 +189,47 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
         if log:
             win._log_append(text)
         return
-    cursor = win.rx_view.textCursor()
-    cursor.movePosition(QTextCursor.MoveOperation.End)
-    fmt = QTextCharFormat()
-    if kind == 2:
-        fmt.setForeground(QColor(theme.meta_color()))
-    elif kind == 1:
-        fmt.setForeground(QColor(theme.tx_color()))
+    store = _rx_store(win)
+    store.append((text, kind))
+    if len(store) > RX_STORE_MAX:
+        del store[:len(store) - RX_STORE_MAX]
+    if text == "\n" or kind:
+        win._cur_line_tx = (kind == 1)
     else:
-        fmt.setForeground(QColor(theme.text_color()))
-    try:
-        fmt.setProperty(QTextFormat.Property.UserProperty, kind)
-    except (AttributeError, TypeError):
-        pass
-    cursor.insertText(text, fmt)
+        win._cur_line_tx = False
+    if _frag_visible(win, kind):
+        _insert_rx_fragment(win, text, kind)
     if log:
         win._log_append(text)
+
+
+def rebuild_rx_view(win: MainWindow) -> None:
+    "rebuild rx view"
+    """Re-render the pane from the fragment store under the active filter (U163b)."""
+    if not hasattr(win, "rx_view"):
+        return
+    store = _rx_store(win)
+    lines = [[]]
+    for text, kind in store:
+        if text == "\n":
+            lines.append([(text, kind)])
+        else:
+            lines[-1].append((text, kind))
+    mode = getattr(win, "_rx_filter", 0)
+    win.rx_view.clear()
+    for line in lines:
+        tx_line = any(k == 1 for _, k in line)
+        if (mode == 1 and tx_line) or (mode == 2 and not tx_line):
+            continue
+        for text, kind in line:
+            _insert_rx_fragment(win, text, kind)
+
+
+def on_filter_changed(win: MainWindow, index: int) -> None:
+    "on filter changed"
+    """Switch the RX/TX view filter and rebuild the pane (U163b)."""
+    win._rx_filter = int(index)
+    rebuild_rx_view(win)
 
 def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> None:
     "append rx group"
@@ -296,6 +360,8 @@ def on_clear(win: MainWindow):
     win._frames.reset()
     win._last_ts = None
     win._rx_pause_buf = []      # U160: a pause buffer must not survive a clear
+    win._rx_store = []          # U163b: the filter store goes with the display
+    win._cur_line_tx = False
     win.rx_view.clear()
     win._line_is_tx = False
     win._cap_warned = False

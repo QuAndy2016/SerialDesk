@@ -227,3 +227,26 @@ def test_focus_inside_row_selects_it(app, win):
     app.processEvents()
     assert bool(entry["widget"].property("selected")) is True
     panel.clear_selection()
+
+
+def test_rx_view_filter_hides_tx_or_rx(app, win):
+    # U163b: the RX/TX filter rebuilds the pane from the fragment store
+    win.rx_view.clear()
+    win._rx_store = []
+    win._emit_rx_text("\n")
+    win._emit_rx_text("<- ", meta=True)
+    win._emit_rx_text("RXLINE")
+    win._emit_rx_text("\n", tx=True)
+    win._emit_rx_text("-> ", tx=True, meta=True)
+    win._emit_rx_text("TXLINE", tx=True)
+    win._on_rx_filter_changed(1)          # RX only
+    app.processEvents()
+    text = win.rx_view.toPlainText()
+    assert "RXLINE" in text and "TXLINE" not in text
+    win._on_rx_filter_changed(2)          # TX only
+    app.processEvents()
+    text = win.rx_view.toPlainText()
+    assert "TXLINE" in text and "RXLINE" not in text
+    win._on_rx_filter_changed(0)          # back to all
+    app.processEvents()
+    assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()

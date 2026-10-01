@@ -549,6 +549,13 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     # switches, then the log actions; Clear stays alone at the far right (U95's
     # rule for destructive actions), which is what the stretch is there for.
     # The in-row Auto-save switch is gone (U97) - the settings dialog owns it.
+    win.rx_filter_combo = QComboBox()                          # U163b: all / RX only / TX only
+    win.rx_filter_combo.addItems([tr("rx.filter.all"), tr("rx.filter.rx"), tr("rx.filter.tx")])
+    win.rx_filter_combo.setCurrentIndex(0)
+    win.rx_filter_combo.setToolTip(tr("rx.filter.tip"))
+    win.rx_filter_combo.currentIndexChanged.connect(win._on_rx_filter_changed)
+    rx_opts.addWidget(win.rx_filter_combo)
+
     rx_opts.addSpacing(12)
     win.ts_check = QCheckBox(tr("ts.label"))                   # U96: on/off only
     win.ts_check.setChecked(bool(load_config().get("timestamp_on", True)))
