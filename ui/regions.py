@@ -574,6 +574,13 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.pause_check.toggled.connect(win._on_pause_toggled)
     rx_opts.addWidget(win.pause_check)
 
+    rx_opts.addSpacing(12)
+    win.wrap_check = QCheckBox(tr("rx.wrap"))            # U162: soft-wrap toggle
+    win.wrap_check.setToolTip(tr("rx.wrap.tip"))
+    win.wrap_check.setChecked(bool(load_config().get("wrap_on", False)))
+    win.wrap_check.toggled.connect(win._on_wrap_toggled)
+    rx_opts.addWidget(win.wrap_check)
+
     rx_opts.addSpacing(18)
     win.save_log_btn = QPushButton(tr("btn.save_log_quick"))
     win.save_log_btn.setToolTip(tr("log.quick.tip"))
@@ -638,7 +645,9 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     """The read-only receive view; it absorbs all spare height (U70)."""
     win.rx_view = QPlainTextEdit()
     win.rx_view.setReadOnly(True)
-    win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)   # U160-A5: long receive lines scroll horizontally instead of wrapping into mush
+    win.rx_view.setLineWrapMode(
+        QPlainTextEdit.LineWrapMode.WidgetWidth if load_config().get("wrap_on", False)
+        else QPlainTextEdit.LineWrapMode.NoWrap)   # U162: follows the wrap switch (default off = U160-A5)
     win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # U43
     win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why

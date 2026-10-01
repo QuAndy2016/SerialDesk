@@ -177,3 +177,27 @@ def test_panel_toggle_button_is_never_blank(app, win):
     win._on_quick_panel_collapsed(False)
     app.processEvents()
     assert not btn.icon().isNull() and btn.isChecked()
+
+
+def test_wrap_toggle_switches_line_wrap(app, win):
+    # U162-B1: the soft-wrap switch flips qplaintextedit wrap mode both ways
+    from PySide6.QtWidgets import QPlainTextEdit
+    win._on_wrap_toggled(True)
+    app.processEvents()
+    assert win.rx_view.lineWrapMode() == QPlainTextEdit.LineWrapMode.WidgetWidth
+    win._on_wrap_toggled(False)
+    app.processEvents()
+    assert win.rx_view.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
+
+
+def test_clean_copy_strips_timestamps_and_markers(app, win):
+    # U162-B2: the clean copy drops kind-2 (timestamp/marker) fragments
+    from ui.actions_controller import _rx_copy_text
+    win.rx_view.clear()
+    win._emit_rx_text("[00:00:00.000] ", meta=True)
+    win._emit_rx_text("<- ", meta=True)
+    win._emit_rx_text("HELLO")
+    app.processEvents()
+    assert _rx_copy_text(win).strip() == "HELLO"
+    assert _rx_copy_text(win, current_line=True).strip() == "HELLO"
+    assert "<- " in win.rx_view.toPlainText()   # raw still shows the marker

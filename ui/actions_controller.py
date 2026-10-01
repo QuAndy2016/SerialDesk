@@ -293,22 +293,105 @@ def on_pause_toggled(win: MainWindow, checked: bool) -> None:
         win._resume_rx_display()
 
 
+def on_wrap_toggled(win: MainWindow, checked: bool) -> None:
+    "on wrap toggled"
+    """Soft-wrap the receive pane on/off and remember it (U162)."""
+    win.rx_view.setLineWrapMode(
+        QPlainTextEdit.LineWrapMode.WidgetWidth if checked
+        else QPlainTextEdit.LineWrapMode.NoWrap)
+    config = load_config()
+    config["wrap_on"] = bool(checked)
+    save_config(config)
+
+
+def _frag_kind(frag) -> int:
+    """Kind stamped on a fragment: 0 = RX payload, 1 = TX, 2 = timestamp/marker."""
+    prop = frag.charFormat().property(QTextFormat.Property.UserProperty)
+    return 0 if prop is None else int(prop)
+
+
+def _rx_copy_text(win: MainWindow, *, selection_only: bool = False,
+                  current_line: bool = False) -> str:
+    """Rebuild receive text for the clipboard without timestamps/markers (U162).
+
+    Walks the document fragment by fragment and keeps only payload fragments
+    (kinds 0/1); the dim timestamp + direction fragments (kind 2) are dropped,
+    so the clipboard gets the data, not the pane decoration.
+    """
+    cursor = win.rx_view.textCursor()
+    doc = cursor.document()
+    sel = None
+    if current_line:
+        blocks = [cursor.block()]
+    elif selection_only:
+        if not cursor.hasSelection():
+            return ""
+        sel = (cursor.selectionStart(), cursor.selectionEnd())
+        blocks = []
+        block, last = doc.findBlock(sel[0]), doc.findBlock(sel[1])
+        while block.isValid():
+            blocks.append(block)
+            if block == last:
+                break
+            block = block.next()
+    else:
+        blocks = []
+        block = doc.firstBlock()
+        while block.isValid():
+            blocks.append(block)
+            block = block.next()
+    lines = []
+    for block in blocks:
+        piece = []
+        it = block.begin()
+        while not it.atEnd():
+            frag = it.fragment()
+            if frag.isValid():
+                start, end = frag.position(), frag.position() + frag.length()
+                if sel is not None:
+                    start, end = max(start, sel[0]), min(end, sel[1])
+                if end > start and _frag_kind(frag) in (0, 1):
+                    piece.append(frag.text()[start - frag.position():end - frag.position()])
+            it += 1
+        text = "".join(piece)
+        if text.strip():
+            lines.append(text)
+    return "\n".join(lines)
+
+
+def _rx_copy_raw(win: MainWindow) -> None:
+    """Copy exactly what is shown - timestamps and markers included (U162)."""
+    cursor = win.rx_view.textCursor()
+    text = (cursor.selectedText().replace("\u2029", "\n") if cursor.hasSelection()
+            else win.rx_view.toPlainText())
+    QApplication.clipboard().setText(text)
+    win._notify(tr("rx.copied_all"), "info", ms=2500)
+
+
+def _copy_rx(win: MainWindow, *, selection_only: bool = False,
+             current_line: bool = False) -> None:
+    """Copy payload text (no timestamps/markers) and confirm it (U162)."""
+    QApplication.clipboard().setText(
+        _rx_copy_text(win, selection_only=selection_only, current_line=current_line))
+    win._notify(tr("rx.copied_line") if current_line else tr("rx.copied_clean"),
+                "info", ms=2500)
+
+
 def open_rx_context_menu(win: MainWindow, pos) -> None:
     "open rx context menu"
-    """Receive-pane right-click: copy selection / copy all (U160)."""
+    """Receive-pane right-click: clean / line / raw copy (U162)."""
     menu = QMenu(win.rx_view)
-    copy_sel = menu.addAction(tr("menu.copy_sel"))
+    copy_sel = menu.addAction(tr("menu.copy_sel_clean"))
     copy_sel.setEnabled(win.rx_view.textCursor().hasSelection())
-    copy_sel.triggered.connect(lambda: win.rx_view.copy())
-    copy_all = menu.addAction(tr("menu.copy_all"))
-    copy_all.triggered.connect(lambda: _copy_all_rx(win))
+    copy_sel.triggered.connect(lambda: _copy_rx(win, selection_only=True))
+    copy_line = menu.addAction(tr("menu.copy_line"))
+    copy_line.triggered.connect(lambda: _copy_rx(win, current_line=True))
+    copy_all = menu.addAction(tr("menu.copy_all_clean"))
+    copy_all.triggered.connect(lambda: _copy_rx(win))
+    menu.addSeparator()
+    copy_raw = menu.addAction(tr("menu.copy_raw"))
+    copy_raw.triggered.connect(lambda: _rx_copy_raw(win))
     menu.exec(win.rx_view.mapToGlobal(pos))
-
-
-def _copy_all_rx(win: MainWindow) -> None:
-    """Copy the whole receive pane to the clipboard (U160)."""
-    QApplication.clipboard().setText(win.rx_view.toPlainText())
-    win._notify(tr("rx.copied_all"), "info", ms=2500)
 
 
 def update_counts(win: MainWindow):
@@ -474,7 +557,7 @@ def apply_accessible_names(win: MainWindow) -> None:
     names = ("port_combo", "refresh_btn", "baud_combo", "open_btn", "rx_fmt_combo",
              "params_summary", "_settings_btn", "_panel_btn", "split_combo",
              "split_ms_edit", "header_edit", "ts_check", "echo_tx_check",
-             "autoscroll_check", "save_log_btn", "save_log_as_btn", "clear_btn",
+             "autoscroll_check", "wrap_check", "save_log_btn", "save_log_as_btn", "clear_btn",
              "rx_view", "tx_edit", "nl_combo", "escape_check", "send_btn",
              "history_btn", "repeat_btn", "repeat_ms", "send_file_btn",
              "tx_settings_btn")
@@ -497,7 +580,7 @@ def setup_tab_order(win: MainWindow) -> None:
     """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
     names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
              "split_combo", "split_ms_edit", "header_edit", "ts_check",
-             "echo_tx_check", "autoscroll_check",
+             "echo_tx_check", "autoscroll_check", "wrap_check",
              "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
              "nl_combo", "escape_check",   # U121: the two pickers live in a popup
              "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",

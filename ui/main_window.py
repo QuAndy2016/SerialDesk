@@ -94,7 +94,7 @@ from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minim
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
-from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
+from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, on_wrap_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
 from ui.startup_controller import build_everything, init_language_and_log, init_state, init_timers, init_worker, restore_settings
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
@@ -289,6 +289,8 @@ class MainWindow(QMainWindow):
     def _open_rx_context_menu(self, pos) -> None: return open_rx_context_menu(self, pos)
 
     def _on_timestamp_toggled(self, checked: bool) -> None: return on_timestamp_toggled(self, checked)
+
+    def _on_wrap_toggled(self, checked: bool) -> None: return on_wrap_toggled(self, checked)
 
     def _on_reconnect_toggled(self, checked: bool) -> None: return on_reconnect_toggled(self, checked)
 
