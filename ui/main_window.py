@@ -12,9 +12,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
-)
-
-from PySide6.QtGui import (
     QAction,
     QKeySequence,
     QActionGroup,
@@ -27,6 +24,7 @@ from PySide6.QtGui import (
     QTextDocument,
     QFont,
 )
+
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -65,9 +63,18 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app import __version__
-from app import update as update_check
-from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app import (
+    __version__,
+    update as update_check,
+    i18n,
+)
+from app.config import (
+    CONFIG_PATH,
+    data_dir,
+    load_config,
+    log_dir,
+    save_config,
+)
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -85,7 +92,7 @@ from ui.connection_controller import ensure_port, notify, on_opened_changed, on_
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_threshold_ms, ts_prefix, update_input_placeholder
 from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minimums, fit_settings_btn, fit_tx_edit_height, give_data_area_the_room, lock_control_widths, row_need, saved_sizes, widest_row
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
-from ui.update_controller import init_update_check, on_update_found, probe_updates, probe_updates_worker, show_update
+from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
 from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_repeat_interval, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
 from ui.startup_controller import build_everything, init_language_and_log, init_state, init_timers, init_worker, restore_settings
@@ -93,7 +100,6 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
-from app import i18n
 from app.i18n import hex_error_message, tr
 
 def resource_path(rel: str) -> str:
@@ -134,7 +140,6 @@ PARITY_KEYS = ["N", "O", "E", "M", "S"]
 STOPBITS_KEYS = [1, 1.5, 2]
 FLOW_KEYS = ["none", "xonxoff", "rtscts"]
 HISTORY_MAX = 50
-from app.config import log_dir
 
 LOG_DIR = log_dir()   # U34: per-user (or portable) logs, not next to the bundle
 LOG_MAX_BYTES = 2 * 1024 * 1024
@@ -283,9 +288,13 @@ class MainWindow(QMainWindow):
 
     def _probe_updates(self) -> None: return probe_updates(self)
 
-    def _probe_updates_worker(self) -> None: return probe_updates_worker(self)
+    def _probe_updates_worker(self, manual: bool = False) -> None:
+        return probe_updates_worker(self, manual)
 
     def _on_update_found(self, tag: str) -> None: return on_update_found(self, tag)
+
+    def _on_update_checked(self, ok: bool, tag: str) -> None:
+        return on_update_checked(self, ok, tag)
 
     def _show_update(self, tag: str, notify: bool) -> None: return show_update(self, tag, notify)
 

@@ -11,8 +11,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
-)
-from PySide6.QtGui import (
     QAction,
     QKeySequence,
     QActionGroup,
@@ -62,9 +60,18 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app import __version__
-from app import update as update_check
-from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app import (
+    __version__,
+    update as update_check,
+    i18n,
+)
+from app.config import (
+    CONFIG_PATH,
+    data_dir,
+    load_config,
+    log_dir,
+    save_config,
+)
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -74,9 +81,7 @@ from ui.history_dialog import HistoryDialog
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from ui.retranslate import retranslate_ui
-from app import i18n
 from app.i18n import hex_error_message, tr
-from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats

@@ -11,8 +11,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
-)
-from PySide6.QtGui import (
     QAction,
     QKeySequence,
     QActionGroup,
@@ -62,9 +60,18 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app import __version__
-from app import update as update_check
-from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app import (
+    __version__,
+    update as update_check,
+    i18n,
+)
+from app.config import (
+    CONFIG_PATH,
+    data_dir,
+    load_config,
+    log_dir,
+    save_config,
+)
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -86,9 +93,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
-from app import i18n
 from app.i18n import hex_error_message, tr
-from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
@@ -100,12 +105,14 @@ if TYPE_CHECKING:
 class _UpdateProbe(QObject):
     """U127: carries the worker thread's answer back onto the GUI thread."""
 
-    found = Signal(str)
+    found = Signal(str)          # a newer tag exists (startup or manual)
+    checked = Signal(bool, str)  # manual probe done: (ok, tag_or_reason)
 def init_update_check(win: MainWindow) -> None:
     "init update check"
     """A quiet look at the latest release; nothing is sent about the user."""
     win._update_probe = _UpdateProbe(win)
     win._update_probe.found.connect(win._on_update_found)
+    win._update_probe.checked.connect(win._on_update_checked)   # N10 manual probe
 
     win._update_act = QAction(tr("update.menu", v=""), win)   # U127
     win._update_act.setVisible(False)
@@ -120,26 +127,48 @@ def init_update_check(win: MainWindow) -> None:
         lambda on: save_config({"check_updates": bool(on)}))
     win._settings_menu.addAction(win._update_check_act)
 
+    # N10: a manual "check now" that always reports back (menu item after the toggle)
+    win._update_now_act = QAction(tr("update.check.now"), win)
+    win._update_now_act.triggered.connect(lambda: probe_updates(win, manual=True))
+    win._settings_menu.addAction(win._update_now_act)
+
     known = str(load_config().get("update_available") or "")
     if known and update_check.is_newer(known, __version__):
         win._show_update(known, notify=False)
     if win._update_check_act.isChecked():
         QTimer.singleShot(2500, win._probe_updates)      # let the window settle
 
-def probe_updates(win: MainWindow) -> None:
-    "probe updates"
+def probe_updates(win: MainWindow, manual: bool = False) -> None:
+    """Start a probe; manual=True reports the outcome through `checked`."""
+    if manual:
+        win._notify(tr("update.checking"), "info", ms=3000)
     import threading
-    threading.Thread(target=win._probe_updates_worker, daemon=True).start()
+    threading.Thread(target=win._probe_updates_worker, args=(manual,),
+                     daemon=True).start()
 
-def probe_updates_worker(win: MainWindow) -> None:
-    "probe updates worker"
+def probe_updates_worker(win: MainWindow, manual: bool = False) -> None:
     """Worker thread: one GET, five-second timeout, no exceptions escape."""
     try:
-        tag = update_check.fetch_latest_tag()
+        tag = update_check.fetch_latest_tag(raise_on_error=manual)
     except Exception:            # noqa: BLE001 - a check must never break the app
+        if manual:
+            win._update_probe.checked.emit(False, "")
         return
-    if tag:
+    if manual:
+        win._update_probe.checked.emit(True, tag)
+    elif tag:
         win._update_probe.found.emit(tag)      # queued onto the GUI thread
+
+def on_update_checked(win: MainWindow, ok: bool, tag: str) -> None:
+    """N10: a manual probe came back - tell the user what it found."""
+    if not ok:
+        win._notify(tr("update.fail"), "warn", ms=6000)
+        return
+    if tag and update_check.is_newer(tag, __version__):
+        save_config({"update_available": tag, "update_notified": tag})
+        win._show_update(tag, notify=True)
+    else:
+        win._notify(tr("update.none"), "info", ms=5000)
 
 def on_update_found(win: MainWindow, tag: str) -> None:
     "on update found"

@@ -6,8 +6,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
-)
-from PySide6.QtGui import (
     QAction,
     QKeySequence,
     QActionGroup,
@@ -58,9 +56,18 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app import __version__
-from app import update as update_check
-from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app import (
+    __version__,
+    update as update_check,
+    i18n,
+)
+from app.config import (
+    CONFIG_PATH,
+    data_dir,
+    load_config,
+    log_dir,
+    save_config,
+)
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -74,9 +81,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
-from app import i18n
 from app.i18n import hex_error_message, tr
-from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
@@ -167,6 +172,12 @@ def _build_config_menu(win: MainWindow) -> None:
     win._cfg_import_act.triggered.connect(win.on_import_config)
     win._cfg_menu.addAction(win._cfg_export_act)
     win._cfg_menu.addAction(win._cfg_import_act)
+
+    # N4: one-click access to the log folder (哪都找不到入口 -> QDesktopServices)
+    win._open_log_dir_act = QAction(tr("menu.open_log_dir"), win)
+    win._open_log_dir_act.triggered.connect(
+        lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log_dir())))
+    win._cfg_menu.addAction(win._open_log_dir_act)
 
 
 def _build_io_section(win: MainWindow) -> None:

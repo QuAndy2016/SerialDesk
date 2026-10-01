@@ -11,8 +11,6 @@ from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
-)
-from PySide6.QtGui import (
     QAction,
     QKeySequence,
     QActionGroup,
@@ -62,9 +60,18 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app import __version__
-from app import update as update_check
-from app.config import CONFIG_PATH, data_dir, load_config, log_dir, save_config
+from app import (
+    __version__,
+    update as update_check,
+    i18n,
+)
+from app.config import (
+    CONFIG_PATH,
+    data_dir,
+    load_config,
+    log_dir,
+    save_config,
+)
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
 from ui import theme
@@ -82,9 +89,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
-from app import i18n
 from app.i18n import hex_error_message, tr
-from app.config import log_dir
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
@@ -180,7 +185,7 @@ def signals_html(win: MainWindow, sig: dict) -> str:
 
 def refresh_ports(win: MainWindow):
     "refresh ports"
-    current = win.port_combo.currentText()
+    current = win.port_combo.currentText() or str(load_config().get("last_port") or "")   # N12
     win.port_combo.blockSignals(True)
     win.port_combo.clear()
     for dev, desc in list_serial_ports():
@@ -217,6 +222,7 @@ def toggle_open(win: MainWindow):
         ok = win.worker.open_port(device, baud, **win._serial_params())
         if ok:
             win.refresh_timer.stop()  # keep port list stable while open
+            save_config({"last_port": device})   # N12: reuse it next launch
 
 def on_opened_changed(win: MainWindow, opened: bool):
     "on opened changed"

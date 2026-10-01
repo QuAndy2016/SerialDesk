@@ -53,8 +53,12 @@ def is_newer(candidate: str, current: str) -> bool:
     return a > b
 
 
-def fetch_latest_tag(timeout: float = TIMEOUT_S) -> str:
-    """The latest release tag, or "" when it cannot be determined (never raises)."""
+def fetch_latest_tag(timeout: float = TIMEOUT_S, raise_on_error: bool = False) -> str:
+    """The latest release tag, or "" when it cannot be determined.
+
+    ``raise_on_error`` lets a manual check tell "no update" apart from
+    "network/API failure" (the startup probe wants the silent behaviour).
+    """
     request = urllib.request.Request(
         RELEASES_API,
         headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"},
@@ -62,7 +66,9 @@ def fetch_latest_tag(timeout: float = TIMEOUT_S) -> str:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8", "replace"))
-    except (urllib.error.URLError, OSError, ValueError, json.JSONDecodeError):
+    except (urllib.error.URLError, OSError, ValueError, json.JSONDecodeError) as exc:
+        if raise_on_error:
+            raise
         return ""
     tag = payload.get("tag_name") if isinstance(payload, dict) else None
     return str(tag or "")
