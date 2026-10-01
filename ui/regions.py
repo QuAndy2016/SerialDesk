@@ -196,6 +196,7 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._panel_btn.clicked.connect(
         lambda: win._on_quick_panel_collapsed(not win._panel_btn.isChecked()))
     bar.addWidget(win._panel_btn)
+    win._sync_panel_btn(False)   # U161: initial icon so the button is not blank on first open
     # U114-D4: one control height across the connection row
     for _w in (win.port_combo, win.refresh_btn, win.baud_combo, win.open_btn,
                win.rx_fmt_combo, win.params_summary, win._settings_btn):

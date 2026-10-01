@@ -220,6 +220,23 @@ class MainWindow(QMainWindow):
         """Settings menu construction (theme, language, config, panel, update, about, shortcuts). (implementation in ui.menus)."""
         build_menu(self)
 
+    def _sync_panel_btn(self, folded: bool | None = None) -> None:
+        """Keep the panel-toggle button in sync with the panel state and theme (U161).
+
+        Sets both the checked state and the arrow icon (left = panel expanded,
+        right = panel folded) so the button is never blank on first paint and it
+        follows theme switches. Called once at build time, on every fold/unfold,
+        and after a theme change.
+        """
+        if not hasattr(self, "_panel_btn"):
+            return
+        if folded is None:
+            folded = self.quick_panel.is_folded() if hasattr(self, "quick_panel") else False
+        self._panel_btn.setChecked(not folded)
+        suffix = "dark" if theme.resolved_dark() else "light"
+        name = "arrow_right_%s.png" % suffix if folded else "arrow_left_%s.png" % suffix
+        self._panel_btn.setIcon(QIcon(resource_path("assets/" + name)))
+
     def _on_quick_panel_collapsed(self, collapsed: bool) -> None:
         """Fold the quick-send panel away (or bring it back) and remember it (U88)."""
         # U106: keep the panel widget alive in its rail state instead of hiding it, so
@@ -227,12 +244,7 @@ class MainWindow(QMainWindow):
         self.quick_panel.set_folded(collapsed)
         if hasattr(self, "_quick_panel_act"):
             self._quick_panel_act.setChecked(not collapsed)
-        if hasattr(self, "_panel_btn"):
-            self._panel_btn.setChecked(not collapsed)
-            self._panel_btn.setIcon(QIcon(resource_path(
-                "assets/arrow_left_%s.png" % ("dark" if theme.resolved_dark() else "light")))
-                if not collapsed else QIcon(resource_path(
-                    "assets/arrow_right_%s.png" % ("dark" if theme.resolved_dark() else "light"))))
+        self._sync_panel_btn(collapsed)   # U161: one place owns the button look
         save_config({"quick_panel_collapsed": bool(collapsed)})
         self._fit_minimum_width()
         self._notify(tr("qs.collapsed") if collapsed else tr("qs.expanded"),

@@ -165,3 +165,15 @@ def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
     win.repeat_btn.setChecked(True)
     assert not win._repeat_timer.isActive()
     assert not win.repeat_btn.isChecked()
+
+
+def test_panel_toggle_button_is_never_blank(app, win):
+    # U161: the fold button used to render blank until the first manual toggle
+    btn = win._panel_btn
+    assert not btn.icon().isNull()          # icon present right after build
+    win._on_quick_panel_collapsed(True)
+    app.processEvents()
+    assert not btn.icon().isNull() and not btn.isChecked()
+    win._on_quick_panel_collapsed(False)
+    app.processEvents()
+    assert not btn.icon().isNull() and btn.isChecked()

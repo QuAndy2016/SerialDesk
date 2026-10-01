@@ -161,6 +161,7 @@ def apply_defaults(win: MainWindow) -> None:
     win.quick_panel.set_folded(False)      # U88/U106: defaults = panel shown again
     if hasattr(win, "_quick_panel_act"):
         win._quick_panel_act.setChecked(True)
+    win._sync_panel_btn(False)   # U161: keep the toggle button in step with the reset
     win.quick_panel.reload_from_config()   # seeds the default rows when config is gone
     win._update_params_summary()
 
@@ -256,6 +257,7 @@ def set_theme_system(win: MainWindow):
     win._recolor_status_light()
     theme.apply_native_dark(win, bool(theme.resolved_dark()))
     win._recolor_rx_view()
+    win._sync_panel_btn()
     win._persist_theme("system")
 
 def set_theme_dark(win: MainWindow):
@@ -265,6 +267,7 @@ def set_theme_dark(win: MainWindow):
     win._recolor_status_light()
     theme.apply_native_dark(win, bool(theme.resolved_dark()))
     win._recolor_rx_view()
+    win._sync_panel_btn()
     win._persist_theme("dark")
 
 def set_theme_light(win: MainWindow):
@@ -274,6 +277,7 @@ def set_theme_light(win: MainWindow):
     win._recolor_status_light()
     theme.apply_native_dark(win, bool(theme.resolved_dark()))
     win._recolor_rx_view()
+    win._sync_panel_btn()
     win._persist_theme("light")
 
 def persist_theme(win: MainWindow, choice: str):
