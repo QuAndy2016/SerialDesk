@@ -142,3 +142,26 @@ def test_retranslate_renders_after_every_change(app) -> None:
         i18n.set_language(lang)
         win.retranslate()
     assert win.windowTitle()
+
+def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
+    """Regression (found in v1.6.0 testing): the repeat row was never attached.
+
+    The row was built and filled in, but `act_col.addLayout(repeat_row)` was lost when
+    the action area became a single-line toolbar (v1.5.1), so both controls had no
+    parent and were invisible - the feature was gone with no error anywhere.
+    """
+    from ui.main_window import MainWindow
+
+    win = MainWindow()
+    win.show()
+    for _ in range(4):
+        app.processEvents()
+    for widget, name in ((win.repeat_btn, "repeat_btn"), (win.repeat_ms, "repeat_ms"),
+                         (win.send_btn, "send_btn"), (win.history_btn, "history_btn"),
+                         (win.tx_edit, "tx_edit")):
+        assert widget.parentWidget() is not None, "%s has no parent" % name
+        assert widget.isVisible(), "%s is not visible" % name
+    # with no port open the toggle must refuse to start a loop (U61) and reset itself
+    win.repeat_btn.setChecked(True)
+    assert not win._repeat_timer.isActive()
+    assert not win.repeat_btn.isChecked()

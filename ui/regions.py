@@ -409,6 +409,15 @@ def build_send_group(win) -> None:
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win.repeat_ms.textChanged.connect(win._on_repeat_interval)
     repeat_row.addWidget(win.repeat_ms)
+    # U130-fix: the row was built but never attached to the toolbar, so the repeat
+    # controls had no parent and stayed invisible from v1.5.1 on (the layout became a
+    # single-line toolbar there and this addLayout was lost).
+    tx_act_sep = QFrame()
+    tx_act_sep.setObjectName("vSep")
+    tx_act_sep.setFrameShape(QFrame.Shape.VLine)
+    tx_act_sep.setFixedWidth(1)
+    act_col.addWidget(tx_act_sep)
+    act_col.addLayout(repeat_row)
     act_row = QHBoxLayout()
     act_row.setContentsMargins(0, 2, 0, 0)
     act_row.setSpacing(10)

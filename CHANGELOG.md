@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.6.1] - 2026-10-01
+
+### Fixed
+
+- **Repeat send had silently disappeared**: the "Repeat send" toggle and its interval box were built and filled in,
+  but the line that attached them to the action area was lost when that area became a single-line toolbar (v1.5.1).
+  Both widgets ended up with no parent, so they were never drawn - no error, no placeholder, the feature was just
+  gone. They are back in the toolbar (`Send | History | Repeat send [Interval (ms): 1000]`), and a smoke test now
+  asserts that every send-area control is parented and visible instead of trusting the code.
+
 ## [v1.6.0] - 2026-10-02
 
 ### Changed
