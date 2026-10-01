@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.5.2] - 2026-10-01
+
+### Fixed
+
+- **The send box wrapped a single payload across several lines (U130)**: a 400-character command is one line of data, so
+  wrapping it in the middle - sometimes inside a value - misrepresented it. The input no longer wraps and scrolls
+  horizontally instead; wrapping moves to an explicit option.
+
+
 ## [v1.5.1] - 2026-10-01
 
 ### Fixed

@@ -1250,7 +1250,9 @@ class MainWindow(QMainWindow):
 
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
-        self.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)   # U129
+        # U130: data is one line, even when it is 400 characters long - wrapping it
+        # mid-token was lying about the payload. Long content scrolls horizontally.
+        self.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self._update_input_placeholder()   # U86: keep the format-specific hint
         self.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
         self.tx_edit.textChanged.connect(self._check_hex_input)
