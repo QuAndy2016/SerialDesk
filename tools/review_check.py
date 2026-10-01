@@ -63,10 +63,50 @@ def check_i18n_keys():
 
 
 def check_shortcuts():
-    text = read(os.path.join(ROOT, "ui", "main_window.py"))
-    registered = set(re.findall(r'\("([^"]+)",\s*(?:self\.|lambda)', text))
-    table = set(re.findall(r'\("([^"]+)",\s*"sc\.', text))
-    return sorted(registered - table), sorted(table - registered)
+    """Compare the shortcut reference table with the shortcuts the window really has.
+
+    The old version regexed ui/main_window.py for `("Ctrl+X", self.` - after the window
+    was split into modules the registrations moved to ui/actions_controller.py, so the
+    check kept "passing" while reporting every shortcut as unregistered. Ask the window
+    instead of the source text, and fall back to a static scan only if Qt cannot start.
+    """
+    try:
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtGui import QAction, QShortcut
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance() or QApplication([])
+        from app.shortcuts import HELP_ROWS
+        from ui.main_window import MainWindow
+
+        from PySide6.QtGui import QKeySequence
+
+        win = MainWindow()
+
+        def texts(sequence):
+            """QKeySequence can hold several bindings; "Ctrl+," must not be split on ","."""
+            return [QKeySequence(sequence[i]).toString() for i in range(sequence.count())]
+
+        registered = set()
+        for shortcut in win.findChildren(QShortcut):
+            registered.update(texts(shortcut.key()))
+        for action in win.findChildren(QAction):
+            if not action.shortcut().isEmpty():
+                registered.update(texts(action.shortcut()))
+        win.deleteLater()
+        app.processEvents()
+        table = {row[0].strip() for row in HELP_ROWS}
+        # A row may carry a scope note: those keys are handled by a focus-scoped key
+        # handler (the quick-send panel's Delete), not by a QShortcut, so "no
+        # QShortcut" is correct for them. Anything else unregistered is a real gap.
+        scoped = {row[0].strip() for row in HELP_ROWS if len(row) > 2 and row[2]}
+        missing = sorted(k for k in (table - registered) if k not in scoped)
+        return sorted(registered - table), missing
+    except Exception as exc:            # Qt or the app cannot start: degrade to text
+        text = read(os.path.join(ROOT, "ui", "main_window.py"))
+        registered = set(re.findall(r'\("([^"]+)",\s*(?:self\.|lambda)', text))
+        table = set(re.findall(r'\("([^"]+)",\s*"sc\.', text))
+        return sorted(registered - table), sorted(table - registered) + ["(static scan: %s)" % exc]
 
 
 def check_theme_literals():
@@ -76,33 +116,82 @@ def check_theme_literals():
     return counts
 
 
-def _code_lines(text):
-    """Yield (line_number, line) with module/function docstrings removed."""
-    in_doc = False
-    for num, line in enumerate(text.splitlines(), 1):
-        stripped = line.strip()
-        if stripped.count('"""') == 1:
-            in_doc = not in_doc
+def _docstring_lines(text):
+    """Line numbers covered by a docstring (module, class, function), via the AST.
+
+    The previous heuristic only understood triple-quoted docstrings that start a line,
+    so a one-line `"text"` docstring - the way every extracted module is documented -
+    was reported as hard-coded user-facing text.
+    """
+    import ast
+
+    covered = set()
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return covered
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if in_doc or stripped.startswith('"""'):
+        body = getattr(node, "body", [])
+        if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) \
+                and isinstance(body[0].value.value, str):
+            for line in range(body[0].value.lineno, body[0].value.end_lineno + 1):
+                covered.add(line)
+    return covered
+
+
+def _code_lines(text):
+    """Yield (line_number, line) with docstrings removed."""
+    docs = _docstring_lines(text)
+    for num, line in enumerate(text.splitlines(), 1):
+        if num in docs:
             continue
         yield num, line
 
 
+#: Calls that put text in front of the user: a literal there must go through tr().
+TEXT_SETTERS = (
+    "setText", "setToolTip", "setWindowTitle", "setPlaceholderText", "setTitle",
+    "setLabelText", "setStatusTip", "setWhatsThis", "addItem", "addItems", "showMessage",
+    "setInformativeText", "setDetailedText", "information", "warning", "critical",
+)
+
+
 def check_hardcoded_strings():
+    """User-facing text passed to a widget setter without tr().
+
+    Rewritten to look at call arguments through the AST. The old text heuristic had two
+    problems: it reported docstrings (a one-line `"Settings menu construction"` is not
+    user-facing text) and it missed anything spanning a line break.
+    """
+    import ast
+
+    cjk = re.compile(r"[\u4e00-\u9fff]")
     hits = []
     for path in sources():
+        rel = os.path.relpath(path, ROOT)
         if os.path.basename(path) in ("i18n.py", "config.py", "update.py"):
             continue
-        for num, line in _code_lines(read(path)):
-            stripped = line.strip()
-            if stripped.startswith("#") or "tr(" in line:
+        try:
+            tree = ast.parse(read(path))
+        except SyntaxError as exc:
+            hits.append("%s: syntax error %s" % (rel, exc))
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
                 continue
-            for literal in re.findall(r'"([^"]{2,})"', line):
-                if re.search(r"[\u4e00-\u9fff]", literal) or (
-                        literal[:1].isupper() and " " in literal and literal.endswith((".", "…"))):
-                    hits.append("%s:%d %s" % (os.path.relpath(path, ROOT), num, stripped[:70]))
-                    break
+            name = node.func.attr if isinstance(node.func, ast.Attribute) else (
+                node.func.id if isinstance(node.func, ast.Name) else "")
+            if name not in TEXT_SETTERS:
+                continue
+            for arg in node.args:
+                if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
+                    continue
+                text = arg.value
+                sentence = text[:1].isupper() and " " in text and text.endswith((".", "…"))
+                if len(text) >= 2 and (cjk.search(text) or sentence):
+                    hits.append("%s:%d %s(%r)" % (rel, node.lineno, name, text[:48]))
     return hits
 
 
@@ -229,8 +318,14 @@ def main() -> int:
     print("\n[dynamic] tools/check_ui.py ->", out.splitlines()[-1] if out else "no output")
     problems += 1 if code else 0
 
-    print("\n=== findings to carry into the review: %d mechanical + %s ===" %
-          (problems, "dynamic gate failed" if code else "dynamic gate clean"))
+    # `problems` counts what must be fixed now. The code-structure numbers are real but
+    # informational (they drive the refactor backlog, they do not block a build) - the
+    # summary used to lump the two together, which is how a broken shortcut check once
+    # read as "13 mechanical findings".
+    informational = len(long_funcs) + no_doc + ann_missing + len(broad)
+    print("\n=== findings to carry into the review: %d blockers + %d informational "
+          "(code structure) + %s ===" %
+          (problems, informational, "dynamic gate failed" if code else "dynamic gate clean"))
     if strict:
         if missing:
             blockers.append("i18n keys used but missing: %s" % ", ".join(missing))
