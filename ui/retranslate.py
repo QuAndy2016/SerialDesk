@@ -86,6 +86,8 @@ def _retranslate_receive_options(win: MainWindow) -> None:
     win.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
     win.autoscroll_check.setText(tr("rx.autoscroll"))
     win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
+    win.pause_check.setText(tr("rx.pause"))
+    win.pause_check.setToolTip(tr("rx.pause.tip"))
     win._reconnect_act.setText(tr("conn.auto"))
     win._reconnect_act.setToolTip(tr("conn.auto.tip"))
     win.params_summary.setToolTip(tr("portset.tip"))

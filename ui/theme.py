@@ -360,6 +360,20 @@ def history_list_colors() -> dict:
             "text": "#111111", "meta": "#6d6d78"}
 
 
+def find_colors() -> dict:
+    """Find-bar highlight colours for the receive pane (runtime, not QSS).
+
+    Current hit uses the same measured selection pair as the history list
+    (dark #ffffff on #4a6a9a = 8.3:1, light #111111 on #cfe0f5 = 15.4:1).
+    Other hits use a dimmed variant of the same hue, still >= 4.5:1 on text.
+    """
+    if resolved_dark():
+        return {"current_bg": "#4a6a9a", "current_fg": "#ffffff",
+                "other_bg": "#3a4a6a", "other_fg": "#d4d4d4"}
+    return {"current_bg": "#cfe0f5", "current_fg": "#111111",
+            "other_bg": "#dde6f2", "other_fg": "#111111"}
+
+
 def watch_system_theme(app: QApplication, callback: Callable[[str], None]) -> None:
     """Notify callback(dark: bool) when OS theme changes, unless overridden.
 

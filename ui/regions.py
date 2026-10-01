@@ -567,6 +567,12 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.autoscroll_check.toggled.connect(win._on_autoscroll_toggled)
     rx_opts.addWidget(win.autoscroll_check)
 
+    rx_opts.addSpacing(12)
+    win.pause_check = QCheckBox(tr("rx.pause"))
+    win.pause_check.setToolTip(tr("rx.pause.tip"))
+    win.pause_check.toggled.connect(win._on_pause_toggled)
+    rx_opts.addWidget(win.pause_check)
+
     rx_opts.addSpacing(18)
     win.save_log_btn = QPushButton(tr("btn.save_log_quick"))
     win.save_log_btn.setToolTip(tr("log.quick.tip"))
@@ -604,7 +610,11 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.find_edit = QLineEdit()
     win.find_edit.setPlaceholderText(tr("find.placeholder"))
     win.find_edit.returnPressed.connect(lambda: win._find_next(True))
+    win.find_edit.textChanged.connect(win._on_find_text_changed)
     find_row.addWidget(win.find_edit, 1)
+    win.find_count_lbl = QLabel("")
+    win.find_count_lbl.setToolTip(tr("find.count.tip"))
+    find_row.addWidget(win.find_count_lbl)
     win.find_prev_btn = QPushButton(tr("find.prev"))
     win.find_prev_btn.clicked.connect(lambda: win._find_next(False))
     find_row.addWidget(win.find_prev_btn)
@@ -627,9 +637,12 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     """The read-only receive view; it absorbs all spare height (U70)."""
     win.rx_view = QPlainTextEdit()
     win.rx_view.setReadOnly(True)
+    win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)   # U160-A5: long receive lines scroll horizontally instead of wrapping into mush
     win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # U43
     win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why
+    win.rx_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+    win.rx_view.customContextMenuRequested.connect(win._open_rx_context_menu)
     rx_layout.addWidget(win.rx_view, 1)   # U70: the view absorbs all spare height
 
 

@@ -135,8 +135,21 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
 
     kind: 0 = RX payload, 1 = TX payload, 2 = timestamp/marker (dimmed, U62).
     The kind is stored on the format so a theme switch can recolour it correctly.
+
+    While the display is paused (U160) the text is buffered instead of inserted,
+    so it can be replayed when the user resumes; the log keeps receiving it.
     """
     kind = 2 if meta else (1 if tx else 0)
+    if getattr(win, "_rx_paused", False):
+        buf = getattr(win, "_rx_pause_buf", None)
+        if buf is None:
+            buf = []
+            win._rx_pause_buf = buf
+        if len(buf) < 20000:
+            buf.append((text, kind))
+        if log:
+            win._log_append(text)
+        return
     cursor = win.rx_view.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
     fmt = QTextCharFormat()
@@ -282,6 +295,7 @@ def on_clear(win: MainWindow):
     win._frame_timer.stop()
     win._frames.reset()
     win._last_ts = None
+    win._rx_pause_buf = []      # U160: a pause buffer must not survive a clear
     win.rx_view.clear()
     win._line_is_tx = False
     win._cap_warned = False
@@ -292,3 +306,14 @@ def on_clear(win: MainWindow):
     win.update_counts()
     if offer_undo:
         win._notify(tr("rx.cleared"), "warn", ms=5000)
+
+
+def resume_rx_display(win: MainWindow) -> None:
+    """Replay the buffered lines after the user resumes display (U160)."""
+    win._rx_paused = False   # replay must go to the view, not back into the buffer
+    buf = getattr(win, "_rx_pause_buf", None) or []
+    win._rx_pause_buf = []
+    for text, kind in buf:
+        win._emit_rx_text(text, tx=(kind == 1), meta=(kind == 2), log=False)
+    win._scroll_rx_bottom()
+    win._notify(tr("rx.pause.resumed"), "info", ms=3000)

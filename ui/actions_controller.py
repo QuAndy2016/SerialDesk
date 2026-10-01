@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QMenu,
     QPlainTextEdit,
+    QTextEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -281,6 +282,35 @@ def check_auto_reply(win: MainWindow, data: bytes) -> None:
             win._reply_buf = b""
             break
 
+def on_pause_toggled(win: MainWindow, checked: bool) -> None:
+    "on pause toggled"
+    """Freeze the receive view; data keeps flowing to the log (U160)."""
+    win._rx_paused = bool(checked)
+    if bool(checked):
+        win._rx_pause_buf = []
+        win._notify(tr("rx.pause"), "info", ms=4000)
+    else:
+        win._resume_rx_display()
+
+
+def open_rx_context_menu(win: MainWindow, pos) -> None:
+    "open rx context menu"
+    """Receive-pane right-click: copy selection / copy all (U160)."""
+    menu = QMenu(win.rx_view)
+    copy_sel = menu.addAction(tr("menu.copy_sel"))
+    copy_sel.setEnabled(win.rx_view.textCursor().hasSelection())
+    copy_sel.triggered.connect(lambda: win.rx_view.copy())
+    copy_all = menu.addAction(tr("menu.copy_all"))
+    copy_all.triggered.connect(lambda: _copy_all_rx(win))
+    menu.exec(win.rx_view.mapToGlobal(pos))
+
+
+def _copy_all_rx(win: MainWindow) -> None:
+    """Copy the whole receive pane to the clipboard (U160)."""
+    QApplication.clipboard().setText(win.rx_view.toPlainText())
+    win._notify(tr("rx.copied_all"), "info", ms=2500)
+
+
 def update_counts(win: MainWindow):
     "update counts"
     """U124: the single status-bar counter (sends, TX bytes, RX bytes)."""
@@ -300,31 +330,115 @@ def update_params_summary(win: MainWindow) -> None:
         text = text[:15] + "…"
     win.params_summary.setText(text + " ▾")
 
+FIND_HIGHLIGHT_CAP = 10000  # U160: cap on how many matches get a background colour
+
+
+def _collect_find_matches(win: MainWindow, text: str) -> list:
+    """All matches of `text` in the receive pane, as (start, end) positions (U160)."""
+    doc = win.rx_view.document()
+    out: list = []
+    if not text:
+        return out
+    needle = QTextCursor(doc)
+    while True:
+        needle = doc.find(text, needle)
+        if needle.isNull():
+            break
+        out.append((needle.selectionStart(), needle.selectionEnd()))
+    return out
+
+
+def _apply_find_highlights(win: MainWindow, matches: list, current: int) -> None:
+    """Highlight every match, the current one stronger (U160)."""
+    colours = theme.find_colors()
+    selections = []
+    for i, (start, end) in enumerate(matches[:FIND_HIGHLIGHT_CAP]):
+        extra = QTextEdit.ExtraSelection()
+        cursor = QTextCursor(win.rx_view.document())
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        fmt = QTextCharFormat()
+        if i == current:
+            fmt.setBackground(QColor(colours["current_bg"]))
+            fmt.setForeground(QColor(colours["current_fg"]))
+        else:
+            fmt.setBackground(QColor(colours["other_bg"]))
+            fmt.setForeground(QColor(colours["other_fg"]))
+        extra.cursor = cursor
+        extra.format = fmt
+        selections.append(extra)
+    win.rx_view.setExtraSelections(selections)
+
+
+def on_find_text_changed(win: MainWindow) -> None:
+    "on find text changed"
+    """Re-run the match search when the query changes (U160)."""
+    text = win.find_edit.text()
+    win._find_matches = _collect_find_matches(win, text)
+    win._find_index = 0
+    win._find_query = text
+    if text and win._find_matches:
+        start, end = win._find_matches[0]
+        cursor = QTextCursor(win.rx_view.document())
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        win.rx_view.setTextCursor(cursor)
+        win.rx_view.centerCursor()
+    _apply_find_highlights(win, win._find_matches, 0)
+    update_find_count(win)
+
+
+def update_find_count(win: MainWindow) -> None:
+    "update find count"
+    """Refresh the n/N label after an index move (U160)."""
+    total = len(win._find_matches)
+    if total == 0:
+        win.find_count_lbl.setText("0/0" if win.find_edit.text() else "")
+        return
+    shown = min(total, FIND_HIGHLIGHT_CAP)
+    suffix = "" if total <= FIND_HIGHLIGHT_CAP else "+"
+    win.find_count_lbl.setText(f"{win._find_index + 1}/{shown}{suffix}")
+
+
 def toggle_find_bar(win: MainWindow, show: bool | None = None) -> None:
     "toggle find bar"
-    """Show/hide the receive find bar (U41)."""
+    """Show/hide the receive find bar (U41); closing clears the highlights (U160)."""
     visible = (not win._find_bar.isVisible()) if show is None else show
     win._find_bar.setVisible(visible)
     if visible:
         win.find_edit.setFocus()
         win.find_edit.selectAll()
+    else:
+        win.rx_view.setExtraSelections([])
+        win.find_count_lbl.setText("")
+
 
 def find_next(win: MainWindow, forward: bool = True) -> None:
     "find next"
-    """Jump to the next/previous match in the receive pane (U41)."""
+    """Jump to the next/previous match in the receive pane (U41/U160)."""
     text = win.find_edit.text()
-    if not text:
-        return
-    flags = QTextDocument.FindFlag(0) if forward else QTextDocument.FindFlag.FindBackward
-    if not win.rx_view.find(text, flags):
-        cursor = win.rx_view.textCursor()
-        # wrap around: forward restarts at the top, backward at the bottom
-        cursor.movePosition(QTextCursor.MoveOperation.Start if forward
-                            else QTextCursor.MoveOperation.End)
-        win.rx_view.setTextCursor(cursor)
-        if not win.rx_view.find(text, flags):
+    matches = getattr(win, "_find_matches", None)
+    if matches is None or text != getattr(win, "_find_query", None):
+        matches = _collect_find_matches(win, text)
+        win._find_matches = matches
+        win._find_query = text
+        win._find_index = 0
+    total = len(matches)
+    if not text or total == 0:
+        if text:
             win._notify(tr("find.none", text=text), "warn", ms=3000)
-            return
+        update_find_count(win)
+        _apply_find_highlights(win, matches, 0)
+        return
+    win._find_index = (win._find_index + (1 if forward else -1)) % total
+    start, end = matches[win._find_index]
+    cursor = QTextCursor(win.rx_view.document())
+    cursor.setPosition(start)
+    cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+    win.rx_view.setTextCursor(cursor)
+    win.rx_view.centerCursor()
+    _apply_find_highlights(win, matches, win._find_index)
+    update_find_count(win)
     win.rx_view.setFocus()
 
 def esc_action(win: MainWindow) -> None:

@@ -271,7 +271,7 @@ class QuickSendPanel(QWidget):
     def _build_row_edit(self, h: QHBoxLayout, text: str) -> QLineEdit:
         """The command text; clicking into it selects the row (see eventFilter)."""
         edit = QLineEdit(text)
-        edit.setPlaceholderText(tr("qs.placeholder"))
+        edit.setPlaceholderText(tr("qs.empty_row"))
         edit.setAccessibleName(tr("qs.row.tip"))    # U122
         h.addWidget(edit, 1)
         return edit
@@ -716,7 +716,7 @@ class QuickSendPanel(QWidget):
         self._rail.set_label(tr("qs.title"))
         self._rail.setToolTip(tr("qs.rail.tip"))
         for entry in self._rows:
-            entry["edit"].setPlaceholderText(tr("qs.placeholder"))
+            entry["edit"].setPlaceholderText(tr("qs.empty_row"))
             entry["send"].setText(tr("qs.send"))
             entry["widget"].setToolTip(tr("qs.row.tip"))
             entry["delay"].setToolTip(tr("qs.delay.tip"))
