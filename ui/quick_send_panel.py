@@ -380,6 +380,11 @@ class QuickSendPanel(QWidget):
                     self._select_row(hit, "range")
                 else:
                     self._select_row(hit, "replace")
+        elif event.type() == QEvent.Type.FocusIn:
+            # U163-I2: Tab into any control of a row selects that row (keyboard reach)
+            entry = self._entry_of(obj)
+            if entry is not None and not entry["widget"].property("selected"):
+                self._select_row(entry, "replace")
         elif event.type() == QEvent.Type.Resize and any(
                 entry["widget"] is obj for entry in self._rows):
             self._place_order_badges()
@@ -399,6 +404,14 @@ class QuickSendPanel(QWidget):
                 self._update_del_btn()
                 return True
         return super().eventFilter(obj, event)
+
+    def _entry_of(self, obj):
+        """The row entry owning a widget, or None (U163-I2 keyboard reach)."""
+        for entry in self._rows:
+            row = entry["widget"]
+            if obj is row or (isinstance(obj, QWidget) and row.isAncestorOf(obj)):
+                return entry
+        return None
 
     def _paint_row(self, entry: dict, on: bool) -> None:
         widget = entry["widget"]

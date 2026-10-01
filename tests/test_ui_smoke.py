@@ -201,3 +201,29 @@ def test_clean_copy_strips_timestamps_and_markers(app, win):
     assert _rx_copy_text(win).strip() == "HELLO"
     assert _rx_copy_text(win, current_line=True).strip() == "HELLO"
     assert "<- " in win.rx_view.toPlainText()   # raw still shows the marker
+
+
+def test_reset_counters_keeps_display(app, win):
+    # U163-N2: zeroing the counters must not clear the pane
+    win.rx_view.clear()
+    win._emit_rx_text("DATA")
+    win.rx_bytes, win.tx_bytes, win._sent_count = 42, 7, 3
+    win._reset_counters()
+    app.processEvents()
+    assert (win.rx_bytes, win.tx_bytes, win._sent_count) == (0, 0, 0)
+    assert "DATA" in win.rx_view.toPlainText()
+
+
+def test_focus_inside_row_selects_it(app, win):
+    # U163-I2: a FocusIn landing on a row control selects that row (keyboard reach)
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QFocusEvent
+    from PySide6.QtWidgets import QLineEdit
+    panel = win.quick_panel
+    panel.clear_selection()
+    entry = panel._rows[0]
+    field = entry["widget"].findChild(QLineEdit)
+    panel.eventFilter(field, QFocusEvent(QEvent.Type.FocusIn))
+    app.processEvents()
+    assert bool(entry["widget"].property("selected")) is True
+    panel.clear_selection()

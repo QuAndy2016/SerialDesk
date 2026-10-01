@@ -299,13 +299,19 @@ def on_clear(win: MainWindow):
     win.rx_view.clear()
     win._line_is_tx = False
     win._cap_warned = False
+    win.update_counts()
+    if offer_undo:
+        win._notify(tr("rx.cleared"), "warn", ms=5000)
+
+
+def on_reset_counters(win: MainWindow) -> None:
+    "on reset counters"
+    """Zero the RX/TX byte and send counters, leaving the display alone (N2/U163)."""
     win.rx_bytes = 0
     win.tx_bytes = 0
     win._sent_count = 0
     win.update_counts()
-    win.update_counts()
-    if offer_undo:
-        win._notify(tr("rx.cleared"), "warn", ms=5000)
+    win._notify(tr("rx.counters_reset"), "info", ms=3000)
 
 
 def resume_rx_display(win: MainWindow) -> None:

@@ -95,6 +95,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "find.count.tip": {"zh": "当前命中 / 总数", "en": "current hit / total"},
 
     "rx.cleared": {"zh": "已清空接收区（5 秒内可撤销）", "en": "Receive pane cleared (undo within 5 s)"},
+    "rx.counters_reset": {"zh": "计数已清零（显示不变）", "en": "Counters reset (display untouched)"},
     "rx.undo.done": {"zh": "已恢复清空前的显示", "en": "Display restored"},
     "undo.label": {"zh": "撤销", "en": "Undo"},
     "find.label": {"zh": "查找:", "en": "Find:"},
@@ -286,6 +287,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "update.none": {"zh": "已是最新版本", "en": "You are up to date"},
     "update.fail": {"zh": "检查更新失败（网络或服务不可用）", "en": "Update check failed (network or service unavailable)"},
     "menu.open_log_dir": {"zh": "打开日志目录", "en": "Open logs folder"},
+    "menu.reset_counters": {"zh": "清零计数", "en": "Reset counters"},
     "about.copy": {"zh": "复制诊断信息", "en": "Copy diagnostics"},
     "about.copied": {"zh": "诊断信息已复制到剪贴板", "en": "Diagnostics copied to the clipboard"},
     "menu.shortcuts": {"zh": "快捷键一览…", "en": "Keyboard shortcuts…"},

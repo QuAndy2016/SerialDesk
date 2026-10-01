@@ -145,6 +145,7 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: t
 QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow:hover { background: $border_muted; }   /* U163-I3: row hover feedback */
 """
 
 def _render(template: str, tokens: dict[str, str]) -> str:
@@ -276,6 +277,7 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: t
 QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(70, 70, 100, 0.08); border: 1px solid rgba(70, 70, 100, 0.20); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow:hover { background: $surface_hover; }   /* U163-I3: row hover feedback */
 """
 
 DARK_QSS = _render(_DARK_QSS_TEMPLATE, {**DARK_TOKENS, **FONT_TOKENS})

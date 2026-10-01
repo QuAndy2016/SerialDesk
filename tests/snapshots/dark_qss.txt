@@ -124,3 +124,4 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: t
 QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow:hover { background: #3a3a4a; }   /* U163-I3: row hover feedback */
