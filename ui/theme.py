@@ -90,8 +90,12 @@ QPushButton#qsDel { color: #8a8a8a; background: transparent; border: none; font-
 QPushButton#qsDel:hover { color: #ff7b72; background: #3a3a4a; border-radius: 4px; }
 QToolButton#paramsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: #8be9fd; }
-QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
-QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #4a4a5a; }
+/* U110: the settings entry is an app-level control - icon + text, a real border,
+   a 32 px hit target and three states, separated from the connection parameters */
+QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 10px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }
+QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #6a6a80; }
+QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #2f2f3d; border-color: #8be9fd; }
+QFrame#connDivider { background: #4a4a5a; max-width: 1px; border: none; }
 /* U106: quick-send panel fold/unfold - a themed icon button, both directions */
 QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 8px 12px; }
 QToolButton#qsCollapse:hover { background: #3a3a4a; border-color: #4a4a5a; }
@@ -116,7 +120,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.16); border: 1px solid rgba(139, 233, 253, 0.16); }
+QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
 """
 
 LIGHT_QSS = """
@@ -200,8 +204,11 @@ QPushButton#qsDel { color: #9a9a9a; background: transparent; border: none; font-
 QPushButton#qsDel:hover { color: #c62828; background: #ececf2; border-radius: 4px; }
 QToolButton#paramsBtn { color: #1f1f1f; background: transparent; border: 1px solid #c8c8d0; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: #1e5aa8; }
-QToolButton#settingsBtn { color: #1f1f1f; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px; margin: 2px 4px 2px 0; }
-QToolButton#settingsBtn:hover { background: #e0e0e8; border-color: #c8c8d0; }
+/* U110: see the dark theme */
+QToolButton#settingsBtn { color: #1f1f1f; background: transparent; border: 1px solid #c8c8d0; border-radius: 4px; padding: 3px 10px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_light.png); qproperty-iconSize: 14px 14px; }
+QToolButton#settingsBtn:hover { background: #e0e0e8; border-color: #a9a9b4; }
+QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #d5d5e0; border-color: #1e5aa8; }
+QFrame#connDivider { background: #c8c8d0; max-width: 1px; border: none; }
 /* U106: quick-send panel fold/unfold - a themed icon button, both directions */
 QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_light.png); qproperty-iconSize: 8px 12px; }
 QToolButton#qsCollapse:hover { background: #e0e0e8; border-color: #c8c8d0; }
@@ -226,7 +233,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QLabel#seqOrd { color: #1e5aa8; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(30, 90, 168, 0.14); border: 1px solid rgba(30, 90, 168, 0.14); }
+QFrame#qsRow[selected="true"] { background: rgba(70, 70, 100, 0.08); border: 1px solid rgba(70, 70, 100, 0.20); }   /* U114-D7: neutral, not the TX blue */
 """
 
 

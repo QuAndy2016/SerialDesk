@@ -101,6 +101,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "The receive pane hit its display limit ({n} lines); older data is no longer shown. Auto-saved logs are unaffected",
     },
     "menu.settings": {"zh": "设置(&S)", "en": "&Settings"},
+    "menu.settings.tip": {"zh": "设置 (Ctrl+,)", "en": "Settings (Ctrl+,)"},
+    "menu.sec.appearance": {"zh": "外观与语言", "en": "Appearance & language"},
+    "menu.sec.io": {"zh": "日志与自动应答", "en": "Logging & auto-reply"},
+    "menu.sec.config": {"zh": "配置", "en": "Configuration"},
+    "menu.sec.danger": {"zh": "危险操作", "en": "Destructive"},
     "theme.menu": {"zh": "主题(&T)", "en": "&Theme"},
     "menu.language": {"zh": "语言(&L)", "en": "&Language"},
     "theme.system": {"zh": "跟随系统(&Y)", "en": "Follow s&ystem"},
@@ -244,8 +249,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
     "tx.placeholder.hex": {
-        "zh": "例如：01 03 00 00 \uff5c 0x01,0x03 \uff5c 01-03-00-00",
-        "en": "e.g. 01 03 00 00 | 0x01,0x03 | 01-03-00-00",
+        "zh": "例如：01 03 00 00",
+        "en": "e.g. 01 03 00 00",
     },
     "tx.placeholder.ascii": {"zh": "例如：AT+VERSION?", "en": "e.g. AT+VERSION?"},
     "tx.input.tip.ascii": {
@@ -278,7 +283,16 @@ STRINGS: dict[str, dict[str, str]] = {
     "flow.sw": {"zh": "软件(XON/XOFF)", "en": "Software (XON/XOFF)"},
     "flow.hw": {"zh": "硬件(RTS/CTS)", "en": "Hardware (RTS/CTS)"},
     # ---- append CRLF (T3) ----
-    "tx.crlf": {"zh": "追加 \\r\\n", "en": "Append \\r\\n"},
+    "tx.newline.label": {"zh": "换行:", "en": "Line ending:"},
+    "tx.nl.none": {"zh": "无", "en": "None"},
+    "tx.nl.cr": {"zh": "回车 CR", "en": "CR"},
+    "tx.nl.lf": {"zh": "换行 LF", "en": "LF"},
+    "tx.nl.crlf": {"zh": "回车+换行 CR LF", "en": "CR LF"},
+    "tx.newline.tip": {
+        "zh": "ASCII 模式下发完内容后追加的字节：无 / 回车 0D / 换行 0A / 回车+换行 0D 0A（AT 指令常用）",
+        "en": "Bytes appended after the payload in ASCII mode: none / CR 0D / LF 0A / CR+LF 0D 0A (the usual choice for AT commands)",
+    },
+    "tx.crlf": {"zh": "追加 \\r\\n", "en": "Append \\r\\n"},   # U112: legacy key, unused
     "tx.crlf.tip": {
         "zh": "ASCII 模式下发送时自动追加回车换行（AT 指令常用）",
         "en": "Append CRLF when sending in ASCII mode (handy for AT commands)",

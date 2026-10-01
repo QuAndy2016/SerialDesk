@@ -98,7 +98,7 @@ def _fixed_row(layout) -> QWidget:
 RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
 # U79: by default the data pane gets the room - the send pane and the quick-send
 # column start at their minimum sizes instead of sharing space evenly.
-DATA_FIRST_V = [520, 190]
+DATA_FIRST_V = [560, 170]
 DATA_FIRST_H = [880, 332]
 LEGACY_SPLIT_DEFAULTS = {
     "v_split_sizes": ([420, 260], DATA_FIRST_V),
@@ -274,10 +274,11 @@ class MainWindow(QMainWindow):
         self._settings_btn = QToolButton()
         self._settings_btn.setObjectName("settingsBtn")
         self._settings_btn.setText(tr("menu.settings"))
-        self._settings_btn.setToolTip(tr("menu.settings"))
+        self._settings_btn.setToolTip(tr("menu.settings.tip"))
         self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._settings_btn.setMinimumHeight(26)
+        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._settings_btn.setMinimumHeight(32)       # U110: same height as the row
+        self._settings_btn.setMinimumWidth(96)
         self._settings_menu = QMenu(self._settings_btn)
         self._settings_btn.setMenu(self._settings_menu)
         self._fit_settings_btn()
@@ -294,6 +295,7 @@ class MainWindow(QMainWindow):
             lambda: self._on_quick_panel_collapsed(not self._quick_panel_act.isChecked()))
         view_menu.addAction(self._quick_panel_act)
         view_menu.addSeparator()
+        view_menu.addSection(tr("menu.sec.appearance"))    # U110: give the menu structure
         self._theme_menu = view_menu.addMenu(tr("theme.menu"))
         view_menu = self._theme_menu
         self._theme_group = QActionGroup(self)
@@ -337,11 +339,8 @@ class MainWindow(QMainWindow):
         self._lang_en.triggered.connect(lambda: self._set_language("en"))
 
         # config import / export (T15)
+        self._settings_menu.addSection(tr("menu.sec.config"))
         self._cfg_menu = self._settings_menu.addMenu(tr("cfg.menu"))
-        self._reset_act = QAction(tr("cfg.reset"), self)
-        self._reset_act.triggered.connect(self._reset_settings)
-        self._settings_menu.addAction(self._reset_act)
-        self._settings_menu.addSeparator()
 
         self._cfg_export_act = QAction(tr("cfg.export"), self)
         self._cfg_import_act = QAction(tr("cfg.import"), self)
@@ -351,6 +350,7 @@ class MainWindow(QMainWindow):
         self._cfg_menu.addAction(self._cfg_import_act)
 
         # U44: about box (version is otherwise invisible in the UI)
+        self._settings_menu.addSection(tr("menu.sec.io"))
         self._autosave_act = QAction(tr("as.menu"), self)
         self._autosave_act.setToolTip(tr("as.note"))
         self._autosave_act.triggered.connect(self._show_autosave_settings)
@@ -378,6 +378,13 @@ class MainWindow(QMainWindow):
         self._about_act = QAction(tr("about.menu"), self)
         self._about_act.triggered.connect(self._show_about)
         self._settings_menu.addAction(self._about_act)
+
+        # U110/D: the destructive entry lives at the very bottom, under its own heading
+        self._settings_menu.addSeparator()
+        self._settings_menu.addSection(tr("menu.sec.danger"))
+        self._reset_act = QAction(tr("cfg.reset"), self)
+        self._reset_act.triggered.connect(self._reset_settings)
+        self._settings_menu.addAction(self._reset_act)
 
     def _on_quick_panel_collapsed(self, collapsed: bool) -> None:
         """Fold the quick-send panel away (or bring it back) and remember it (U88)."""
@@ -437,6 +444,7 @@ class MainWindow(QMainWindow):
             ("Ctrl+K", lambda: self.tx_edit.setFocus()),
             ("F5", self.toggle_open),
             ("Ctrl+B", self._toggle_quick_panel),          # U88: fold/unfold the panel
+            ("Ctrl+,", self._settings_btn.showMenu),        # U110: the platform convention
             ("Ctrl+Up", lambda: self._recall_history(1)),    # U87: older command
             ("Ctrl+Down", lambda: self._recall_history(-1)),  # U87: newer command
             ("Ctrl+F", lambda: self._toggle_find_bar(True)),
@@ -574,8 +582,8 @@ class MainWindow(QMainWindow):
             self.tx_size_lbl.setText(tr("tx.payload.bad"))
             return
         payload = self._apply_checksum(payload)
-        if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
-            payload += b"\r\n"
+        if self.tx_fmt_combo.currentIndex() == 1:
+            payload += self._newline_bytes()
         self.tx_size_lbl.setText(tr("tx.payload", n=len(payload)))
 
     def _update_port_tooltip(self) -> None:
@@ -728,8 +736,10 @@ class MainWindow(QMainWindow):
         self.encoding_combo.setToolTip(tr("params.encoding.tip"))
         self.escape_check.setText(tr("tx.escape"))
         self.escape_check.setToolTip(tr("tx.escape.tip"))
-        self.crlf_check.setText(tr("tx.crlf"))
-        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
+        self._nl_lbl.setText(tr("tx.newline.label"))
+        self._reload_combo(self.nl_combo, [tr("tx.nl.none"), tr("tx.nl.cr"), tr("tx.nl.lf"),
+                                           tr("tx.nl.crlf")])
+        self.nl_combo.setToolTip(tr("tx.newline.tip"))
         self._tx_group.setTitle(tr("group.tx"))
         self._tx_fmt_lbl.setText(tr("txfmt.label"))
         self.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
@@ -832,7 +842,16 @@ class MainWindow(QMainWindow):
         bar.addWidget(self.params_summary)
 
         bar.addSpacing(10)
+        conn_div = QFrame()                     # U110: app-level entry, set apart
+        conn_div.setObjectName("connDivider")
+        conn_div.setFrameShape(QFrame.Shape.VLine)
+        conn_div.setFixedWidth(1)
+        bar.addWidget(conn_div)
         bar.addWidget(self._settings_btn)   # U72: same line as Port / Baud / Open
+        # U114-D4: one control height across the connection row
+        for _w in (self.port_combo, self.refresh_btn, self.baud_combo, self.open_btn,
+                   self.rx_fmt_combo, self.params_summary, self._settings_btn):
+            _w.setMinimumHeight(32)
 
         bar.addStretch(1)
         root.addLayout(bar)
@@ -1022,9 +1041,19 @@ class MainWindow(QMainWindow):
         mod_row = QHBoxLayout(self._tx_mod_group)
         mod_row.setContentsMargins(0, 0, 0, 0)
         mod_row.setSpacing(10)
-        self.crlf_check = QCheckBox(tr("tx.crlf"))
-        self.crlf_check.setToolTip(tr("tx.crlf.tip"))
-        mod_row.addWidget(self.crlf_check)
+        # U112: the old "追加 \r\n" checkbox spoke escape notation. It is now a picker
+        # over the actual line endings, named the way the rest of the field names them.
+        self._nl_lbl = QLabel(tr("tx.newline.label"))
+        mod_row.addWidget(self._nl_lbl)
+        self.nl_combo = QComboBox()
+        self.nl_combo.addItems([tr("tx.nl.none"), tr("tx.nl.cr"), tr("tx.nl.lf"), tr("tx.nl.crlf")])
+        _saved_nl = load_config().get("newline")
+        if _saved_nl is None:                      # migrate the old boolean config key
+            _saved_nl = "crlf" if load_config().get("crlf") else "none"
+        self.nl_combo.setCurrentIndex({"none": 0, "cr": 1, "lf": 2, "crlf": 3}.get(str(_saved_nl), 0))
+        self.nl_combo.setToolTip(tr("tx.newline.tip"))
+        self.nl_combo.currentIndexChanged.connect(self._persist_newline)
+        mod_row.addWidget(self.nl_combo)
         self.escape_check = QCheckBox(tr("tx.escape"))
         self.escape_check.setChecked(True)
         self.escape_check.setToolTip(tr("tx.escape.tip"))
@@ -1060,8 +1089,10 @@ class MainWindow(QMainWindow):
         tx_row = QHBoxLayout()
         self.tx_edit = QPlainTextEdit()
         self._update_input_placeholder()   # U86: keep the format-specific hint
-        self.tx_edit.setMinimumHeight(90)       # U98: the row merge pays for this
+        self.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
         self.tx_edit.textChanged.connect(self._check_hex_input)
+        self.tx_edit.textChanged.connect(self._fit_tx_edit_height)   # U111: compact by default
+        self._fit_tx_edit_height()
         tx_row.addWidget(self.tx_edit, 1)
 
         tx_row.addSpacing(10)
@@ -1116,7 +1147,8 @@ class MainWindow(QMainWindow):
         repeat_row.addWidget(self._repeat_lbl)
         self.repeat_ms = QLineEdit("1000")
         self.repeat_ms.setValidator(QIntValidator(10, 60000, self))
-        self.repeat_ms.setMaximumWidth(112)
+        # U113: the label carries "(ms)", so the box only has to fit 60000
+        self.repeat_ms.setFixedWidth(self.repeat_ms.fontMetrics().horizontalAdvance("60000") + 22)
         self.repeat_ms.setToolTip(tr("tx.interval.tip"))
         self.repeat_ms.textChanged.connect(self._on_repeat_interval)
         repeat_row.addWidget(self.repeat_ms)
@@ -1132,8 +1164,8 @@ class MainWindow(QMainWindow):
         tx_layout.addLayout(tx_row, 1)          # the input takes every spare pixel
 
         self._v_splitter.addWidget(tx_group)
-        self._v_splitter.setStretchFactor(1, 2)
-        tx_group.setMinimumHeight(140)                          # U63/U98/U99
+        self._v_splitter.setStretchFactor(1, 0)   # U111: data first
+        tx_group.setMinimumHeight(120)                          # U63/U98/U99/U111
         self._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
         self._v_splitter.setCollapsible(1, False)   #      the panes are added
         _stored_v = load_config().get("v_split_sizes")
@@ -1167,7 +1199,7 @@ class MainWindow(QMainWindow):
         for _sig in (self.tx_edit.textChanged,
                      self.tx_fmt_combo.currentIndexChanged,
                      self.checksum_combo.currentIndexChanged,
-                     self.crlf_check.toggled,
+                     self.nl_combo.currentIndexChanged,
                      self.escape_check.toggled,
                      self.encoding_combo.currentIndexChanged):
             _sig.connect(self._update_payload_size)      # U74: live payload size
@@ -1264,7 +1296,7 @@ class MainWindow(QMainWindow):
                     self._settings_btn, self._crc_lbl, self._repeat_lbl,
                     self.tx_fmt_combo, self.checksum_combo,
                     self.ts_check, self.echo_tx_check, self.autoscroll_check,
-                    self.crlf_check, self.escape_check,
+                    self.nl_combo, self.escape_check,
                     self.save_log_btn, self.save_log_as_btn, self.clear_btn,
                     self.send_file_btn, self.repeat_btn, self.send_btn, self.history_btn)
         for wdg in controls:
@@ -1338,11 +1370,31 @@ class MainWindow(QMainWindow):
             return sizes
         return list(default)
 
+    NEWLINE_BYTES = {"none": b"", "cr": b"\r", "lf": b"\n", "crlf": b"\r\n"}
+    NEWLINE_KEYS = ("none", "cr", "lf", "crlf")
+
+    def _newline_bytes(self) -> bytes:
+        """U112: the bytes the "line ending" picker appends (ASCII mode only)."""
+        index = min(max(0, self.nl_combo.currentIndex()), len(self.NEWLINE_KEYS) - 1)
+        return self.NEWLINE_BYTES[self.NEWLINE_KEYS[index]]
+
+    def _persist_newline(self, _index: int = 0) -> None:
+        key = self.NEWLINE_KEYS[min(max(0, self.nl_combo.currentIndex()), 3)]
+        save_config({"newline": key})      # U109: save_config merges, other keys survive
+
+    def _fit_tx_edit_height(self) -> None:
+        """U111: one line by default, four at most - a short command should not cost
+        three lines of vertical space, which is what the fixed 90 px did."""
+        lines = max(1, min(4, self.tx_edit.document().blockCount()))
+        fm = self.tx_edit.fontMetrics()
+        height = int(fm.lineSpacing() * lines + 2 * self.tx_edit.frameWidth() + 10)
+        self.tx_edit.setFixedHeight(max(30, height))
+
     def _fit_settings_btn(self) -> None:
         """Size the Settings button to its label plus padding (U60: "Settings" must fit)."""
         text = self._settings_btn.text()
-        width = self._settings_btn.fontMetrics().horizontalAdvance(text) + 46
-        self._settings_btn.setMinimumWidth(max(92, width))
+        width = self._settings_btn.fontMetrics().horizontalAdvance(text) + 70
+        self._settings_btn.setMinimumWidth(max(96, width))   # U110: room for the gear
 
     def _setup_tab_order(self) -> None:
         """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
@@ -1350,7 +1402,7 @@ class MainWindow(QMainWindow):
                  "split_combo", "split_ms_edit", "header_edit", "ts_check",
                  "echo_tx_check", "autoscroll_check",
                  "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
-                 "tx_fmt_combo", "checksum_combo", "crlf_check", "escape_check",
+                 "tx_fmt_combo", "checksum_combo", "nl_combo", "escape_check",
                  "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
                  "send_file_btn"]
         widgets = [w for w in (getattr(self, n, None) for n in names) if w is not None]
@@ -2254,8 +2306,8 @@ class MainWindow(QMainWindow):
         if not self._ensure_port():
             return
         payload = self._apply_checksum(payload)
-        if self.tx_fmt_combo.currentIndex() == 1 and self.crlf_check.isChecked():
-            payload += b"\r\n"
+        if self.tx_fmt_combo.currentIndex() == 1:
+            payload += self._newline_bytes()
         if not self.worker.send(payload):
             return          # U61: never echo or count a frame that was not queued
         self._echo_tx(payload)

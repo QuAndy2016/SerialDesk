@@ -1,5 +1,39 @@
 # Changelog
 
+## [v1.2.0] - 2026-10-01
+
+A design pass over the send area and the quick-send panel, driven by a review of the shipped UI.
+
+### Changed
+
+- **The send area no longer grows with the window (U111)**: the vertical splitter gave the send area 40 % of every
+  extra pixel of height, although the send area is one input box. Stretch is data-first now (`[560, 170]`, send floor
+  120 px), and the input box is one line high by default and grows to four as you type - measured: 190 px of send area
+  at both an 800 px and a 1000 px window, and a 30 px input for one line instead of 90 px.
+- **The line-ending option says what it does (U112)**: "追加 \r\n" was escape notation in a label. It is a picker now -
+  None / CR / LF / CR LF - defaulting to None so upgrading behaves exactly as before, with the old `crlf` boolean
+  migrating automatically. Verified byte-for-byte: `AT` + CR LF sends `AT\r\n`, LF alone sends `AT\n`.
+- **Settings is a real control (U110)**: the app-level entry was a borderless text label. It now has a gear icon, a
+  bordered 32 px hit target, hover/pressed states, a divider that separates it from the connection parameters, and the
+  Ctrl+, shortcut. The menu gained section headings and the destructive "Restore default settings" moved to the bottom
+  under its own heading.
+- **One control height across the connection row (U114-D4)** and a shorter send-box placeholder with the examples moved
+  into the tooltip (D6).
+- **The repeat interval box is sized to its content (U113)**: 112 px for a four-digit number became 60 px.
+- **Quick-send panel**: the sequence status text left the toolbar (D1, it reports to the status bar now), the add button
+  dropped to secondary weight (D3), the property line lines up with the text box (D5), row ticks grey out when sequence
+  mode is off (D9), and the destructive delete sits apart from Run (D10).
+
+### Fixed
+
+- **A selected quick-send row stayed selected forever (U115)**: the highlight and the enabled "delete selected" button
+  survived clicks anywhere else in the window. The selection is a transient state now - clicking outside (or on the
+  panel's empty area), pressing Esc, folding the panel or starting a sequence drops it, while clicking the delete button
+  itself keeps it.
+- **The row highlight no longer uses the TX blue (U114-D7)**: "sending" and "selected" shared one colour; the selection
+  is neutral now.
+
+
 ## [v1.1.0] - 2026-10-01
 
 ### Added

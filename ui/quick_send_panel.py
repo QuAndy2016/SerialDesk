@@ -8,6 +8,7 @@ import os
 from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QFrame,
@@ -107,6 +108,9 @@ class QuickSendPanel(QWidget):
         self._folded = False
         self._build_ui()
         self._load()
+        self.set_rows_selectable(self.seq_check.isChecked())
+        # U115: watch clicks anywhere in the app so a selection cannot go stale
+        QApplication.instance().installEventFilter(self)
 
     # -- UI -----------------------------------------------------------------
 
@@ -150,9 +154,8 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setEnabled(False)
         self.seq_btn.clicked.connect(self.toggle_sequence)
         seq_row.addWidget(self.seq_btn)
-        self.seq_label = QLabel("")
-        seq_row.addWidget(self.seq_label)
         seq_row.addStretch(1)
+        seq_row.addSpacing(16)      # U114-D10: keep a destructive action away from Run
         self.del_btn = QPushButton(tr("qs.del_selected"))   # U68 plan A
         self.del_btn.setToolTip(tr("qs.del_selected.tip"))
         self.del_btn.setEnabled(False)
@@ -171,7 +174,8 @@ class QuickSendPanel(QWidget):
         scroll.setWidget(self._container)
         layout.addWidget(scroll, 1)
 
-        self.add_btn = QPushButton(tr("qs.add"))
+        self.add_btn = QPushButton(tr("qs.add"))   # U114-D3: secondary weight, not a hero
+        self.add_btn.setProperty("secondary", True)
         self.add_btn.setToolTip(tr("qs.add.tip", n=MAX_ENTRIES))
         self.add_btn.clicked.connect(lambda: self.add_row())
         layout.addWidget(self.add_btn)
@@ -232,7 +236,7 @@ class QuickSendPanel(QWidget):
         # U105/U104: the second line carries the row's properties, indented under the
         # text box, with the unit written out - "500" explained itself to nobody.
         meta = QHBoxLayout()
-        meta.setContentsMargins(24, 0, 0, 0)
+        meta.setContentsMargins(0, 0, 0, 0)     # U114-D5: aligned to the text box below
         meta.setSpacing(4)
         fmt = QComboBox()
         fmt.addItems(["HEX", "ASCII"])
@@ -256,16 +260,30 @@ class QuickSendPanel(QWidget):
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         edit.installEventFilter(self)      # clicking into the text selects the row
         self._rows.append({"widget": row, "edit": edit, "fmt": fmt, "send": send,
-                           "delay": delay, "sel": sel, "ord": ord_lbl, "unit": unit})
+                           "delay": delay, "sel": sel, "ord": ord_lbl, "unit": unit,
+                           "meta": meta})
+        # U114-D5: the property line starts where the text box starts - measured after
+        # the layout has placed the widgets, so it survives language/font changes.
+        QTimer.singleShot(0, self._align_meta_rows)
         sel.setChecked(bool(selected))
+        sel.setEnabled(self.seq_check.isChecked())   # U114-D9
         self._renumber_selection()
         self._update_count()
 
     # -- folded state (U106) -------------------------------------------------
 
+    def _align_meta_rows(self) -> None:
+        """U114-D5: keep every property line flush with its text box."""
+        for entry in self._rows:
+            meta = entry.get("meta")
+            if meta is not None:
+                meta.setContentsMargins(max(0, entry["edit"].x()), 0, 0, 0)
+
     def set_folded(self, folded: bool) -> None:
         """Show the rail instead of the panel contents, and let the splitter shrink."""
         self._folded = bool(folded)
+        if self._folded:
+            self.clear_selection()
         self._content.setVisible(not self._folded)
         self._rail.setVisible(self._folded)
         if self._folded:
@@ -284,6 +302,10 @@ class QuickSendPanel(QWidget):
     def eventFilter(self, obj, event):  # noqa: N802 - Qt naming
         """Click selects a row; Delete removes the selection (3 s undo stays)."""
         if event.type() == QEvent.Type.MouseButtonPress:
+            # U115: a click outside the panel (or on its empty area) drops the selection;
+            # clicking the toolbar controls that act on the selection keeps it.
+            if self.selected_entry() is not None and not self._click_keeps_selection(obj, event):
+                self.clear_selection()
             for entry in self._rows:
                 if entry["widget"] is obj or entry["edit"] is obj:
                     self._select_row(entry)
@@ -294,6 +316,9 @@ class QuickSendPanel(QWidget):
         elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Delete:
             self.delete_selected()
             return True
+        elif event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
+            if self.clear_selection():
+                return True
         return super().eventFilter(obj, event)
 
     def _select_row(self, entry: dict) -> None:
@@ -308,6 +333,36 @@ class QuickSendPanel(QWidget):
 
     def selected_entry(self) -> dict | None:
         return next((e for e in self._rows if e["widget"].property("selected")), None)
+
+    def clear_selection(self) -> bool:
+        """U115: drop the highlight (outside click, Esc, folding, starting a sequence)."""
+        changed = False
+        for entry in self._rows:
+            if bool(entry["widget"].property("selected")):
+                entry["widget"].setProperty("selected", False)
+                entry["widget"].style().unpolish(entry["widget"])
+                entry["widget"].style().polish(entry["widget"])
+                changed = True
+        self.del_btn.setEnabled(False)
+        return changed
+
+    def _click_keeps_selection(self, obj, event) -> bool:
+        """True when the press should not clear the selection."""
+        widget = obj if isinstance(obj, QWidget) else None
+        if widget is None:
+            return False
+        for keeper in (self.del_btn, self.add_btn, self.seq_btn, self.seq_check):
+            if widget is keeper or keeper.isAncestorOf(widget):
+                return True
+        if widget is self or self.isAncestorOf(widget):
+            point = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else None
+            if point is None:
+                return False
+            for entry in self._rows:
+                row = entry["widget"]
+                if row.isVisible() and row.rect().contains(row.mapFromGlobal(point)):
+                    return True
+        return False
 
     def delete_selected(self) -> None:
         """Delete the highlighted row; main window offers a 3 s undo (U68)."""
@@ -369,8 +424,15 @@ class QuickSendPanel(QWidget):
 
     def _on_seq_toggled(self, checked: bool) -> None:
         self.seq_btn.setEnabled(checked)
+        self.set_rows_selectable(checked)       # U114-D9: the ticks only mean something here
         if not checked:
             self.stop_sequence()
+            self.clear_selection()
+
+    def set_rows_selectable(self, enabled: bool) -> None:
+        """U114-D9: outside sequence mode a row tick does nothing, so grey it out."""
+        for entry in self._rows:
+            entry["sel"].setEnabled(bool(enabled))
 
     def toggle_sequence(self) -> None:
         """Start the row-by-row sequence, or stop it when already running."""
@@ -394,7 +456,7 @@ class QuickSendPanel(QWidget):
         if payload is not None:
             self.send_payload.emit(payload)
         total = len(self._seq_queue)
-        self.seq_label.setText(tr("qs.seq.progress", i=self._seq_index + 1, n=total))
+        self.log.emit(tr("qs.seq.progress", i=self._seq_index + 1, n=total))
         if self._seq_index + 1 >= total:
             delay = self._row_delay(entry)
             self._seq_timer.singleShot(delay, self._finish_sequence)
@@ -433,7 +495,7 @@ class QuickSendPanel(QWidget):
         self._seq_timer.stop()
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
-        self.seq_label.setText(tr("qs.seq.done"))
+        self.log.emit(tr("qs.seq.done"))
         self._seq_index = 0
         self._seq_queue = []
 
@@ -442,8 +504,6 @@ class QuickSendPanel(QWidget):
         self._seq_timer.stop()
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
-        if self.seq_label.text() != tr("qs.seq.done"):
-            self.seq_label.setText("")
         self._seq_index = 0
         self._seq_queue = []
 
@@ -511,6 +571,7 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setToolTip(tr("qs.seq.tip"))
         self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
         self._rail.set_label(tr("qs.title"))
+        QTimer.singleShot(0, self._align_meta_rows)     # U114-D5: widths changed
         self._rail.setToolTip(tr("qs.rail.tip"))
         for entry in self._rows:
             entry["edit"].setPlaceholderText(tr("qs.placeholder"))
