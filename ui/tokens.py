@@ -96,8 +96,12 @@ LIGHT_TOKENS: dict[str, str] = {
 #: Measured (tests/test_text_colours.py): hue distance to the accent >= 18 deg,
 #: saturation below the accent's, contrast on the pane >= 4.5:1.
 TEXT_COLOURS: dict[str, dict[str, str]] = {
-    "dark": {"rx": "#c0c0c0", "echo": "#89a9cc", "meta": "#7d8590"},
-    "light": {"rx": "#111111", "echo": "#2f6b7a", "meta": "#6d6d78"},
+    # U125 colour convergence: the echo is a NEUTRAL cool gray-blue, not a second
+    # brand colour - the accent (interaction) and the data colours (rx/echo/meta)
+    # must not compete. Verified by tests/test_text_colours.py (hue >= 18 deg from
+    # the accent, saturation <= the accent's, contrast on the pane >= 4.5:1).
+    "dark": {"rx": "#c0c0c0", "echo": "#8f9fb2", "meta": "#7d8590"},
+    "light": {"rx": "#111111", "echo": "#4f6a70", "meta": "#6d6d78"},
 }
 
 #: The background those runtime colours are painted on (QPlainTextEdit).
