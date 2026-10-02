@@ -163,7 +163,9 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.1** | 修复与打磨：新数据即时高亮、序列「已发 N 次」计数 + 当前发送行高亮、折叠控件去重、SpinBox 上下箭头与清空下拉箭头放大 | ✅ 已完成 |
 | **v1.8.2** | 发送区按分区标注（发送内容区 / 循环发送 / 发送·历史）、打勾即可删除选中、折叠按钮移至连接行最右端 | ✅ 已完成 |
 | **v1.8.3** | 发送区改版：输入框在左、发送 / 历史 / 循环控件成列在右（发送按钮顺手），面板最小高度 335→235px | ✅ 已完成 |
-| **v1.8.4** | 发送区收敛为两段：设置行在上，下面一行左右分栏（左输入框 / 右发送·历史·循环紧凑列，与输入框顶对齐） | ✅ 本次发布 |
+| **v1.8.4** | 发送区收敛为两段：设置行在上，下面一行左右分栏（左输入框 / 右发送·历史·循环紧凑列，与输入框顶对齐） | ✅ 已完成 |
+| **v1.8.5** | 发送区压到约两行按钮高、按钮缩小并列，输入框默认自动换行 + 垂直滚动，数据区默认获得更多高度 | ✅ 已完成 |
+| **v1.8.6** | 修复：发送历史列表跟随应用主题（非 Windows 平台原本会发白）；README 图廊重做（内容饱满、整体图整宽、中英各 10 张） | ✅ 本次发布 |
 | v1.1+ | 波形显示（pyqtgraph）、TCP / UDP 调试、协议解析面板 | 计划中（按用户反馈排优先级）|
 
 ## 快速开始
@@ -375,7 +377,8 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 | **v1.8.2** | Send area labelled by its sections (send content / repeat send / send·history), ticking a row now arms "Delete selected", and the fold toggle moved to the far right of the connection row | ✅ Done |
 | **v1.8.3** | Send area re-planned: payload box on the left, Send / History / repeat controls in a column on the right (the primary button under the hand); pane minimum height 335→235 px | ✅ Done |
 | **v1.8.4** | Send area is two bands again: settings row on top, then one row split left / right (input box | compact Send / History / repeat column, flush with the box) | ✅ Done |
-| **v1.8.5** | Send pane squeezed to about two button rows with smaller side-by-side buttons, the input wraps + scrolls by default, and the data area gets more height by default | ✅ This release |
+| **v1.8.5** | Send pane squeezed to about two button rows with smaller side-by-side buttons, the input wraps + scrolls by default, and the data area gets more height by default | ✅ Done |
+| **v1.8.6** | Fix: the send-history list follows the app theme (it rendered light off-Windows); README gallery rebuilt (content-dense shots, full-width overviews, 10 shots per language) | ✅ This release |
 | v1.1+ | Waveform view (pyqtgraph), TCP / UDP, protocol analyser panel | Planned (prioritised by user feedback) |
 
 ### Quick start

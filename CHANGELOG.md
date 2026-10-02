@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.8.6] - 2026-10-02
+
+### Fixed
+
+- **The send-history list follows the app theme** (Linux/macOS and anywhere the app does
+  not switch the native colour scheme): the list had no style rule and inherited the OS
+  palette, so it rendered light inside the dark dialog (Windows only looked right because
+  the app turns the native colour scheme dark there). Both sheets now style the list's
+  background, text and selected row.
+
+
 ## [v1.8.5] - 2026-10-02
 
 ### Changed
