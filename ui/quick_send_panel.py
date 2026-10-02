@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMenu,
@@ -246,30 +247,40 @@ class QuickSendPanel(QWidget):
     # -- rows ----------------------------------------------------------------
 
     def add_row(self, text: str = "", is_hex: bool = True, delay_ms: int = 500,
-                selected: bool = False):
-        """Append one quick-send row together with its property chip."""
+                selected: bool = False, name: str = "", note: str = ""):
+        """Append one quick-send row: a name line above the command line (U182)."""
         if len(self._rows) >= MAX_ENTRIES:
             self.log.emit(tr("qs.max", n=MAX_ENTRIES))
             return
         row = self._make_row_frame()
-        # U118: one line per row again - the command keeps the whole width and the
-        # row's properties moved into a small chip at the trailing edge.
-        h = QHBoxLayout(row)
-        h.setContentsMargins(0, 2, 0, 2)
-        h.setSpacing(6)
-        sel, ord_lbl = self._build_row_select(h, row)
-        edit = self._build_row_edit(h, text)
-        chip, fmt, delay, unit = self._build_row_chip(h, is_hex, delay_ms)
-        send = self._build_row_send(h, row)
+        col = QVBoxLayout(row)
+        col.setContentsMargins(0, 2, 0, 2)
+        col.setSpacing(2)
+        top = QHBoxLayout()
+        top.setSpacing(6)
+        sel, ord_lbl = self._build_row_select(top, row)
+        name_edit = self._build_row_name(top)
+        name_edit.setText(name)
+        chip, fmt, delay, unit = self._build_row_chip(top, is_hex, delay_ms)
+        send = self._build_row_send(top, row)
+        col.addLayout(top)
+        bottom = QHBoxLayout()
+        bottom.setSpacing(6)
+        edit = self._build_row_edit(bottom, text)
+        col.addLayout(bottom)
 
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         edit.installEventFilter(self)      # clicking into the text selects the row
-        entry = {"widget": row, "edit": edit, "fmt": fmt, "send": send, "delay": delay,
+        name_edit.installEventFilter(self)
+        entry = {"widget": row, "edit": edit, "name": name_edit,
+                 "note": str(note), "fmt": fmt, "send": send, "delay": delay,
                  "sel": sel, "ord": ord_lbl, "unit": unit, "chip": chip}
         self._rows.append(entry)
         fmt.currentIndexChanged.connect(lambda *_: self._refresh_chip(entry))
         delay.textChanged.connect(lambda *_: self._refresh_chip(entry))
+        name_edit.textChanged.connect(lambda *_: self._refresh_entry_tip(entry))
         self._refresh_chip(entry)
+        self._refresh_entry_tip(entry)
         sel.setChecked(bool(selected))
         sel.setEnabled(self.seq_check.isChecked())   # U114-D9
         self._renumber_selection()
@@ -300,6 +311,16 @@ class QuickSendPanel(QWidget):
         ord_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         ord_lbl.hide()
         return sel, ord_lbl
+
+    def _build_row_name(self, h: QHBoxLayout) -> QLineEdit:
+        """U182: the command's display name (the row falls back to the content)."""
+        name = QLineEdit()
+        name.setObjectName("qsName")
+        name.setPlaceholderText(tr("qs.name.ph"))
+        name.setToolTip(tr("qs.name.tip"))
+        name.setAccessibleName(tr("qs.name.ph"))
+        h.addWidget(name, 1)
+        return name
 
     def _build_row_edit(self, h: QHBoxLayout, text: str) -> QLineEdit:
         """The command text; clicking into it selects the row (see eventFilter)."""
@@ -421,6 +442,12 @@ class QuickSendPanel(QWidget):
         elif event.type() == QEvent.Type.Resize and any(
                 entry["widget"] is obj for entry in self._rows):
             self._place_order_badges()
+        elif event.type() == QEvent.Type.ContextMenu:
+            # U182: right-click a row to edit its note
+            entry = self._entry_of(obj)
+            if entry is not None:
+                self._edit_note(entry)
+                return True
         elif event.type() == QEvent.Type.KeyPress and self._owns_keyboard():
             # U129: these shortcuts belong to the panel only - they used to be app-wide,
             # which meant Ctrl+A in the send box selected quick-send rows, and Delete in
@@ -512,6 +539,22 @@ class QuickSendPanel(QWidget):
         if chip is not None:
             chip.setText(self._chip_text(entry))
 
+    def _refresh_entry_tip(self, entry: dict) -> None:
+        """U182: the row tooltip carries the name and the note."""
+        name = entry["name"].text().strip() if entry.get("name") is not None else ""
+        note = str(entry.get("note", "")).strip()
+        parts = [p for p in (name, note) if p]
+        entry["widget"].setToolTip("\n".join(parts) if parts else tr("qs.row.tip"))
+
+    def _edit_note(self, entry: dict) -> None:
+        """U182: edit the free-text note for one command (row context menu)."""
+        text, ok = QInputDialog.getMultiLineText(
+            self, tr("qs.note.title"), tr("qs.note.label"), str(entry.get("note", "")))
+        if ok:
+            entry["note"] = text
+            self._refresh_entry_tip(entry)
+            self.save()
+
     def clear_selection(self) -> bool:
         """U115: drop the highlight (outside click, Esc, folding, starting a sequence)."""
         changed = False
@@ -547,8 +590,11 @@ class QuickSendPanel(QWidget):
             self.delete_entries(entries)
 
     def _row_payload(self, entry: dict) -> dict:
+        name_w = entry.get("name")
         return {"text": entry["edit"].text(), "hex": entry["fmt"].currentIndex() == 0,
-                "delay": self._row_delay(entry), "index": self._rows.index(entry)}
+                "delay": self._row_delay(entry), "index": self._rows.index(entry),
+                "name": name_w.text() if name_w is not None else "",
+                "note": str(entry.get("note", ""))}
 
     def delete_entries(self, entries: list) -> None:
         """Remove the given rows and report them as one batch (U118)."""
@@ -734,7 +780,8 @@ class QuickSendPanel(QWidget):
         index = int(payload.get("index", len(self._rows)))
         before = len(self._rows)
         self.add_row(str(payload.get("text", "")), bool(payload.get("hex", True)),
-                     int(payload.get("delay", 500) or 0))
+                     int(payload.get("delay", 500) or 0), False,
+                     str(payload.get("name", "")), str(payload.get("note", "")))
         if len(self._rows) > before and index < len(self._rows) - 1:
             entry = self._rows.pop()
             self._rows.insert(max(0, index), entry)
@@ -781,12 +828,15 @@ class QuickSendPanel(QWidget):
         for entry in self._rows:
             entry["edit"].setPlaceholderText(tr("qs.empty_row"))
             entry["send"].setText(tr("qs.send"))
-            entry["widget"].setToolTip(tr("qs.row.tip"))
             entry["delay"].setToolTip(tr("qs.delay.tip"))
             entry["unit"].setText(tr("qs.delay.unit"))
+            if entry.get("name") is not None:
+                entry["name"].setPlaceholderText(tr("qs.name.ph"))
+                entry["name"].setToolTip(tr("qs.name.tip"))
             if entry.get("sel") is not None:
                 entry["sel"].setToolTip(tr("qs.sel.tip"))
                 entry["ord"].setToolTip(tr("qs.sel.order.tip"))
+            self._refresh_entry_tip(entry)
 
     # -- persistence -----------------------------------------------------------
 
@@ -808,13 +858,16 @@ class QuickSendPanel(QWidget):
             return
         for item in items:
             self.add_row(str(item.get("text", "")), bool(item.get("hex", True)),
-                         int(item.get("delay", 500) or 0), bool(item.get("sel", False)))
+                         int(item.get("delay", 500) or 0), bool(item.get("sel", False)),
+                         str(item.get("name", "")), str(item.get("note", "")))
 
     def save(self):
         """Persist the quick-send rows into the config file."""
         items = [
             {"text": e["edit"].text(), "hex": e["fmt"].currentIndex() == 0,
-             "delay": self._row_delay(e), "sel": bool(e["sel"].isChecked())}
+             "delay": self._row_delay(e), "sel": bool(e["sel"].isChecked()),
+             "name": e["name"].text() if e.get("name") is not None else "",
+             "note": str(e.get("note", ""))}
             for e in self._rows
         ]
         config = {}

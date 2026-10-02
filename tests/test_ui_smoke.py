@@ -67,10 +67,13 @@ def test_actions_sit_below_the_input(app, win):
     assert group_y < input_y < send_y
 
 
-def test_quick_send_rows_are_one_line_and_explain_themselves(app, win):
+def test_quick_send_rows_show_name_and_command_lines(app, win):
+    # U182: each row is a name line above the command line, plus the property chip
     row = win.quick_panel._rows[0]
-    assert row["widget"].height() < 40
+    assert row["name"] is not None and row["edit"] is not None
+    assert row["name"] is not row["edit"]
     assert "HEX" in row["chip"].text() and "500" in row["chip"].text()
+    assert row["widget"].height() < 80        # two lines, not a tall block
 
 
 def test_selection_survives_a_row_click_and_clears_outside(app, win):

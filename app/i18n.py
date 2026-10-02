@@ -564,6 +564,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.bad_fmt": {"zh": "指令格式错误: {e}", "en": "Invalid command format: {e}"},
     "qs.save_fail": {"zh": "保存配置失败: {e}", "en": "Failed to save config: {e}"},
     # ---- command sequence (T13) ----
+    "qs.name.ph": {"zh": "名称（可选）", "en": "Name (optional)"},
+    "qs.name.tip": {"zh": "给这条命令起个名字（例如“查询IMEI”）；留空则只显示命令内容",
+                     "en": "A display name for this command (e.g. 'Query IMEI'); empty shows the command only"},
+    "qs.note.title": {"zh": "命令备注", "en": "Command note"},
+    "qs.note.label": {"zh": "备注（悬停该行可看）", "en": "Note (shown when hovering the row)"},
     "qs.seq": {"zh": "序列模式", "en": "Sequence mode"},
     "qs.seq.tip": {
         "zh": "按顺序发送：每条指令可单独设延迟（毫秒），点「运行」依次自动发出",

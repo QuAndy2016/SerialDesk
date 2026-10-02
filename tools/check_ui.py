@@ -82,6 +82,11 @@ def check_overflow() -> int:
                     if widget.window() is not win.window():
                         continue        # popups and dialogs have their own geometry
                     parent, rect = widget.parentWidget(), widget.geometry()
+                    # U182: a scroll area sizes its content widget to the content on
+                    # purpose, so "content taller than viewport" is normal scrolling,
+                    # not a control clipping out of its row.
+                    if parent.objectName() == "qt_scrollarea_viewport":
+                        continue
                     if (rect.left() < -2 or rect.top() < -2
                             or rect.right() > parent.width() + 2
                             or rect.bottom() > parent.height() + 2):
