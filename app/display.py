@@ -49,6 +49,45 @@ def fragment_visible(kind: int, mode: int) -> bool:
         return True
     return kind_is_tx(kind) == (mode == 2)
 
+def split_fragments(text: str, kind: int) -> list[tuple[str, int]]:
+    """Store entries for one display fragment, with the newlines made explicit.
+
+    A payload can carry '\n' of its own: an ASCII 0x0A byte, or the row breaks a
+    hexdump adds. Keeping that inside one entry made the *document* show more
+    lines than the *store* knew about, so the two disagreed about where a line
+    ends - which is how "a line break that should not be there" (and rows glued
+    together after a view rebuild) appeared. Splitting it here gives the store
+    exactly the shape the pane renders.
+    """
+    if "\n" not in text:
+        return [(text, kind)]
+    out: list[tuple[str, int]] = []
+    for i, part in enumerate(text.split("\n")):
+        if i:
+            out.append(("\n", kind))     # exactly where the pane breaks the line
+        if part:
+            out.append((part, kind))
+    return out
+
+
+def rows_from_fragments(store) -> list[list[tuple[str, int]]]:
+    """Group the fragment stream into display rows - the single row model.
+
+    The live pane and the view rebuild both walk this, so a "row" cannot mean
+    two different things in the two places. Empty rows are kept: a blank line in
+    the store is a blank line in the pane, and dropping it would shift every row
+    below it. (Raised by the 2026-10-03 data-path pass.)
+    """
+    rows: list[list[tuple[str, int]]] = [[]]
+    for text, kind in store:
+        for piece, piece_kind in split_fragments(text, kind):
+            if piece == "\n":
+                rows.append([])
+            else:
+                rows[-1].append((piece, piece_kind))
+    return rows
+
+
 RX_ASCII = 0
 RX_HEX = 1
 RX_HEX_ASCII = 2

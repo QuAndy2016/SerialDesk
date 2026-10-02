@@ -587,3 +587,24 @@ def test_line_ending_control_is_visible_but_disabled_in_hex(app, win):
     finally:
         win.tx_fmt_combo.setCurrentIndex(was)
         app.processEvents()
+
+
+def test_store_rows_and_document_lines_agree_with_embedded_newlines(app, win):
+    """2026-10-03 (data-path pass): the store must know every line the pane shows.
+
+    Before this, an ASCII payload containing 0x0A rendered two lines while the
+    store held one entry - the filter and every per-line action then worked off a
+    row model that did not match the screen.
+    """
+    from app.display import rows_from_fragments
+    from ui.receive_controller import rebuild_rx_view
+    win.rx_view.clear()
+    win._rx_store = []
+    win._emit_rx_text("AA\nBB", tx=False)
+    app.processEvents()
+    assert win.rx_view.blockCount() == 2
+    assert len(rows_from_fragments(win._rx_store)) == 2
+    before = win.rx_view.toPlainText()
+    rebuild_rx_view(win)
+    app.processEvents()
+    assert win.rx_view.toPlainText() == before      # rebuild is a no-op visually

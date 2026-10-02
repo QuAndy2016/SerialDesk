@@ -90,7 +90,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, frag_kind, fragment_visible, kind_is_meta, kind_is_tx, long_line_tooltip)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, frag_kind, fragment_visible, kind_is_meta, kind_is_tx, long_line_tooltip, rows_from_fragments, split_fragments)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -221,7 +221,10 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
             win._log_append(text)
         return
     store = _rx_store(win)
-    store.append((text, kind))
+    # 2026-10-03: normalise on the way in - a payload that carries its own '\n'
+    # (an ASCII 0x0A byte, or a hexdump's row breaks) is stored as explicit line
+    # separators, so the store and the document agree on where lines end.
+    store.extend(split_fragments(text, kind))
     if len(store) > RX_STORE_MAX:
         del store[:len(store) - RX_STORE_MAX]
     if text == "\n" or kind:
@@ -268,19 +271,18 @@ def rebuild_rx_view(win: MainWindow) -> None:
     if not hasattr(win, "rx_view"):
         return
     store = _rx_store(win)
-    lines = [[]]
-    for text, kind in store:
-        if text == "\n":
-            lines.append([(text, kind)])
-        else:
-            lines[-1].append((text, kind))
+    rows = rows_from_fragments(store)
     mode = getattr(win, "_rx_filter", 0)
     win.rx_view.clear()
-    for line in lines:
-        tx_line = any(kind_is_tx(k) for _, k in line)
+    first = True
+    for row in rows:
+        tx_line = any(kind_is_tx(k) for _, k in row)
         if (mode == 1 and tx_line) or (mode == 2 and not tx_line):
             continue
-        for text, kind in line:
+        if not first:
+            _insert_rx_fragment(win, "\n", 0)
+        first = False
+        for text, kind in row:
             _insert_rx_fragment(win, text, kind)
 
 
