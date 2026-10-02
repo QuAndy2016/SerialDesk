@@ -95,38 +95,48 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 ### 界面一览
 
 <p align="center">
-  <img src="assets/shot_overview_dark.jpg" width="49%" alt="主界面 · 深色主题">
-  <img src="assets/shot_overview_light.jpg" width="49%" alt="主界面 · 浅色主题">
+  <img src="assets/shot_overview_dark.jpg" width="100%" alt="主界面 · 深色主题">
   <br>
-  <sub>主界面：深色 / 浅色（中英双语，主题可跟随系统）</sub>
+  <sub>主界面 · 深色主题（收发/时间戳/校验/快捷发送，中英双语）</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_overview_light.jpg" width="100%" alt="主界面 · 浅色主题">
+  <br>
+  <sub>主界面 · 浅色主题（主题可跟随系统）</sub>
 </p>
 
 <p align="center">
   <img src="assets/shot_receive.jpg" width="49%" alt="接收区">
   <img src="assets/shot_send.jpg" width="49%" alt="发送区">
   <br>
-  <sub>接收区（关键词高亮 · 视图过滤 · 时间戳）· 发送区（左侧输入，右侧发送与循环）</sub>
+  <sub>接收区（关键词高亮 · 视图过滤 · 时间戳）· 发送区（左侧输入，右侧发送与循环按钮）</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot_quicksend.jpg" width="49%" alt="快速发送面板">
-  <img src="assets/shot_dlg_history.jpg" width="49%" alt="发送历史">
+  <img src="assets/shot_quicksend.jpg" width="34%" alt="快速发送面板">
   <br>
-  <sub>快速发送面板（序列模式 · 已发次数 · 发送中高亮）· 发送历史</sub>
+  <sub>快速发送面板：序列模式 · 已发次数 · 发送中高亮</sub>
 </p>
 
 <p align="center">
   <img src="assets/shot_dlg_rules.jpg" width="49%" alt="自动应答规则">
-  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="串口参数设置">
+  <img src="assets/shot_dlg_history.jpg" width="49%" alt="发送历史">
   <br>
-  <sub>自动应答规则 · 串口参数设置（数据位 / 停止位 / 校验 / 流控）</sub>
+  <sub>自动应答规则 · 发送历史（含格式 / 字节数）</sub>
 </p>
 
 <p align="center">
+  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="串口参数设置">
   <img src="assets/shot_dlg_autosave.jpg" width="49%" alt="日志保存设置">
-  <img src="assets/shot_dlg_shortcuts.jpg" width="49%" alt="快捷键一览">
   <br>
-  <sub>日志保存设置 · 快捷键一览</sub>
+  <sub>串口参数设置（数据位 / 停止位 / 校验 / 流控）· 日志保存设置</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_dlg_shortcuts.jpg" width="34%" alt="快捷键一览">
+  <br>
+  <sub>快捷键一览</sub>
 </p>
 
 ## 路线图
@@ -296,10 +306,15 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 ### Screenshots
 
 <p align="center">
-  <img src="assets/shot_en_overview_dark.jpg" width="49%" alt="Main window, dark theme">
-  <img src="assets/shot_en_overview_light.jpg" width="49%" alt="Main window, light theme">
+  <img src="assets/shot_en_overview_dark.jpg" width="100%" alt="Main window, dark theme">
   <br>
-  <sub>Main window: dark / light (English UI shown; Chinese + English, theme can follow the system)</sub>
+  <sub>Main window · dark theme (I/O, timestamps, checksums, quick send; English UI shown)</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_en_overview_light.jpg" width="100%" alt="Main window, light theme">
+  <br>
+  <sub>Main window · light theme (the theme can follow the system)</sub>
 </p>
 
 <p align="center">
@@ -310,24 +325,29 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 </p>
 
 <p align="center">
-  <img src="assets/shot_en_quicksend.jpg" width="49%" alt="Quick-send panel">
-  <img src="assets/shot_en_dlg_history.jpg" width="49%" alt="Send history">
+  <img src="assets/shot_en_quicksend.jpg" width="34%" alt="Quick-send panel">
   <br>
-  <sub>Quick-send panel (sequence mode · sent counter · the row being sent) · Send history</sub>
+  <sub>Quick-send panel: sequence mode · sent counter · the row being sent</sub>
 </p>
 
 <p align="center">
   <img src="assets/shot_en_dlg_rules.jpg" width="49%" alt="Auto-reply rules">
-  <img src="assets/shot_en_dlg_port_settings.jpg" width="49%" alt="Port settings">
+  <img src="assets/shot_en_dlg_history.jpg" width="49%" alt="Send history">
   <br>
-  <sub>Auto-reply rules · Port settings (data bits / stop bits / parity / flow control)</sub>
+  <sub>Auto-reply rules · Send history (format / size per entry)</sub>
 </p>
 
 <p align="center">
+  <img src="assets/shot_en_dlg_port_settings.jpg" width="49%" alt="Port settings">
   <img src="assets/shot_en_dlg_autosave.jpg" width="49%" alt="Log saving settings">
-  <img src="assets/shot_en_dlg_shortcuts.jpg" width="49%" alt="Shortcut reference">
   <br>
-  <sub>Log saving settings · Shortcut reference</sub>
+  <sub>Port settings (data bits / stop bits / parity / flow control) · Log saving settings</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_en_dlg_shortcuts.jpg" width="34%" alt="Shortcut reference">
+  <br>
+  <sub>Shortcut reference</sub>
 </p>
 
 ### Roadmap
