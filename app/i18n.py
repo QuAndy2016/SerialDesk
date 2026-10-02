@@ -162,9 +162,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "split.tlv.tip": {"zh": "长度前缀字节数（1~4），小端可选", "en": "Length-prefix size (1-4); optional little-endian"},
     "split.tlv.le": {"zh": "小端", "en": "LE"},
     "split.tlv.le.tip": {"zh": "长度字段按小端读取（默认大端）", "en": "Read the length field little-endian (default big-endian)"},
-    "split.tlv.crc": {"zh": "CRC16", "en": "CRC16"},
+    "split.tlv.crc": {"zh": "CRC", "en": "CRC"},
     "split.tlv.crc.tip": {"zh": "帧尾带 CRC-16/Modbus 校验；校验失败的帧丢弃并重新同步", "en": "Frame ends with a CRC-16/Modbus check; a bad frame is dropped and the stream resynchronises"},
     "qs.example.tip": {"zh": "首次运行示例：可直接发送，或改成你的指令；不需要就清空", "en": "Seeded example: send it as-is, edit it, or clear the row"},
+    "btn.more": {"zh": "更多", "en": "More"},
+    "btn.more.tip": {"zh": "自动滚动 / 暂停显示 / 自动换行 / 另存为…", "en": "Auto-scroll / Pause / Wrap / Save as…"},
     "split.tip": {
         "zh": "分包分行方式\n自动：按波特率 3.5 字符时间\n手动：指定毫秒间隔\n按帧头：识别帧头字符串分行",
         "en": "How frames are split\nAuto: 3.5-char time by baud rate\nManual: fixed millisecond gap\nBy header: split on the header string",

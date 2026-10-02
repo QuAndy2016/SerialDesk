@@ -22,6 +22,8 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+MIN_WINDOW_WIDTH = 1280   # U164: a 1366x768 laptop must still fit the whole window
+
 
 def run(cmd, **kw):
     return subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, **kw)
@@ -95,6 +97,43 @@ def check_overflow() -> int:
     return 0
 
 
+def check_min_width() -> int:
+    """U164: the window must not demand more width than a 1366x768 laptop has.
+
+    The overflow check resizes the window to 1070 px and lets _fit_minimum_width()
+    raise the floor to whatever the rows need, so a row that is simply too wide
+    passes there. This check measures that floor itself.
+    """
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    from app import i18n
+    from ui.main_window import MainWindow
+
+    problems = []
+    for lang in ("zh", "en"):
+        i18n.set_language(lang)
+        win = MainWindow()
+        win.resize(1070, 600)
+        win.show()
+        for _ in range(4):
+            app.processEvents()
+        win._fit_minimum_width()
+        for _ in range(2):
+            app.processEvents()
+        if win.minimumWidth() > MIN_WINDOW_WIDTH:
+            problems.append("%s: minimum width %d px > %d" % (
+                lang, win.minimumWidth(), MIN_WINDOW_WIDTH))
+        win.close()
+    if problems:
+        print("[min-width] %d violations" % len(problems))
+        for line in problems:
+            print("   ", line)
+        return 1
+    print("[min-width] ok (<= %d px in zh/en)" % MIN_WINDOW_WIDTH)
+    return 0
+
+
 def check_tests() -> int:
     proc = run([sys.executable, "-m", "pytest", "-q"])
     tail = (proc.stdout or proc.stderr).strip().splitlines()[-1:] or [""]
@@ -103,7 +142,8 @@ def check_tests() -> int:
 
 
 def main() -> int:
-    results = {"contrast": check_contrast(), "overflow": check_overflow(), "tests": check_tests()}
+    results = {"contrast": check_contrast(), "overflow": check_overflow(),
+               "min-width": check_min_width(), "tests": check_tests()}
     bad = [name for name, code in results.items() if code]
     print("\nUI gate:", "FAILED -> " + ", ".join(bad) if bad else "all clear")
     return 1 if bad else 0

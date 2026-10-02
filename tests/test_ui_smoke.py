@@ -346,3 +346,40 @@ def test_quick_send_seeds_examples_on_first_run(app, tmp_path, monkeypatch):
     assert len(panel._rows) == qsp.DEFAULT_ROWS
     assert panel._rows[0]["edit"].toolTip()          # the seeded rows say why
     panel.deleteLater()
+
+
+def test_more_menu_holds_the_low_frequency_switches(app, win):
+    """U164: auto-scroll/pause/wrap/save-as left the row but stay alive and wired."""
+    assert win.more_btn.menu() is win.more_menu
+    for widget in (win.autoscroll_check, win.pause_check, win.wrap_check,
+                   win.save_log_as_btn):
+        assert not widget.isVisible()
+    assert win.act_autoscroll.isCheckable() and win.act_pause.isCheckable()
+    assert win.act_wrap.isCheckable()
+    assert win.act_autoscroll.isChecked() == win.autoscroll_check.isChecked()
+    assert win.act_wrap.isChecked() == win.wrap_check.isChecked()
+    assert win.act_save_as.text()          # the "Save as" action is in the menu
+
+
+def test_link_checkbox_mirrors_both_ways(app):
+    from PySide6.QtGui import QAction
+    from PySide6.QtWidgets import QCheckBox
+    from ui.regions import _link_checkbox
+
+    box = QCheckBox()
+    action = QAction("mirror")
+    action.setCheckable(True)
+    _link_checkbox(box, action)
+    action.setChecked(True)
+    assert box.isChecked()
+    box.setChecked(False)
+    assert not action.isChecked()
+
+
+def test_window_fits_a_small_laptop(app, win):
+    """U164: the whole receive row must fit inside 1366x768 (kept last on purpose)."""
+    win.resize(1070, 600)
+    for _ in range(3):
+        app.processEvents()
+    win._fit_minimum_width()
+    assert win.minimumWidth() <= 1280

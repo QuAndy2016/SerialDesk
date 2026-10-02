@@ -522,11 +522,11 @@ def _build_byte_split_pages(win: MainWindow) -> tuple[QWidget, QWidget, QWidget]
 
     win.split_start_edit = QLineEdit()
     win.split_start_edit.setPlaceholderText(tr("split.delim.start"))
-    win.split_start_edit.setMaximumWidth(78)
+    win.split_start_edit.setMaximumWidth(64)
     win.split_start_edit.setToolTip(tr("split.delim.tip"))
     win.split_end_edit = QLineEdit()
     win.split_end_edit.setPlaceholderText(tr("split.delim.end"))
-    win.split_end_edit.setMaximumWidth(78)
+    win.split_end_edit.setMaximumWidth(64)
     win.split_end_edit.setToolTip(tr("split.delim.tip"))
     delim_page = QWidget()
     delim_row = QHBoxLayout(delim_page)
@@ -586,7 +586,7 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     fixed_page, delim_page, tlv_page = _build_byte_split_pages(win)
 
     win.split_slot = QStackedWidget()
-    win.split_slot.setMinimumWidth(156)   # the mode hint must not clip
+    win.split_slot.setMinimumWidth(140)   # the mode hint must not clip
     win.split_slot.addWidget(win.split_hint_lbl)   # 0 auto / off
     win.split_slot.addWidget(win.split_ms_edit)    # 1 manual
     win.split_slot.addWidget(win.header_edit)      # 2 by header
@@ -596,12 +596,66 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addWidget(win.split_slot)
 
 
+def _link_checkbox(box: QCheckBox, action: QAction) -> None:
+    """Mirror a checkbox's state onto a menu action, in both directions (U164)."""
+    action.setChecked(box.isChecked())      # set before wiring: no startup signal
+    action.toggled.connect(box.setChecked)
+    box.toggled.connect(action.setChecked)
+
+
+def _build_more_controls(win: MainWindow) -> QToolButton:
+    """The hidden switches and the More menu that mirrors them (U164)."""
+    win.autoscroll_check = QCheckBox(tr("rx.autoscroll"), win)   # U43
+    win.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
+    win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
+    win.autoscroll_check.toggled.connect(win._on_autoscroll_toggled)
+    win.autoscroll_check.hide()
+
+    win.pause_check = QCheckBox(tr("rx.pause"), win)
+    win.pause_check.setToolTip(tr("rx.pause.tip"))
+    win.pause_check.toggled.connect(win._on_pause_toggled)
+    win.pause_check.hide()
+
+    win.wrap_check = QCheckBox(tr("rx.wrap"), win)            # U162: soft-wrap toggle
+    win.wrap_check.setToolTip(tr("rx.wrap.tip"))
+    win.wrap_check.setChecked(bool(load_config().get("wrap_on", False)))
+    win.wrap_check.toggled.connect(win._on_wrap_toggled)
+    win.wrap_check.hide()
+
+    win.save_log_as_btn = QPushButton(tr("btn.save_log_as"), win)
+    win.save_log_as_btn.clicked.connect(win.on_save_log_as)
+    win.save_log_as_btn.hide()
+
+    win.more_btn = QToolButton()
+    win.more_btn.setText(tr("btn.more"))
+    win.more_btn.setToolTip(tr("btn.more.tip"))
+    win.more_btn.setAccessibleName(tr("btn.more"))
+    win.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+    win.more_menu = QMenu(win.more_btn)
+    win.act_autoscroll = win.more_menu.addAction(tr("rx.autoscroll"))
+    win.act_autoscroll.setToolTip(tr("rx.autoscroll.tip"))
+    win.act_pause = win.more_menu.addAction(tr("rx.pause"))
+    win.act_pause.setToolTip(tr("rx.pause.tip"))
+    win.act_wrap = win.more_menu.addAction(tr("rx.wrap"))
+    win.act_wrap.setToolTip(tr("rx.wrap.tip"))
+    win.more_menu.addSeparator()
+    win.act_save_as = win.more_menu.addAction(tr("btn.save_log_as"))
+    win.act_save_as.triggered.connect(win.on_save_log_as)
+    for action in (win.act_autoscroll, win.act_pause, win.act_wrap):
+        action.setCheckable(True)
+    _link_checkbox(win.autoscroll_check, win.act_autoscroll)
+    _link_checkbox(win.pause_check, win.act_pause)
+    _link_checkbox(win.wrap_check, win.act_wrap)
+    win.more_btn.setMenu(win.more_menu)
+    return win.more_btn
+
+
 def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
-    """Timestamp / echo / autoscroll switches and the log + clear actions (U96)."""
-    # U96: one row, not two. The stream settings come first, then the display
-    # switches, then the log actions; Clear stays alone at the far right (U95's
-    # rule for destructive actions), which is what the stretch is there for.
-    # The in-row Auto-save switch is gone (U97) - the settings dialog owns it.
+    """Timestamp / echo switches, the More menu and the log + clear actions (U96/U164)."""
+    # U96: one row, not two. U164: the row must still fit a 1366x768 laptop, so the
+    # low-frequency controls (auto-scroll, pause, wrap, "Save as") keep their state
+    # but move into a "More" menu. Their widgets stay alive (hidden) so every piece
+    # of code that addresses them - retranslate, tests, config - keeps working.
     win.rx_filter_combo = QComboBox()                          # U163b: all / RX only / TX only
     win.rx_filter_combo.addItems([tr("rx.filter.all"), tr("rx.filter.rx"), tr("rx.filter.tx")])
     win.rx_filter_combo.setCurrentIndex(0)
@@ -621,35 +675,15 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
     win.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
     rx_opts.addWidget(win.echo_tx_check)
-    rx_opts.addSpacing(12)
-    win.autoscroll_check = QCheckBox(tr("rx.autoscroll"))   # U43
-    win.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
-    win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
-    win.autoscroll_check.toggled.connect(win._on_autoscroll_toggled)
-    rx_opts.addWidget(win.autoscroll_check)
 
     rx_opts.addSpacing(12)
-    win.pause_check = QCheckBox(tr("rx.pause"))
-    win.pause_check.setToolTip(tr("rx.pause.tip"))
-    win.pause_check.toggled.connect(win._on_pause_toggled)
-    rx_opts.addWidget(win.pause_check)
-
-    rx_opts.addSpacing(12)
-    win.wrap_check = QCheckBox(tr("rx.wrap"))            # U162: soft-wrap toggle
-    win.wrap_check.setToolTip(tr("rx.wrap.tip"))
-    win.wrap_check.setChecked(bool(load_config().get("wrap_on", False)))
-    win.wrap_check.toggled.connect(win._on_wrap_toggled)
-    rx_opts.addWidget(win.wrap_check)
+    rx_opts.addWidget(_build_more_controls(win))
 
     rx_opts.addSpacing(18)
     win.save_log_btn = QPushButton(tr("btn.save_log_quick"))
     win.save_log_btn.setToolTip(tr("log.quick.tip"))
     win.save_log_btn.clicked.connect(win.on_save_log_quick)
     rx_opts.addWidget(win.save_log_btn)
-
-    win.save_log_as_btn = QPushButton(tr("btn.save_log_as"))
-    win.save_log_as_btn.clicked.connect(win.on_save_log_as)
-    rx_opts.addWidget(win.save_log_as_btn)
 
     rx_opts.addStretch(1)
     win.clear_btn = QPushButton(tr("btn.clear"))
