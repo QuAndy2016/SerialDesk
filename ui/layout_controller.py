@@ -227,8 +227,15 @@ def fit_tx_edit_height(win: MainWindow) -> None:
                      if w.isVisible()), default=0) + 8
         avail = win._tx_group.height() - above - below - 6
         cap = 26 * line + chrome
+        # 2026-10-02: the "send content" caption above the box is part of the send
+        # pane's fixed budget. Take its height out of the input, or the pane's
+        # minimum grows by one text row and overflows the splitter at 1070x600.
+        cap_lbl = getattr(win, "_tx_content_lbl", None)
+        caption = (cap_lbl.sizeHint().height() + 4) if cap_lbl is not None \
+            and cap_lbl.isVisible() else 0
         # at least three lines - one line was what made the box feel cramped
-        win.tx_edit.setFixedHeight(int(max(3 * line + chrome, min(avail, cap))))
+        win.tx_edit.setFixedHeight(
+            int(max(3 * line + chrome, min(avail, cap)) - caption))
     finally:
         win._fitting_tx = False
 

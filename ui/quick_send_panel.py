@@ -294,6 +294,7 @@ class QuickSendPanel(QWidget):
         self._refresh_entry_tip(entry)
         sel.setChecked(bool(selected))
         sel.setEnabled(self.seq_check.isChecked())   # U114-D9
+        sel.toggled.connect(self._on_row_tick)       # B2: a tick arms the delete button
         self._renumber_selection()
         self._update_count()
 
@@ -526,11 +527,25 @@ class QuickSendPanel(QWidget):
         return None
 
     def _update_del_btn(self) -> None:
-        count = len(self.selected_entries())
+        count = len(self._armed_entries())
         self.del_btn.setEnabled(count > 0)
         self.del_btn.setText(tr("qs.del_selected.n", n=count) if count
                              else tr("qs.del_selected"))
         self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+
+    def _armed_entries(self) -> list:
+        """B2 (2026-10-02): rows the delete action removes - click-selected or ticked.
+
+        The row tick (the sequence checkbox) and the click highlight looked like the
+        same thing to the user, but only the highlight armed the delete button, so
+        ticking rows and pressing "Delete selected" did nothing. Both now arm it.
+        """
+        return [e for e in self._rows
+                if bool(e["widget"].property("selected")) or e["sel"].isChecked()]
+
+    def _on_row_tick(self, _checked: bool = False) -> None:
+        """B2: arming follows the tick, not only the click highlight."""
+        self._update_del_btn()
 
     def selected_entries(self) -> list:
         """Payloads of every selected row, in list order."""
@@ -596,8 +611,8 @@ class QuickSendPanel(QWidget):
         return False
 
     def delete_selected(self) -> None:
-        """U118: delete every selected row; the main window offers a 3 s batch undo."""
-        entries = self.selected_entries()
+        """U118/B2: delete every armed row; the main window offers a 3 s batch undo."""
+        entries = self._armed_entries()
         if entries:
             self.delete_entries(entries)
 

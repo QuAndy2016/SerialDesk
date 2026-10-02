@@ -1,5 +1,28 @@
 # Changelog
 
+## [v1.8.2] - 2026-10-02
+
+### Added
+
+- **The send area is labelled by its sections** (Andy's annotated layout): a muted
+  "send content (text input)" caption sits above the payload box, and a "repeat send"
+  caption now opens the loop cluster (stop / interval / count), so the area no longer
+  reads as one long run of unlabelled controls.
+
+### Fixed
+
+- **"Delete selected" works after ticking rows** (B2): the row tick (the sequence
+  checkbox) and the click highlight looked like the same thing, but only the highlight
+  armed the delete button - ticking rows and pressing Delete did nothing. Either now
+  arms it, so both gestures delete.
+
+### Changed
+
+- **The quick-send fold toggle moved to the far right of the connection row** (S6):
+  directly above the panel's right edge. Beside Settings it read as a Settings submenu
+  (a chevron glued to a gear); on the panel's own edge the mapping is obvious.
+
+
 ## [v1.8.1] - 2026-10-02
 
 ### Fixed

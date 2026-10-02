@@ -200,7 +200,6 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._panel_btn.setToolTip(tr("menu.quick_panel.tip"))
     win._panel_btn.clicked.connect(
         lambda: win._on_quick_panel_collapsed(not win._panel_btn.isChecked()))
-    bar.addWidget(win._panel_btn)
     win._sync_panel_btn(False)   # U161: initial icon so the button is not blank on first open
     # U114-D4: one control height across the connection row
     for _w in (win.port_combo, win.refresh_btn, win.baud_combo, win.open_btn,
@@ -208,6 +207,11 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
         _w.setMinimumHeight(32)
 
     bar.addStretch(1)
+    # S6 (2026-10-02): the fold toggle sits at the far right edge, directly above the
+    # quick-send panel's right edge. Beside Settings it read as a submenu of Settings
+    # (a chevron glued to a gear); on the opposite edge it would fold a panel that is
+    # a screen away. Same edge as the panel keeps the spatial mapping.
+    bar.addWidget(win._panel_btn)
 
 
 def _mount_parameter_dialog(win: MainWindow) -> None:
