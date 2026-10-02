@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v1.8.8] - 2026-10-02
 
 ### Changed
 
@@ -32,9 +32,6 @@
   (installer, portable zip and their checksums), the feature list became five
   categorised tables with worked examples for the `{i}` placeholder, a development
   progress block was added, and the "If Windows blocks it" section was dropped.
-
-
-## [Unreleased]
 
 
 ## [v1.8.6] - 2026-10-02
