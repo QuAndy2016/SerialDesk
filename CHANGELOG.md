@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Send-history multi-select and batch delete** (U183): the list takes Ctrl/Shift
+  clicks, Ctrl+A selects the visible rows (filtered-out rows stay untouched), the
+  delete button reads "Delete selected (N)" and greys out with nothing selected, and
+  one click drops the whole selection (indices removed high-to-low, metadata cleaned,
+  config persisted). Enter/double-click fill is unchanged.
+
+
 ## [v1.8.6] - 2026-10-02
 
 ### Fixed

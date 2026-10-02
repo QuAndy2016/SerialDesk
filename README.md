@@ -94,7 +94,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
 | 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
 | 指令序列 | 序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化）；头部显示「已发 N 次」，正在发送的那一行高亮 |
-| 发送历史 | 最近 50 条自动记录、去重、持久化；弹窗可筛选，每条带格式/字节数/时间，双击或回车回填，删除需二次确认 |
+| 发送历史 | 最近 50 条自动记录、去重、持久化；弹窗可筛选，每条带格式/字节数/时间；**支持多选（Ctrl/Shift）与 Ctrl+A 全选后批量删除**；双击或回车回填；清空需二次确认 |
 | 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消 |
 
 #### 示例：发送内容自动递增 `{i}`
@@ -355,7 +355,7 @@ Both share the same notes:
 | Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
 | Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
 | Command sequence | sequence mode: each row has its own delay, press Run to fire them in order; the header shows a "sent N times" counter and the row being sent is highlighted |
-| Send history | the last 50 commands, deduplicated and persisted; filterable popup with format / size / age per entry, double-click or Enter recalls it, clearing asks twice |
+| Send history | the last 50 commands, deduplicated and persisted; filterable popup with format / size / age per entry; **multi-select (Ctrl/Shift) or Ctrl+A with batch delete**; double-click or Enter recalls it; clearing asks twice |
 | File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel |
 
 #### Example: the auto-increment placeholder `{i}`
