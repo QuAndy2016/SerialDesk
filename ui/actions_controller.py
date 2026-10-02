@@ -320,17 +320,6 @@ def on_pause_toggled(win: MainWindow, checked: bool) -> None:
         win._resume_rx_display()
 
 
-def on_wrap_toggled(win: MainWindow, checked: bool) -> None:
-    "on wrap toggled"
-    """Soft-wrap the receive pane on/off and remember it (U162)."""
-    win.rx_view.setLineWrapMode(
-        QPlainTextEdit.LineWrapMode.WidgetWidth if checked
-        else QPlainTextEdit.LineWrapMode.NoWrap)
-    config = load_config()
-    config["wrap_on"] = bool(checked)
-    save_config(config)
-
-
 def _frag_kind(frag) -> int:
     """Kind stamped on a fragment: side bit + meta bit (app.display.frag_kind).
 
@@ -630,7 +619,7 @@ def apply_accessible_names(win: MainWindow) -> None:
     names = ("port_combo", "refresh_btn", "baud_combo", "open_btn", "rx_fmt_combo",
              "params_summary", "_settings_btn", "_panel_btn", "split_combo",
              "split_ms_edit", "header_edit", "ts_check",
-             "autoscroll_check", "wrap_check", "rx_filter_combo", "save_log_btn", "save_log_as_btn", "clear_btn",
+             "autoscroll_check", "rx_filter_combo", "save_log_btn", "save_log_as_btn", "clear_btn",
              "rx_view", "tx_edit", "nl_combo", "escape_check", "send_btn",
              "history_btn", "repeat_btn", "repeat_ms", "send_file_btn",
              "tx_settings_btn")
@@ -653,7 +642,7 @@ def setup_tab_order(win: MainWindow) -> None:
     """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
     names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
              "split_combo", "split_ms_edit", "header_edit", "rx_filter_combo", "ts_check",
-             "autoscroll_check", "wrap_check",
+             "autoscroll_check",
              "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
              "nl_combo", "escape_check",   # U121: the two pickers live in a popup
              "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",

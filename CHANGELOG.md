@@ -7,6 +7,8 @@
 - **The send box always wraps** (Andy 2026-10-02): the "Wrap input" switch was removed -
   long payloads soft-wrap with a vertical scrollbar by default instead of offering a
   setting to hunt for.
+- **The receive pane always wraps** (Andy 2026-10-02): the "Wrap" item left the More menu
+  as well; long RX lines wrap by default.
 
 
 ## [v1.8.7] - 2026-10-02

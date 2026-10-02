@@ -199,15 +199,14 @@ def test_panel_toggle_button_is_never_blank(app, win):
     assert not btn.icon().isNull() and btn.isChecked()
 
 
-def test_wrap_toggle_switches_line_wrap(app, win):
-    # U162-B1: the soft-wrap switch flips qplaintextedit wrap mode both ways
+def test_receive_pane_always_wraps(app, win):
+    """2026-10-02 (Andy): the soft-wrap switch was removed - the pane always wraps.
+
+    The old test flipped win._on_wrap_toggled both ways; the switch no longer exists.
+    """
     from PySide6.QtWidgets import QPlainTextEdit
-    win._on_wrap_toggled(True)
-    app.processEvents()
     assert win.rx_view.lineWrapMode() == QPlainTextEdit.LineWrapMode.WidgetWidth
-    win._on_wrap_toggled(False)
-    app.processEvents()
-    assert win.rx_view.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
+    assert not hasattr(win, "wrap_check") and not hasattr(win, "act_wrap")
 
 
 def test_clean_copy_strips_timestamps_and_markers(app, win):
@@ -420,16 +419,15 @@ def test_quick_send_seeds_examples_on_first_run(app, tmp_path, monkeypatch):
 
 
 def test_more_menu_holds_the_low_frequency_switches(app, win):
-    """U164/U179: only pause/wrap/save-as live in the More menu; auto-scroll is back
-    in the row because it is high frequency."""
+    """U164/U179: only pause/save-as live in the More menu now (the wrap switch was
+    removed in 2026-10-02); auto-scroll is back in the row because it is high frequency."""
     assert win.more_btn.menu() is win.more_menu
-    for widget in (win.pause_check, win.wrap_check, win.save_log_as_btn):
+    for widget in (win.pause_check, win.save_log_as_btn):
         assert not widget.isVisible()
-    assert win.act_pause.isCheckable() and win.act_wrap.isCheckable()
+    assert win.act_pause.isCheckable()
     assert win.act_pause.isChecked() == win.pause_check.isChecked()
     row = win.ts_check.parentWidget()
     assert row.isAncestorOf(win.autoscroll_check)
-    assert win.act_wrap.isChecked() == win.wrap_check.isChecked()
     assert win.act_save_as.text()          # the "Save as" action is in the menu
 
 
@@ -458,5 +456,5 @@ def test_receive_row_keeps_the_low_frequency_controls_out(app, win):
     for widget in (win.autoscroll_check, win.save_log_btn, win.clear_btn,
                    win.rx_filter_combo):
         assert row.isAncestorOf(widget)
-    for widget in (win.pause_check, win.wrap_check, win.save_log_as_btn):
+    for widget in (win.pause_check, win.save_log_as_btn):
         assert not row.isAncestorOf(widget)

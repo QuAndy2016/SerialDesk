@@ -739,12 +739,6 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.pause_check.toggled.connect(win._on_pause_toggled)
     win.pause_check.hide()
 
-    win.wrap_check = QCheckBox(tr("rx.wrap"), win)            # U162: soft-wrap toggle
-    win.wrap_check.setToolTip(tr("rx.wrap.tip"))
-    win.wrap_check.setChecked(bool(load_config().get("wrap_on", False)))
-    win.wrap_check.toggled.connect(win._on_wrap_toggled)
-    win.wrap_check.hide()
-
     win.save_log_as_btn = QPushButton(tr("btn.save_log_as"), win)
     win.save_log_as_btn.clicked.connect(win.on_save_log_as)
     win.save_log_as_btn.hide()
@@ -757,15 +751,12 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.more_menu = QMenu(win.more_btn)
     win.act_pause = win.more_menu.addAction(tr("rx.pause"))
     win.act_pause.setToolTip(tr("rx.pause.tip"))
-    win.act_wrap = win.more_menu.addAction(tr("rx.wrap"))
-    win.act_wrap.setToolTip(tr("rx.wrap.tip"))
     win.more_menu.addSeparator()
     win.act_save_as = win.more_menu.addAction(tr("btn.save_log_as"))
     win.act_save_as.triggered.connect(win.on_save_log_as)
-    for action in (win.act_pause, win.act_wrap):
+    for action in (win.act_pause,):
         action.setCheckable(True)
     _link_checkbox(win.pause_check, win.act_pause)
-    _link_checkbox(win.wrap_check, win.act_wrap)
     win.more_btn.setMenu(win.more_menu)
     return win.more_btn
 
@@ -873,9 +864,8 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     """The read-only receive view; it absorbs all spare height (U70)."""
     win.rx_view = QPlainTextEdit()
     win.rx_view.setReadOnly(True)
-    win.rx_view.setLineWrapMode(
-        QPlainTextEdit.LineWrapMode.WidgetWidth if load_config().get("wrap_on", False)
-        else QPlainTextEdit.LineWrapMode.NoWrap)   # U162: follows the wrap switch (default off = U160-A5)
+    # 2026-10-02 (Andy): the receive pane always soft-wraps now - the switch was removed.
+    win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
     win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # U43
     win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why
