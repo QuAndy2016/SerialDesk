@@ -419,6 +419,27 @@ def update_counts(win: MainWindow):
     win.sent_lbl.setText(tr("tx.counter", n=win._sent_count,
                              tx=win.tx_bytes, rx=win.rx_bytes))
 
+
+COUNTS_REFRESH_MS = 100     # 2026-10-03 (data-path P1): coalesce counter refreshes
+
+
+def schedule_counts(win: MainWindow) -> None:
+    """Queue a status-counter refresh (P1: called once per received batch).
+
+    update_counts() re-formats the status label; under a flood it ran for every
+    batch. At most one refresh per 100 ms looks identical to the eye and keeps the
+    GUI thread for the pane itself. update_counts() stays immediate for callers
+    that need the label in step right now (send, clear, theme switch).
+    """
+    timer = getattr(win, "_counts_timer", None)
+    if timer is None:
+        timer = QTimer(win)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: update_counts(win))
+        win._counts_timer = timer
+    if not timer.isActive():
+        timer.start(COUNTS_REFRESH_MS)
+
 def update_params_summary(win: MainWindow) -> None:
     "update params summary"
     """One-line summary of the low-frequency settings (U35-P3)."""

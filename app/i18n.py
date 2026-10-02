@@ -482,6 +482,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "发送已暂停：设备无响应。请重新打开串口后继续（必要时拔插一次 USB 转串口）",
         "en": "Sending paused: the device stopped responding. Re-open the port to continue (re-plug the USB adapter if needed)",
     },
+    "err.tx.queue.total": {
+        "zh": "发送队列已满（{n} 帧待发），本帧被丢弃；累计已丢 {total} 帧",
+        "en": "Send queue full ({n} frames waiting): this frame was dropped; {total} dropped so far",
+    },
     "err.tx.queue": {
         "zh": "发送队列已满（{n} 帧待发），请降低发送频率或检查设备是否停止接收",
         "en": "Send queue full ({n} pending) - slow down or check whether the device stopped receiving",

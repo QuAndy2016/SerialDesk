@@ -124,7 +124,7 @@ def on_received(win: MainWindow, ts: float, data: bytes):
     "on received"
     win._check_auto_reply(data)
     win.rx_bytes += len(data)
-    win.update_counts()
+    win._schedule_counts()      # P1: one status refresh per 100 ms, not per batch
 
     mode = win.split_combo.currentIndex()
     if mode == SPLIT_HEADER:
@@ -180,18 +180,34 @@ def _insert_rx_fragment(win: MainWindow, text: str, kind: int) -> None:
     """Insert one fragment with the colour its class calls for (U62/U163b)."""
     cursor = win.rx_view.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
-    fmt = QTextCharFormat()
-    if kind_is_meta(kind):
-        fmt.setForeground(QColor(theme.meta_color()))
-    elif kind_is_tx(kind):
-        fmt.setForeground(QColor(theme.tx_color()))
-    else:
-        fmt.setForeground(QColor(theme.text_color()))
-    try:
-        fmt.setProperty(QTextFormat.Property.UserProperty, kind)
-    except (AttributeError, TypeError):
-        pass
-    cursor.insertText(text, fmt)
+    cursor.insertText(text, _kind_format(win, kind))
+
+
+def _kind_format(win: MainWindow, kind: int) -> QTextCharFormat:
+    """The char format for a fragment kind, built once and reused (P1).
+
+    Rebuilding a QTextCharFormat (colour + user property) for every fragment was
+    pure per-fragment overhead; four kinds exist, so four cached objects do.
+    """
+    cache = getattr(win, "_rx_fmt_cache", None)
+    if cache is None:
+        cache = {}
+        win._rx_fmt_cache = cache
+    fmt = cache.get(kind)
+    if fmt is None:
+        fmt = QTextCharFormat()
+        if kind_is_meta(kind):
+            fmt.setForeground(QColor(theme.meta_color()))
+        elif kind_is_tx(kind):
+            fmt.setForeground(QColor(theme.tx_color()))
+        else:
+            fmt.setForeground(QColor(theme.text_color()))
+        try:
+            fmt.setProperty(QTextFormat.Property.UserProperty, kind)
+        except (AttributeError, TypeError):
+            pass
+        cache[kind] = fmt
+    return fmt
 
 
 def _frag_visible(win: MainWindow, kind: int) -> bool:
@@ -348,7 +364,9 @@ def recolor_rx_view(win: MainWindow) -> None:
 
     Text inserted under one theme keeps the colour it was given, which turns
     black-on-dark (or worse) after a theme switch, so re-colour the document.
+    The cached per-kind formats are dropped first (P1) - they hold the old colours.
     """
+    win._rx_fmt_cache = {}
     doc = win.rx_view.document()
     cursor = QTextCursor(doc)
     block = doc.begin()

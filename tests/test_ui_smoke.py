@@ -608,3 +608,28 @@ def test_store_rows_and_document_lines_agree_with_embedded_newlines(app, win):
     rebuild_rx_view(win)
     app.processEvents()
     assert win.rx_view.toPlainText() == before      # rebuild is a no-op visually
+
+
+def test_status_counts_are_coalesced_not_recomputed_per_batch(app, win):
+    """2026-10-03 (data-path P1): one status refresh per 100 ms, not one per batch."""
+    win.rx_bytes += 1234
+    win._schedule_counts()
+    app.processEvents()
+    assert getattr(win, "_counts_timer", None) is not None
+    assert win._counts_timer.isActive()          # a refresh is queued
+    win._schedule_counts()                       # more data: no second timer
+    assert win._counts_timer.isActive()
+    win._counts_timer.stop()
+    win.update_counts()                          # the immediate path still works
+    assert str(win.rx_bytes) in win.sent_lbl.text().replace(",", "")
+    win.rx_bytes -= 1234
+    win.update_counts()
+
+
+def test_dropped_send_frames_are_counted(app, win):
+    """2026-10-03 (data-path P1): a full TX queue must not drop a frame silently."""
+    before = getattr(win, "_tx_dropped", 0)
+    win._on_send_error("queue", "64")
+    assert win._tx_dropped == before + 1
+    win._on_send_error("queue", "64")
+    assert win._tx_dropped == before + 2       # the second toast reports the total

@@ -94,7 +94,7 @@ from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minim
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
-from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_case_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_tick, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
+from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_case_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_tick, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, schedule_counts, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
 from ui.startup_controller import build_everything, init_language_and_log, init_state, init_timers, init_worker, restore_settings
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
@@ -483,7 +483,11 @@ class MainWindow(QMainWindow):
         if kind == "timeout":
             self._notify(tr("err.tx.timeout"), "error")
         elif kind == "queue":
-            self._notify(tr("err.tx.queue", n=detail), "error")
+            # 2026-10-03 (P1): a full queue drops the frame - count it, so "did a frame
+            # go missing?" has an answer instead of one transient toast.
+            self._tx_dropped = getattr(self, "_tx_dropped", 0) + 1
+            key = "err.tx.queue" if self._tx_dropped == 1 else "err.tx.queue.total"
+            self._notify(tr(key, n=detail, total=self._tx_dropped), "error")
         elif kind == "closed":
             self._notify(tr("err.tx.closed"), "error")
         elif kind == "cts":
@@ -710,6 +714,10 @@ class MainWindow(QMainWindow):
     def update_counts(self):
                              """Qt slot: refresh the status-bar counters (ui/actions_controller)."""
                              return update_counts(self)
+
+    def _schedule_counts(self) -> None:
+                             """P1: coalesced status-counter refresh (ui/actions_controller)."""
+                             return schedule_counts(self)
 
     def showEvent(self, event: QShowEvent):  # noqa: N802 - Qt naming
         """On first show, let the data area claim its room before the user sees a jump."""
