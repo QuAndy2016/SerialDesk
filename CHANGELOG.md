@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.8.4] - 2026-10-02
+
+### Changed
+
+- **Send area is exactly two bands again** (Andy): the settings row on top, then one
+  row split left / right - the payload box on the left, and Send / History / repeat
+  in a compact column on the right, flush with the box's top edge. The extra caption
+  band added in v1.8.3 ("send content") is gone; it had pushed the buttons below the
+  box's top edge and made the structure three bands instead of two.
+
+
 ## [v1.8.3] - 2026-10-02
 
 ### Changed

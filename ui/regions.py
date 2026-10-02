@@ -465,14 +465,16 @@ def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
 
 
 def _build_payload_box(win: MainWindow) -> QWidget:
-    """Left column: the "send content" caption above the payload box (2026-10-02)."""
+    """The left half of the send row: just the payload box (2026-10-02, Andy).
+
+    The area is two bands only - the settings row on top, then this row split left
+    (input) / right (actions). A caption line here added a third band and pushed the
+    buttons below the box's top edge, so it is gone.
+    """
     box = QWidget()
     col = QVBoxLayout(box)
     col.setContentsMargins(0, 0, 0, 0)
-    col.setSpacing(2)
-    win._tx_content_lbl = QLabel(tr("tx.content.label"))
-    win._tx_content_lbl.setObjectName("payloadHint")   # the muted caption style
-    col.addWidget(win._tx_content_lbl)
+    col.setSpacing(0)
     win.tx_edit = QPlainTextEdit()
     # U130: data is one line, even when it is 400 characters long - wrapping it
     # mid-token was lying about the payload. Long content scrolls horizontally.
@@ -508,6 +510,7 @@ def _build_input_and_actions(win: MainWindow) -> QWidget:
 def _build_action_column(win: MainWindow) -> QWidget:
     """The right-hand action column: send, history, then the repeat controls."""
     actions = QWidget()
+    actions.setMaximumWidth(168)      # a compact column, flush with the box's top
     act_col = QVBoxLayout(actions)
     act_col.setContentsMargins(0, 0, 0, 0)
     act_col.setSpacing(6)
@@ -531,6 +534,7 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.repeat_btn = QPushButton(tr("tx.repeat"))
     win.repeat_btn.setCheckable(True)
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
+    win.repeat_btn.setMinimumWidth(112)
     win.repeat_btn.toggled.connect(win._on_repeat_toggled)
     act_col.addWidget(win.repeat_btn)
     interval_row = QHBoxLayout()
@@ -565,8 +569,6 @@ def _build_action_column(win: MainWindow) -> QWidget:
     act_col.addWidget(win.tx_size_lbl)
     act_col.addStretch(1)
     return actions
-
-
 def build_data_panes(win: MainWindow, root: QWidget) -> None:
     """Data panes: receive group, splitter wiring, send group and the quick-send panel."""
     # --- main splitter: left (rx/tx) + right (quick send) ---------------
