@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **The line-ending picker now covers quick send** (Andy 2026-10-02): picking CRLF
+  (or CR / LF) in the send area also ends every quick-send ASCII row - single sends and
+  sequence steps alike. HEX rows stay byte-exact, the same rule the send box follows in
+  HEX mode.
+
+
 ## [v1.8.8] - 2026-10-02
 
 ### Changed

@@ -463,3 +463,63 @@ def test_receive_row_keeps_the_low_frequency_controls_out(app, win):
         assert row.isAncestorOf(widget)
     for widget in (win.pause_check, win.save_log_as_btn):
         assert not row.isAncestorOf(widget)
+
+
+class _FakeWorker:
+    """Enough worker for the send path: it is open and it records payloads."""
+
+    def __init__(self):
+        self.sent = []
+
+    def is_open(self):
+        return True
+
+    def send(self, payload):
+        self.sent.append(payload)
+        return True
+
+
+def test_quick_send_rows_follow_the_line_ending(app, win):
+    """2026-10-02 (Andy): picking CRLF must also end the quick-send rows.
+
+    An ASCII row gets exactly what a manual send would append; a HEX row stays
+    byte-exact, the same rule the send box itself follows in HEX mode.
+    """
+    panel = win.quick_panel
+    fake = _FakeWorker()
+    worker, nl_index, crc_index = win.worker, win.nl_combo.currentIndex(), \
+        win.checksum_combo.currentIndex()
+    win.worker = fake
+    try:
+        win.checksum_combo.setCurrentIndex(0)        # no checksum, deterministic bytes
+        win.nl_combo.setCurrentIndex(3)              # CRLF
+        app.processEvents()
+        panel.add_row("AT+RST", is_hex=False)
+        panel.add_row("01 03 00 00", is_hex=True)
+        ascii_entry, hex_entry = panel._rows[-2], panel._rows[-1]
+        ascii_entry["send"].click()
+        hex_entry["send"].click()
+        app.processEvents()
+        assert fake.sent == [b"AT+RST\r\n", b"\x01\x03\x00\x00"]
+    finally:
+        win.worker = worker
+        win.nl_combo.setCurrentIndex(nl_index)
+        win.checksum_combo.setCurrentIndex(crc_index)
+        for entry in (panel._rows[-2], panel._rows[-1]):
+            panel._remove_row(entry["widget"]) if hasattr(panel, "_remove_row") else None
+        app.processEvents()
+
+
+def test_quick_send_row_payload_carries_its_format(app, win):
+    """The panel tells the controller whether the row is HEX - that flag is what
+    decides if the line ending is appended."""
+    panel = win.quick_panel
+    seen = []
+    panel.send_payload.connect(lambda payload, is_hex: seen.append((payload, is_hex)))
+    panel.add_row("AT", is_hex=False)
+    panel.add_row("41 54", is_hex=True)
+    app.processEvents()
+    panel._send_row(panel._rows[-2]["widget"])
+    panel._send_row(panel._rows[-1]["widget"])
+    app.processEvents()
+    assert seen == [(b"AT", False), (b"AT", True)]

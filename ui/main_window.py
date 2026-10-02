@@ -658,9 +658,9 @@ class MainWindow(QMainWindow):
                        """Qt slot: send the input box contents (ui/send_controller)."""
                        return on_send(self)
 
-    def on_quick_send(self, payload: bytes):
+    def on_quick_send(self, payload: bytes, is_hex: bool = False):
                                              """Qt slot: send one quick-send payload (ui/send_controller)."""
-                                             return on_quick_send(self, payload)
+                                             return on_quick_send(self, payload, is_hex)
 
     def on_received(self, ts: float, data: bytes):
                                                    """Qt slot: handle a chunk of received bytes (ui/receive_controller)."""

@@ -115,7 +115,9 @@ class QuickSendPanel(QWidget):
     Persisted to config.json as JSON list; max 99 rows.
     """
 
-    send_payload = Signal(bytes)   # parsed payload, no checksum applied yet
+    send_payload = Signal(bytes, bool)   # parsed payload + whether the row is HEX
+    # (2026-10-02) the bool lets the controller apply the send box's line ending to
+    # ASCII rows too - Andy: "picking CRLF must also end quick-send commands".
     error = Signal(str)            # user-facing format error text (U36)
     deleted = Signal(list)         # removed row payloads (U58/U118: batch undo)
     log = Signal(str)
@@ -679,13 +681,17 @@ class QuickSendPanel(QWidget):
                 self.error.emit(tr("qs.bad_fmt", e=exc))
             return None
 
+    def _row_is_hex(self, entry: dict) -> bool:
+        """True when the row's format chip says HEX (its bytes are exact)."""
+        return entry["fmt"].currentIndex() == 0
+
     def _send_row(self, row: QWidget):
         entry = self._find(row)
         if entry is None:
             return
         payload = self._payload_for(entry)
         if payload is not None:
-            self.send_payload.emit(payload)
+            self.send_payload.emit(payload, self._row_is_hex(entry))
 
     # -- sequence mode (T13) --------------------------------------------------
 
@@ -746,7 +752,7 @@ class QuickSendPanel(QWidget):
         self._mark_sending(entry)
         payload = self._payload_for(entry)
         if payload is not None:
-            self.send_payload.emit(payload)
+            self.send_payload.emit(payload, self._row_is_hex(entry))
         total = len(self._seq_queue)
         self.log.emit(tr("qs.seq.progress", i=self._seq_index + 1, n=total))
         if self._seq_index + 1 >= total:

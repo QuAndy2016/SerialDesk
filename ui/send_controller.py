@@ -433,13 +433,21 @@ def on_send(win: MainWindow):
         win.quick_panel.stop_sequence()
         win._notify(tr("inc.done"), "warn", ms=4000)
 
-def on_quick_send(win: MainWindow, payload: bytes):
+def on_quick_send(win: MainWindow, payload: bytes, is_hex: bool = False):
     "on quick send"
+    """Send one quick-send row (button or sequence step).
+
+    2026-10-02 (Andy): the send box's line-ending picker also ends quick-send rows.
+    An ASCII row gets the same bytes the manual send would append; a HEX row is
+    byte-exact (and the send box behaves the same way in HEX mode).
+    """
     if not win.worker.is_open():     # U61: quick send / sequence obey the same rule
         win.quick_panel.stop_sequence()
         win._notify(tr("err.tx.closed"), "error")
         return
     payload = win._apply_checksum(payload)
+    if not is_hex:
+        payload += win._newline_bytes()
     if not win.worker.send(payload):
         win.quick_panel.stop_sequence()
         return

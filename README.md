@@ -87,7 +87,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 功能 | 说明 |
 |------|------|
 | 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
-| 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用） |
+| 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快速发送的 ASCII 行同样追加**（HEX 行按字节原样发送） |
 | 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔 |
 | 重复发送次数 | 循环可设次数；0 �  不限次数（显示 ∞，手动停止） |
 | 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢 |
@@ -350,7 +350,7 @@ Both share the same notes:
 | Feature | Notes |
 |---------|-------|
 | Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
-| Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands) |
+| Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick-send ASCII rows append it too** (HEX rows stay byte-exact) |
 | Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval |
 | Repeat count | optional limit; 0 = endless (shown as ∞, stop by hand) |
 | Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
