@@ -95,6 +95,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
+LOG_FLUSH_MS = 200          # 2026-10-03 (data-path P1): batch the auto-save writes
+LOG_FLUSH_BYTES = 8192      # ...or flush as soon as this much text is buffered
+
+
 def log_header_text(win: MainWindow) -> str:
     "log header text"
     """Context for the log segment, so a shared capture can be reproduced (N3)."""
@@ -120,14 +124,53 @@ def log_open(win: MainWindow) -> None:
 
 def log_close(win: MainWindow) -> None:
     "log close"
+    log_flush(win)          # P1: nothing buffered may be lost when the segment closes
     win._log_sink.close()
     win._log_fp = None
 
+
 def log_append(win: MainWindow, text: str) -> None:
     "log append"
-    """Append a chunk of received text to the auto-save file, rotating when needed."""
+    """Buffer a chunk of received text for the auto-save file (P1: batched writes).
+
+    Writing every fragment straight to disk turned the log into one I/O hiccup per
+    line under a flood. The buffer is flushed on size, on a short timer and before
+    the segment closes, so a crash costs at most the last 200 ms of log.
+    """
     if win._log_fp is None:
         return
+    buf = getattr(win, "_log_buf", None)
+    if buf is None:
+        buf = []
+        win._log_buf = buf
+        win._log_buf_bytes = 0
+    buf.append(text)
+    win._log_buf_bytes += len(text)
+    if win._log_buf_bytes >= LOG_FLUSH_BYTES:
+        log_flush(win)
+        return
+    timer = getattr(win, "_log_timer", None)
+    if timer is None:
+        timer = QTimer(win)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: log_flush(win))
+        win._log_timer = timer
+    if not timer.isActive():
+        timer.start(LOG_FLUSH_MS)
+
+
+def log_flush(win: MainWindow) -> None:
+    "log flush"
+    """Write the buffered log text through the sink (rotation happens inside it)."""
+    buf = getattr(win, "_log_buf", None)
+    if not buf:
+        return
+    text = "".join(buf)
+    buf.clear()
+    win._log_buf_bytes = 0
+    timer = getattr(win, "_log_timer", None)
+    if timer is not None:
+        timer.stop()
     try:
         win._log_sink.configure(win._log_dir, win._log_max_bytes, win._log_max_seconds)
         win._log_sink.append(text)
