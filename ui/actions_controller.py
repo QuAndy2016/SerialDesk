@@ -159,10 +159,33 @@ def on_repeat_toggled(win: MainWindow, checked: bool):
     win.repeat_btn.setText(tr("tx.repeat.stop") if checked else tr("tx.repeat"))
     if checked:
         win._sent_count = 0
+        win._repeat_count = 0          # U171: each start counts from zero
         win.update_counts()
         win._repeat_timer.start(win._repeat_value())
     else:
         win._repeat_timer.stop()
+
+
+def repeat_count(win: MainWindow) -> int:
+    "repeat count"
+    """U171: how many repeats to send (0 = keep going until stopped)."""
+    try:
+        return max(0, min(9999, int(win.repeat_times.value())))
+    except (AttributeError, ValueError):
+        return 0
+
+
+def on_repeat_tick(win: MainWindow) -> None:
+    "on repeat tick"
+    """U171: one repeat step - send once, and stop once the count is reached."""
+    win.on_send()
+    target = repeat_count(win)
+    if target <= 0:
+        return
+    win._repeat_count = int(getattr(win, "_repeat_count", 0)) + 1
+    if win._repeat_count >= target:
+        stop_repeat(win)
+        win._notify(tr("tx.repeat.done", n=target), "info", ms=3000)
 
 def repeat_value(win: MainWindow) -> int:
     "repeat value"

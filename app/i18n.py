@@ -370,6 +370,10 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.repeat.tip": {"zh": "按设定间隔重复发送当前内容；点一下开始，运行中按钮变为「停止循环」，再点一下停止",
                       "en": "Repeat the current input at the set interval; click once to start - the button then reads Stop repeat, click again to stop"},
     "tx.repeat.stop": {"zh": "停止循环", "en": "Stop repeat"},
+    "tx.repeat.count": {"zh": "次数", "en": "Count"},
+    "tx.repeat.count.tip": {"zh": "循环发送的次数；0 = 不限次数（显示 ∞，手动停止）",
+                           "en": "How many times to repeat; 0 = unlimited (shows ∞, stop by hand)"},
+    "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
     "tx.sent_count": {"zh": "已发送 {n} 次", "en": "sent \u00d7{n}"},
     "tx.history.btn": {"zh": "历史 ({n})", "en": "History ({n})"},
@@ -547,6 +551,10 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.rail.tip": {"zh": "展开快速发送面板（Ctrl+B）", "en": "Show the quick-send panel (Ctrl+B)"},
     "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
+    "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},
+    "qs.loops": {"zh": "循环", "en": "Loops"},
+    "qs.loops.tip": {"zh": "序列整体重复几轮；0 = 不限轮数（显示 ∞，手动停止）",
+                     "en": "How many rounds to repeat the whole sequence; 0 = unlimited (shows ∞)"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
 }
 

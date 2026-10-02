@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QStyle,
     QStyleOption,
     QToolButton,
@@ -35,6 +36,11 @@ from app.protocol import HexFormatError, ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
 DEFAULT_ROWS = 10   # blank rows seeded on first run (U15)
+
+
+def loop_should_continue(round_no: int, loops: int) -> bool:
+    """U170: True when the sequence should start another round (loops 0 = endless)."""
+    return loops == 0 or round_no < loops
 EXAMPLES = (        # U128: seeded once so the panel is never a blank wall
     ("AT", False),
     ("AT+VERSION?", False),
@@ -123,6 +129,7 @@ class QuickSendPanel(QWidget):
         self._seq_running = False
         self._seq_queue: list[dict] = []
         self._seq_index = 0
+        self._seq_round = 1
         self._folded = False
         self._build_ui()
         self._load()
@@ -162,6 +169,19 @@ class QuickSendPanel(QWidget):
         head.addStretch(1)
         self.count_label = QLabel("0/99")
         head.addWidget(self.count_label)
+        # U170: the round count lives in the head row (which has slack next to the
+        # title), so the sequence row below does not grow and widen the whole panel.
+        head.addSpacing(10)
+        self._seq_loops_lbl = QLabel(tr("qs.loops"))
+        head.addWidget(self._seq_loops_lbl)
+        self.seq_loops = QSpinBox()
+        self.seq_loops.setRange(0, 9999)
+        self.seq_loops.setValue(1)
+        self.seq_loops.setSpecialValueText("\u221e")
+        self.seq_loops.setToolTip(tr("qs.loops.tip"))
+        self.seq_loops.setFixedWidth(
+            self.seq_loops.fontMetrics().horizontalAdvance("9999") + 26)
+        head.addWidget(self.seq_loops)
         # U106: the fold control sits at the trailing edge (matching the side it folds
         # towards), is a themed icon button instead of a text glyph, has a 24x24 hit
         # target, and toggles both ways.
@@ -620,6 +640,7 @@ class QuickSendPanel(QWidget):
         self._seq_queue = targets
         self._seq_running = True
         self._seq_index = 0
+        self._seq_round = 1
         self.seq_btn.setText(tr("qs.stop"))
         self._seq_send_current()
 
@@ -665,12 +686,27 @@ class QuickSendPanel(QWidget):
         if self._seq_running:
             self._seq_send_current()
 
+    def _seq_loops_value(self) -> int:
+        """U170: how many rounds to run (0 = endless)."""
+        try:
+            return max(0, min(9999, int(self.seq_loops.value())))
+        except (AttributeError, ValueError):
+            return 1
+
     def _finish_sequence(self) -> None:
+        loops = self._seq_loops_value()
+        if loop_should_continue(self._seq_round, loops):
+            self._seq_round += 1
+            self._seq_index = 0
+            self.seq_btn.setText(tr("qs.stop"))
+            self._seq_send_current()
+            return
         self._seq_timer.stop()
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
-        self.log.emit(tr("qs.seq.done"))
+        self.log.emit(tr("qs.seq.done.n", n=max(1, self._seq_round)))
         self._seq_index = 0
+        self._seq_round = 1
         self._seq_queue = []
 
     def stop_sequence(self) -> None:
@@ -679,6 +715,7 @@ class QuickSendPanel(QWidget):
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
         self._seq_index = 0
+        self._seq_round = 1
         self._seq_queue = []
 
     def _delete_row(self, row: QWidget):

@@ -254,6 +254,37 @@ def test_rx_view_filter_hides_tx_or_rx(app, win):
     assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()
 
 
+def test_sequence_loop_rule():
+    # U170: 0 = endless, otherwise stop once the requested rounds are done
+    from ui.quick_send_panel import loop_should_continue
+    assert loop_should_continue(1, 1) is False
+    assert loop_should_continue(1, 2) is True
+    assert loop_should_continue(2, 2) is False
+    assert loop_should_continue(99, 0) is True
+
+
+def test_repeat_count_reads_the_spin(app, win):
+    # U171: 0 means endless, any other value is the target
+    from ui.actions_controller import repeat_count
+    win.repeat_times.setValue(0)
+    assert repeat_count(win) == 0
+    win.repeat_times.setValue(5)
+    assert repeat_count(win) == 5
+
+
+def test_repeat_tick_stops_after_the_count(app, win):
+    # U171: each tick sends once and the loop stops itself at the target
+    from ui.actions_controller import on_repeat_tick
+    sent = []
+    win.on_send = lambda: sent.append(1)
+    win.repeat_times.setValue(3)
+    win._repeat_count = 0
+    for _ in range(3):
+        on_repeat_tick(win)
+    assert len(sent) == 3
+    assert not win._repeat_timer.isActive()
+
+
 def test_column_hex_rows_and_offset():
     # U163c: pure hexdump formatter - 16 bytes per row, running offset
     from app.display import column_hex

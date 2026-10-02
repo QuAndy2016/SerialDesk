@@ -465,6 +465,18 @@ def _build_action_toolbar(win: MainWindow) -> QWidget:
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win.repeat_ms.textChanged.connect(win._on_repeat_interval)
     repeat_row.addWidget(win.repeat_ms)
+    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
+    # until stopped - the same "0 = endless" rule as the quick-send sequence.
+    win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
+    repeat_row.addWidget(win._repeat_cnt_lbl)
+    win.repeat_times = QSpinBox()
+    win.repeat_times.setRange(0, 9999)
+    win.repeat_times.setValue(0)
+    win.repeat_times.setSpecialValueText("\u221e")
+    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
+    win.repeat_times.setFixedWidth(
+        win.repeat_times.fontMetrics().horizontalAdvance("9999") + 26)
+    repeat_row.addWidget(win.repeat_times)
     # U130-fix: the row was built but never attached to the toolbar, so the repeat
     # controls had no parent and stayed invisible from v1.5.1 on (the layout became a
     # single-line toolbar there and this addLayout was lost).

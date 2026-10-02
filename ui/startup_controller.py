@@ -158,7 +158,7 @@ def init_timers(win: MainWindow) -> None:
     win._recall_draft = ""
     win._sent_count = 0
     win._repeat_timer = QTimer(win)
-    win._repeat_timer.timeout.connect(win.on_send)
+    win._repeat_timer.timeout.connect(win._on_repeat_tick)
     win._file_timer = QTimer(win)
     win._file_timer.timeout.connect(win._send_file_chunk)
     win._sig_timer = QTimer(win)
