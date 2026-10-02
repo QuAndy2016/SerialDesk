@@ -1,5 +1,35 @@
 # Changelog
 
+## [v1.8.0] - 2026-10-02
+
+### Added
+
+- **Auto-increment placeholder in the send box** (U180): put `{i}` (or `{i:N}`,
+  `{i:N:le}`) in the payload and SerialDesk substitutes a running counter before
+  sending. The new "Increment" chip opens a panel for enabled / start / step / width /
+  endianness / radix / wrap / reset. Use `\{i}` to send a literal `{i}`. History keeps
+  the template only, and the checksum follows the substituted frame.
+- **Persistent keyword highlight bar** (U181): the find bar is now an always-on
+  highlight bar (input highlights as you type instead of jumping); Enter / prev / next
+  still navigate. A case-sensitivity switch was added and persisted.
+- **Named quick-send commands with notes** (U182): each quick-send row is two lines - a
+  name line (edit inline) plus the command-content line; a row right-click offers
+  "edit command note". Name and note are saved with the row and shown as its tooltip.
+
+### Changed
+
+- **Find label renamed to "Highlight"** to match the always-on behaviour.
+- **Old quick-send configurations migrate losslessly**: rows without name / note fields
+  load with empty defaults instead of being rejected.
+
+### Internal quality (no user-visible change)
+
+- U180 logic lives in a pure `app/increment.py` layer (placeholder parsing, render,
+  next value, wrap/stop) with its own unit tests.
+- Row payload / restore / load / save all carry name + note; receive-row structure
+  assertions updated for the two-line layout.
+
+
 ## [v1.7.0] - 2026-10-02
 
 ### Added
