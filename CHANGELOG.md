@@ -1,5 +1,49 @@
 # Changelog
 
+## [v1.7.0] - 2026-10-02
+
+### Added
+
+- **Sequence loop count** (U170): the quick-send sequence can repeat the whole run
+  a set number of rounds (0 shows ∞ = keep going until stopped).
+- **Repeat-send count** (U171): the repeat-send loop can stop after a set number of
+  sends (0 shows ∞ = keep going until stopped).
+- **Send-box soft-wrap switch** (U165): the input can wrap long content; off by
+  default so a long HEX string still shows as one line.
+- **Clear split button** (U169): one click clears the display; the menu also offers
+  "clear display and counters" and "reset counters" (previously buried in Settings).
+- **Port dropdown shows the full device name** (U172): the closed box stays short
+  ("COM5"), the popup lists "COM5 — USB-SERIAL CH340 …".
+
+### Fixed
+
+- **"RX only" leaked the TX markers** and glued them onto the previous RX line (U176).
+- **"TX only" hid the TX timestamps** (U177). Both were the same defect: the marker
+  fragments carried no side, so the filter misclassified them.
+- **Checkbox tick was drawn in the top-left corner**, not centred (U166) - the icon
+  generator drew every glyph at fixed coordinates without centring it.
+- **Fold arrows were off-centre single chevrons** (U174); they are centred double
+  chevrons (<< / >>) now.
+- **The settings gear read as a ring** (U173): the old radii ran past the canvas and
+  clipped the teeth.
+
+### Changed
+
+- **Receive row re-plan** (U178/U179): the "Echo TX" checkbox duplicated the
+  view-filter dropdown, so it is gone (TX is always captured); "Auto-scroll" moved
+  back into the row (it is high frequency); "Save as…" is now "Save log as…".
+- **Panel title** has an accent bar and title weight (U167).
+- **Icons regenerated** on the centred 16x16 grid; checkbox indicator aligned to the
+  asset size; fold-control icon size raised from 8x12 to 14x14.
+
+### Internal quality (no user-visible change)
+
+- Receive fragments now carry a 4-way kind (RX/TX payload, RX/TX marker) and the
+  view filter is a pure, unit-tested function.
+- Port dropdown grew a small `ui/port_delegate.py` (kept separate to avoid a circular
+  import between the row builder and the port controller).
+
+
 ## [v1.6.3] - 2026-10-02
 
 ### Added
