@@ -518,6 +518,7 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.send_btn.clicked.connect(win.on_send)
     win.send_btn.setDefault(True)
     win.send_btn.setMinimumWidth(112)
+    win.send_btn.setMaximumWidth(148)
     win.send_btn.setToolTip(tr("sc.send.tip"))
     act_col.addWidget(win.send_btn)
     # U87: the history is a popup now, so it costs one compact button beside the
@@ -525,6 +526,7 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.history_btn = QPushButton(tr("tx.history.btn", n=0))
     win.history_btn.setToolTip(tr("tx.history.btn.tip", n=0))
     win.history_btn.setMinimumWidth(112)
+    win.history_btn.setMaximumWidth(148)
     win.history_btn.setProperty("secondary", True)   # U98: a reference, not a peer
     win.history_btn.setEnabled(False)
     win.history_btn.clicked.connect(win._show_history)
@@ -535,6 +537,7 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.repeat_btn.setCheckable(True)
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
     win.repeat_btn.setMinimumWidth(112)
+    win.repeat_btn.setMaximumWidth(148)
     win.repeat_btn.toggled.connect(win._on_repeat_toggled)
     act_col.addWidget(win.repeat_btn)
     interval_row = QHBoxLayout()
@@ -543,6 +546,8 @@ def _build_action_column(win: MainWindow) -> QWidget:
     interval_row.addWidget(win._repeat_lbl)
     win.repeat_ms = QLineEdit("1000")
     win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
+    # the column is capped: let the field shrink so label + field always fit inside
+    win.repeat_ms.setMinimumWidth(56)
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win.repeat_ms.textChanged.connect(win._on_repeat_interval)
     interval_row.addWidget(win.repeat_ms, 1)
@@ -557,6 +562,7 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.repeat_times.setRange(0, 9999)
     win.repeat_times.setValue(0)
     win.repeat_times.setSpecialValueText("\u221e")
+    win.repeat_times.setMinimumWidth(56)
     win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
     count_row.addWidget(win.repeat_times, 1)
     act_col.addLayout(count_row)
