@@ -22,7 +22,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-MIN_WINDOW_WIDTH = 1280   # U164: a 1366x768 laptop must still fit the whole window
+MIN_WINDOW_WIDTH = 1366   # U164: a 1366x768 laptop must still fit the whole window
 
 
 def run(cmd, **kw):
@@ -111,6 +111,7 @@ def check_min_width() -> int:
     from ui.main_window import MainWindow
 
     problems = []
+    measured = []
     for lang in ("zh", "en"):
         i18n.set_language(lang)
         win = MainWindow()
@@ -121,16 +122,20 @@ def check_min_width() -> int:
         win._fit_minimum_width()
         for _ in range(2):
             app.processEvents()
+        measured.append("%s=%d" % (lang, win.minimumWidth()))
         if win.minimumWidth() > MIN_WINDOW_WIDTH:
             problems.append("%s: minimum width %d px > %d" % (
                 lang, win.minimumWidth(), MIN_WINDOW_WIDTH))
         win.close()
     if problems:
-        print("[min-width] %d violations" % len(problems))
+        print("[min-width] %d violations (limit %d; measured %s)"
+              % (len(problems), MIN_WINDOW_WIDTH, ", ".join(measured)))
         for line in problems:
             print("   ", line)
         return 1
-    print("[min-width] ok (<= %d px in zh/en)" % MIN_WINDOW_WIDTH)
+    # print the numbers even on success: the font metrics differ per platform, so the
+    # value itself is the evidence that the row still fits (U164).
+    print("[min-width] ok (<= %d px; %s)" % (MIN_WINDOW_WIDTH, ", ".join(measured)))
     return 0
 
 

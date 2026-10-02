@@ -328,6 +328,12 @@ def main() -> int:
 
     code, out = dynamic()
     print("\n[dynamic] tools/check_ui.py ->", out.splitlines()[-1] if out else "no output")
+    if code and out:
+        # CI only reads this file's stdout, and "failed" alone says nothing about
+        # *why* (the Windows runner's fonts measure differently from Linux).
+        print("[dynamic] full UI gate output:")
+        for line in out.splitlines():
+            print("   ", line)
     problems += 1 if code else 0
 
     # `problems` counts what must be fixed now. The code-structure numbers are real but

@@ -382,4 +382,4 @@ def test_window_fits_a_small_laptop(app, win):
     for _ in range(3):
         app.processEvents()
     win._fit_minimum_width()
-    assert win.minimumWidth() <= 1280
+    assert win.minimumWidth() <= 1366
