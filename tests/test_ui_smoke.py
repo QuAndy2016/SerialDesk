@@ -254,6 +254,24 @@ def test_rx_view_filter_hides_tx_or_rx(app, win):
     assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()
 
 
+def test_find_highlights_and_case_switch(app, win):
+    # U181: the highlight box is persistent and the case switch re-runs the search
+    win.rx_view.clear()
+    win._rx_store = []
+    win._emit_rx_text("AT+CGSN=1 at ok")
+    win.find_case_check.setChecked(False)
+    win.find_edit.setText("AT")
+    app.processEvents()
+    assert len(win._find_matches) == 2          # case-insensitive: AT and at
+    assert win.rx_view.extraSelections()        # matches are highlighted
+    win.find_case_check.setChecked(True)
+    app.processEvents()
+    assert len(win._find_matches) == 1          # only the upper-case AT
+    win.find_edit.setText("at")
+    app.processEvents()
+    assert len(win._find_matches) == 1          # only the lower-case at
+
+
 def test_sequence_loop_rule():
     # U170: 0 = endless, otherwise stop once the requested rounds are done
     from ui.quick_send_panel import loop_should_continue

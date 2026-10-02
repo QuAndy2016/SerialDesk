@@ -746,6 +746,11 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.find_count_lbl = QLabel("")
     win.find_count_lbl.setToolTip(tr("find.count.tip"))
     find_row.addWidget(win.find_count_lbl)
+    win.find_case_check = QCheckBox(tr("find.case"))     # U181
+    win.find_case_check.setChecked(bool(load_config().get("find_case", False)))
+    win.find_case_check.setToolTip(tr("find.case.tip"))
+    win.find_case_check.toggled.connect(win._on_find_case_toggled)
+    find_row.addWidget(win.find_case_check)
     win.find_prev_btn = QPushButton(tr("find.prev"))
     win.find_prev_btn.clicked.connect(lambda: win._find_next(False))
     find_row.addWidget(win.find_prev_btn)
@@ -760,7 +765,8 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     find_row.addWidget(win.find_close_btn)
     win._find_bar.setSizePolicy(QSizePolicy.Policy.Preferred,
                                 QSizePolicy.Policy.Fixed)   # U70
-    win._find_bar.hide()
+    # U181: the bar is a persistent highlight box now (default on, remembered)
+    win._find_bar.setVisible(bool(load_config().get("find_bar_on", True)))
     rx_layout.addWidget(win._find_bar)
 
 

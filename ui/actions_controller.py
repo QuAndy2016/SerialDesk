@@ -458,19 +458,27 @@ def update_params_summary(win: MainWindow) -> None:
 FIND_HIGHLIGHT_CAP = 10000  # U160: cap on how many matches get a background colour
 
 
-def _collect_find_matches(win: MainWindow, text: str) -> list:
-    """All matches of `text` in the receive pane, as (start, end) positions (U160)."""
+def _collect_find_matches(win: MainWindow, text: str, case_sensitive: bool = False) -> list:
+    """All matches of `text` in the receive pane, as (start, end) positions (U160/U181)."""
     doc = win.rx_view.document()
     out: list = []
     if not text:
         return out
+    flags = (QTextDocument.FindFlag.FindCaseSensitively if case_sensitive
+             else QTextDocument.FindFlag(0))
     needle = QTextCursor(doc)
     while True:
-        needle = doc.find(text, needle)
+        needle = doc.find(text, needle, flags)
         if needle.isNull():
             break
         out.append((needle.selectionStart(), needle.selectionEnd()))
     return out
+
+
+def find_case_sensitive(win: MainWindow) -> bool:
+    """U181: whether the receive search distinguishes case."""
+    box = getattr(win, "find_case_check", None)
+    return bool(box.isChecked()) if box is not None else False
 
 
 def _apply_find_highlights(win: MainWindow, matches: list, current: int) -> None:
@@ -497,20 +505,27 @@ def _apply_find_highlights(win: MainWindow, matches: list, current: int) -> None
 
 def on_find_text_changed(win: MainWindow) -> None:
     "on find text changed"
-    """Re-run the match search when the query changes (U160)."""
+    """Highlight every match while typing (U160/U181).
+
+    U181: this no longer moves the cursor to the first match - the bar is a
+    persistent highlight box now, and scrolling the pane on every keystroke made
+    it unusable for reading. Jumping stays on Enter / the prev-next buttons.
+    """
     text = win.find_edit.text()
-    win._find_matches = _collect_find_matches(win, text)
+    win._find_matches = _collect_find_matches(win, text, find_case_sensitive(win))
     win._find_index = 0
     win._find_query = text
-    if text and win._find_matches:
-        start, end = win._find_matches[0]
-        cursor = QTextCursor(win.rx_view.document())
-        cursor.setPosition(start)
-        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
-        win.rx_view.setTextCursor(cursor)
-        win.rx_view.centerCursor()
     _apply_find_highlights(win, win._find_matches, 0)
     update_find_count(win)
+
+
+def on_find_case_toggled(win: MainWindow, checked: bool) -> None:
+    "on find case toggled"
+    """U181: remember the case switch and re-run the search."""
+    config = load_config()
+    config["find_case"] = bool(checked)
+    save_config(config)
+    on_find_text_changed(win)
 
 
 def update_find_count(win: MainWindow) -> None:
@@ -527,9 +542,16 @@ def update_find_count(win: MainWindow) -> None:
 
 def toggle_find_bar(win: MainWindow, show: bool | None = None) -> None:
     "toggle find bar"
-    """Show/hide the receive find bar (U41); closing clears the highlights (U160)."""
+    """Show/hide the receive find bar and remember it (U41/U160/U181).
+
+    U181: the bar is a persistent highlight box - it defaults to visible and its
+    state is persisted, so the keyword highlighter is always one keystroke away.
+    """
     visible = (not win._find_bar.isVisible()) if show is None else show
     win._find_bar.setVisible(visible)
+    config = load_config()
+    config["find_bar_on"] = bool(visible)
+    save_config(config)
     if visible:
         win.find_edit.setFocus()
         win.find_edit.selectAll()
@@ -544,7 +566,7 @@ def find_next(win: MainWindow, forward: bool = True) -> None:
     text = win.find_edit.text()
     matches = getattr(win, "_find_matches", None)
     if matches is None or text != getattr(win, "_find_query", None):
-        matches = _collect_find_matches(win, text)
+        matches = _collect_find_matches(win, text, find_case_sensitive(win))
         win._find_matches = matches
         win._find_query = text
         win._find_index = 0
