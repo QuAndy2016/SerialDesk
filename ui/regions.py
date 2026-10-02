@@ -476,6 +476,13 @@ def _build_payload_box(win: MainWindow) -> QWidget:
     col.setContentsMargins(0, 0, 0, 0)
     col.setSpacing(0)
     win.tx_edit = QPlainTextEdit()
+    # 2026-10-02 (Andy): the pane is compact, so the input must be able to shrink to
+    # whatever its row gets. QPlainTextEdit's implicit minimumSizeHint (~4 lines) is
+    # bigger than the row on the Windows runner's fonts and caused the audit to report
+    # a 66 px box inside 61 px container. An Ignored vertical policy tells the layout
+    # to take the sizeHint out of the minimum; the box still expands into spare height.
+    from PySide6.QtWidgets import QSizePolicy
+    win.tx_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
     # U130 -> 2026-10-02: long payloads wrap and scroll by default now (Andy).
     win.tx_edit.setLineWrapMode(
         QPlainTextEdit.LineWrapMode.WidgetWidth
