@@ -92,13 +92,41 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 - **接收区关键词高亮条** —— 常驻高亮条：输入即高亮、不抢占滚动位置，大小写可选；新到的数据同样即时高亮
 - **背景 QThread 读取** —— UI 永不卡顿
 
-### 界面预览
+### 界面一览
 
 <p align="center">
-  <img src="assets/screenshot_dark.jpg" width="49%" alt="深色主题">
-  <img src="assets/screenshot_light.jpg" width="49%" alt="浅色主题">
+  <img src="assets/shot_overview_dark.jpg" width="49%" alt="主界面 · 深色主题">
+  <img src="assets/shot_overview_light.jpg" width="49%" alt="主界面 · 浅色主题">
   <br>
-  <sub>左：深色主题 · 右：浅色主题</sub>
+  <sub>主界面：深色 / 浅色（中英双语，主题可跟随系统）</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_receive.jpg" width="49%" alt="接收区">
+  <img src="assets/shot_send.jpg" width="49%" alt="发送区">
+  <br>
+  <sub>接收区（关键词高亮 · 视图过滤 · 时间戳）· 发送区（左侧输入，右侧发送与循环）</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_quicksend.jpg" width="49%" alt="快速发送面板">
+  <img src="assets/shot_dlg_history.jpg" width="49%" alt="发送历史">
+  <br>
+  <sub>快速发送面板（序列模式 · 已发次数 · 发送中高亮）· 发送历史</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_dlg_rules.jpg" width="49%" alt="自动应答规则">
+  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="串口参数设置">
+  <br>
+  <sub>自动应答规则 · 串口参数设置（数据位 / 停止位 / 校验 / 流控）</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_dlg_autosave.jpg" width="49%" alt="日志保存设置">
+  <img src="assets/shot_dlg_shortcuts.jpg" width="49%" alt="快捷键一览">
+  <br>
+  <sub>日志保存设置 · 快捷键一览</sub>
 </p>
 
 ## 路线图
@@ -268,10 +296,38 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 ### Screenshots
 
 <p align="center">
-  <img src="assets/screenshot_dark.jpg" width="49%" alt="Dark theme">
-  <img src="assets/screenshot_light.jpg" width="49%" alt="Light theme">
+  <img src="assets/shot_overview_dark.jpg" width="49%" alt="Main window, dark theme">
+  <img src="assets/shot_overview_light.jpg" width="49%" alt="Main window, light theme">
   <br>
-  <sub>Left: dark theme · Right: light theme</sub>
+  <sub>Main window: dark / light (Chinese + English, theme can follow the system)</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_receive.jpg" width="49%" alt="Receive area">
+  <img src="assets/shot_send.jpg" width="49%" alt="Send area">
+  <br>
+  <sub>Receive area (keyword highlight · view filter · timestamps) · Send area (input left, send + repeat right)</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_quicksend.jpg" width="49%" alt="Quick-send panel">
+  <img src="assets/shot_dlg_history.jpg" width="49%" alt="Send history">
+  <br>
+  <sub>Quick-send panel (sequence mode · sent counter · the row being sent) · Send history</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_dlg_rules.jpg" width="49%" alt="Auto-reply rules">
+  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="Port settings">
+  <br>
+  <sub>Auto-reply rules · Port settings (data bits / stop bits / parity / flow control)</sub>
+</p>
+
+<p align="center">
+  <img src="assets/shot_dlg_autosave.jpg" width="49%" alt="Log saving settings">
+  <img src="assets/shot_dlg_shortcuts.jpg" width="49%" alt="Shortcut reference">
+  <br>
+  <sub>Log saving settings · Shortcut reference</sub>
 </p>
 
 ### Roadmap
