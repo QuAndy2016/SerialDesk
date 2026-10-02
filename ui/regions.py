@@ -437,10 +437,10 @@ def _build_text_decorations(win: MainWindow) -> QWidget:
     win.escape_check.setChecked(True)
     win.escape_check.setToolTip(tr("tx.escape.tip"))
     mod_row.addWidget(win.escape_check)
-    # U165: the send box can soft-wrap too (its own switch, default off so a long
-    # HEX string still shows as a single line, which is what U130 asked for).
+    # U165/2026-10-02: the send box soft-wraps by default now (Andy: long payloads
+    # should wrap and scroll instead of running off the edge), still switchable.
     win.tx_wrap_check = QCheckBox(tr("tx.wrap"))
-    win.tx_wrap_check.setChecked(bool(load_config().get("tx_wrap_on", False)))
+    win.tx_wrap_check.setChecked(bool(load_config().get("tx_wrap_on", True)))
     win.tx_wrap_check.setToolTip(tr("tx.wrap.tip"))
     win.tx_wrap_check.toggled.connect(win._on_tx_wrap_toggled)
     mod_row.addWidget(win.tx_wrap_check)
@@ -476,9 +476,11 @@ def _build_payload_box(win: MainWindow) -> QWidget:
     col.setContentsMargins(0, 0, 0, 0)
     col.setSpacing(0)
     win.tx_edit = QPlainTextEdit()
-    # U130: data is one line, even when it is 400 characters long - wrapping it
-    # mid-token was lying about the payload. Long content scrolls horizontally.
-    win.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+    # U130 -> 2026-10-02: long payloads wrap and scroll by default now (Andy).
+    win.tx_edit.setLineWrapMode(
+        QPlainTextEdit.LineWrapMode.WidgetWidth
+        if load_config().get("tx_wrap_on", True)
+        else QPlainTextEdit.LineWrapMode.NoWrap)
     win._update_input_placeholder()   # U86: keep the format-specific hint
     win.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
     win.tx_edit.textChanged.connect(win._check_hex_input)
@@ -508,72 +510,85 @@ def _build_input_and_actions(win: MainWindow) -> QWidget:
 
 
 def _build_action_column(win: MainWindow) -> QWidget:
-    """The right-hand action column: send, history, then the repeat controls."""
+    """Two compact rows of actions beside the input (2026-10-02, Andy).
+
+    The send pane used to be as tall as a three-button column plus two field rows.
+    Andy asked for about two button rows so the data area above keeps the space:
+    row 1 = Send + History (+ the payload hint), row 2 = repeat toggle + interval +
+    count, everything compact and side by side.
+    """
     actions = QWidget()
     act_col = QVBoxLayout(actions)
     act_col.setContentsMargins(0, 0, 0, 0)
-    act_col.setSpacing(6)
+    act_col.setSpacing(4)
+
+    top_row = QHBoxLayout()
+    top_row.setSpacing(6)
     win.send_btn = QPushButton(tr("btn.send"))
     win.send_btn.clicked.connect(win.on_send)
     win.send_btn.setDefault(True)
-    win.send_btn.setMinimumWidth(112)
-    win.send_btn.setMaximumWidth(148)
+    win.send_btn.setMinimumWidth(64)
+    win.send_btn.setMaximumWidth(96)
     win.send_btn.setToolTip(tr("sc.send.tip"))
-    act_col.addWidget(win.send_btn)
+    top_row.addWidget(win.send_btn)
     # U87: the history is a popup now, so it costs one compact button beside the
     # primary action instead of a whole row of its own.
     win.history_btn = QPushButton(tr("tx.history.btn", n=0))
     win.history_btn.setToolTip(tr("tx.history.btn.tip", n=0))
-    win.history_btn.setMinimumWidth(112)
-    win.history_btn.setMaximumWidth(148)
+    win.history_btn.setMinimumWidth(72)
+    win.history_btn.setMaximumWidth(104)
     win.history_btn.setProperty("secondary", True)   # U98: a reference, not a peer
     win.history_btn.setEnabled(False)
     win.history_btn.clicked.connect(win._show_history)
-    act_col.addWidget(win.history_btn)
-    # U98: "Repeat send" starts and stops a process, so it is a toggle button that
-    # reads "Stop repeat" while running - a checkbox stood in for an action before.
-    win.repeat_btn = QPushButton(tr("tx.repeat"))
-    win.repeat_btn.setCheckable(True)
-    win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
-    win.repeat_btn.setMinimumWidth(112)
-    win.repeat_btn.setMaximumWidth(148)
-    win.repeat_btn.toggled.connect(win._on_repeat_toggled)
-    act_col.addWidget(win.repeat_btn)
-    interval_row = QHBoxLayout()
-    interval_row.setSpacing(6)
-    win._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
-    interval_row.addWidget(win._repeat_lbl)
-    win.repeat_ms = QLineEdit("1000")
-    win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
-    # the column is capped: let the field shrink so label + field always fit inside
-    win.repeat_ms.setMinimumWidth(56)
-    win.repeat_ms.setToolTip(tr("tx.interval.tip"))
-    win.repeat_ms.textChanged.connect(win._on_repeat_interval)
-    interval_row.addWidget(win.repeat_ms, 1)
-    act_col.addLayout(interval_row)
-    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
-    # until stopped - the same "0 = endless" rule as the quick-send sequence.
-    count_row = QHBoxLayout()
-    count_row.setSpacing(6)
-    win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
-    count_row.addWidget(win._repeat_cnt_lbl)
-    win.repeat_times = QSpinBox()
-    win.repeat_times.setRange(0, 9999)
-    win.repeat_times.setValue(0)
-    win.repeat_times.setSpecialValueText("\u221e")
-    win.repeat_times.setMinimumWidth(56)
-    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
-    count_row.addWidget(win.repeat_times, 1)
-    act_col.addLayout(count_row)
+    top_row.addWidget(win.history_btn)
+    top_row.addStretch(1)
     # U121: the payload hint sits with the actions it describes
     win.tx_size_lbl = QLabel("")
     win.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
     # the app stylesheet drives the widget font, so the smaller size is asked for
     # by object name (QLabel#payloadHint) instead of a QFont that QSS would override
     win.tx_size_lbl.setObjectName("payloadHint")
-    act_col.addWidget(win.tx_size_lbl)
+    top_row.addWidget(win.tx_size_lbl)
+    act_col.addLayout(top_row)
+
+    bottom_row = QHBoxLayout()
+    bottom_row.setSpacing(6)
+    # U98: "Repeat send" starts and stops a process, so it is a toggle button that
+    # reads "Stop repeat" while running - a checkbox stood in for an action before.
+    win.repeat_btn = QPushButton(tr("tx.repeat"))
+    win.repeat_btn.setCheckable(True)
+    win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
+    win.repeat_btn.setMinimumWidth(64)
+    win.repeat_btn.setMaximumWidth(96)
+    win.repeat_btn.toggled.connect(win._on_repeat_toggled)
+    bottom_row.addWidget(win.repeat_btn)
+    win._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
+    bottom_row.addWidget(win._repeat_lbl)
+    win.repeat_ms = QLineEdit("1000")
+    win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
+    win.repeat_ms.setMinimumWidth(56)
+    win.repeat_ms.setMaximumWidth(76)
+    win.repeat_ms.setToolTip(tr("tx.interval.tip"))
+    win.repeat_ms.textChanged.connect(win._on_repeat_interval)
+    bottom_row.addWidget(win.repeat_ms)
+    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
+    # until stopped - the same "0 = endless" rule as the quick-send sequence.
+    win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
+    bottom_row.addWidget(win._repeat_cnt_lbl)
+    win.repeat_times = QSpinBox()
+    win.repeat_times.setRange(0, 9999)
+    win.repeat_times.setValue(0)
+    win.repeat_times.setSpecialValueText("\u221e")
+    win.repeat_times.setMinimumWidth(56)
+    win.repeat_times.setMaximumWidth(76)
+    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
+    bottom_row.addWidget(win.repeat_times)
+    bottom_row.addStretch(1)
+    act_col.addLayout(bottom_row)
     act_col.addStretch(1)
     return actions
+
+
 def build_data_panes(win: MainWindow, root: QWidget) -> None:
     """Data panes: receive group, splitter wiring, send group and the quick-send panel."""
     # --- main splitter: left (rx/tx) + right (quick send) ---------------

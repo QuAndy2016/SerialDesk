@@ -106,7 +106,7 @@ LEGACY_SPLIT_DEFAULTS = {
     "split_sizes": ([820, 340], DATA_FIRST_H),
 }
 QUICK_PANEL_MIN_W = 332   # the quick-send rows need this (U69)
-TX_PANE_MIN_H = 190       # the send pane keeps its rows usable (U63)
+TX_PANE_MIN_H = 120       # 2026-10-02: the send pane is ~2 button rows; data gets the rest
 def fit_minimum_width(win: MainWindow) -> None:
     "fit minimum width"
     try:
@@ -231,8 +231,10 @@ def fit_tx_edit_height(win: MainWindow) -> None:
             and cap_lbl.isVisible() else 0
         avail = win._tx_group.height() - above - caption - 8
         cap = 26 * line + chrome
-        # at least three lines - one line was what made the box feel cramped
-        win.tx_edit.setFixedHeight(int(max(3 * line + chrome, min(avail, cap))))
+        # 2026-10-02 (Andy): the pane is meant to be compact (about two button rows)
+        # so the data area above gets the space; two lines is the floor, the pane can
+        # still grow if the user drags the divider.
+        win.tx_edit.setFixedHeight(int(max(2 * line + chrome, min(avail, cap))))
     finally:
         win._fitting_tx = False
 

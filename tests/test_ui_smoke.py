@@ -53,11 +53,13 @@ def test_status_counter_reads_from_the_stats_object(app, win):
     assert "5" in text and "TX" in text and "RX" in text
 
 
-def test_send_input_is_at_least_three_lines_and_does_not_wrap(app, win):
+def test_send_input_is_compact_and_wraps(app, win):
+    """2026-10-02 (Andy): the pane is about two button rows high and long payloads
+    wrap + scroll, so the floor is two lines and wrapping is the default."""
     from PySide6.QtWidgets import QPlainTextEdit
     line = win.tx_edit.fontMetrics().lineSpacing()
-    assert win.tx_edit.height() >= 3 * line
-    assert win.tx_edit.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
+    assert win.tx_edit.height() >= 2 * line
+    assert win.tx_edit.lineWrapMode() == QPlainTextEdit.LineWrapMode.WidgetWidth
 
 
 def test_actions_sit_beside_the_input(app, win):

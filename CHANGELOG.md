@@ -1,5 +1,23 @@
 # Changelog
 
+## [v1.8.5] - 2026-10-02
+
+### Changed
+
+- **The send pane is compact now** (Andy): about two button rows instead of a tall
+  column, so the data area above keeps the space. The actions sit in two tight rows
+  beside the input - Send + History (with the payload hint) on the first, the repeat
+  toggle + interval + count on the second - with smaller, side-by-side buttons.
+- **The send box wraps and scrolls by default** (Andy): long payloads soft-wrap with a
+  vertical scrollbar instead of running off the edge. The "Wrap input" switch is still
+  there (now on by default) for anyone who wants the old single-line behaviour.
+
+### Internal quality (no user-visible change)
+
+- The send pane's minimum height is 129 px (was 335 px in v1.8.2) and the default
+  divider split gives the rest to the receive pane (TX_PANE_MIN_H 190 -> 120).
+
+
 ## [v1.8.4] - 2026-10-02
 
 ### Changed
