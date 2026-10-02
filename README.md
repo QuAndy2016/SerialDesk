@@ -42,25 +42,6 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 请解压整个目录再运行，不要把 exe 单独拷出来 —— 同目录的文件夹是运行库。每个 release 都附带 `.sha256` 校验文件，可用 `certutil -hashfile <zip> SHA256` 核对。
 
-### 被 Windows 拦下来怎么办
-
-本项目没有购买代码签名证书，新发布的 exe 首次运行时 Windows 会有提示，属正常现象，三步可解：
-
-1. **Edge 下载被拦（最常见）**：在下载面板里**单击**「删除」**旁边的小箭头 ∨**，弹出菜单后选「**仍然保留**」。
-
-<p align="center">
-  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge 下载面板：单击「删除」旁边的小箭头，再选「仍然保留」">
-  <br>
-  <sub><b>关键：单击「删除」旁边的小箭头 ∨ → 选「仍然保留」；千万不要按在「删除」本身</b></sub>
-</p>
-
-> ⚠ **注意：要点的是那个小箭头 ∨，不是「删除」本身**——点偏了会直接命中「删除」，文件就被丢进回收站了；**单击小箭头 ∨** 即可弹出菜单。
-
-2. **SmartScreen 提示「Windows 已保护你的电脑」／「通常不会下载」**：点「更多信息」→「仍要运行」
-3. **提示文件被锁定**：右键 exe → 属性 → 勾选「解除锁定」→ 确定
-
-**为什么会有这些提示**：exe 没有代码签名（证书按年付费），Windows 无法确认发布者，SmartScreen 就按「低信誉文件」处理——便携 zip 和安装器都一样。本项目已从单文件（onefile）改为目录模式（onedir）并做过体积裁剪，误报概率明显降低；如果仍然遇到误报，欢迎提 Issue。
-
 ## 功能
 
 - **串口枚举自动刷新** —— 3 秒轮询，插拔自动感知
@@ -262,25 +243,6 @@ This project aims for something simple — a modern interface, ready out of the 
 Grab `SerialDesk_vX.Y.Z-win64.zip` from the [Releases page](https://github.com/QuAndy2016/SerialDesk/releases/latest), extract it, and double-click the exe inside — no Python required.
 
 Please extract the whole folder and run it from there; the sibling folder holds the runtime. Every release ships with a `.sha256` checksum file.
-
-#### If Windows blocks it
-
-This project has no code-signing certificate, so Windows warns on the first run. That is expected — three steps fix it:
-
-1. **Edge blocks the download (the usual one):** in the downloads panel, **press and hold** the small arrow ∨ **next to** "Delete", then pick "**Keep anyway**" from the menu that appears.
-
-<p align="center">
-  <img src="assets/smartscreen_edge_keep.jpg" width="300" alt="Edge download panel: press and hold the arrow next to Delete, then pick Keep anyway">
-  <br>
-  <sub><b>Key: press and hold the arrow ∨ beside "Delete", then "Keep anyway" - never press "Delete" itself</b></sub>
-</p>
-
-> ⚠ **Note: press and hold, not a plain click** - a quick click lands on "Delete" and the file goes to the recycle bin; hold the small arrow ∨ until the menu opens.
-
-2. **SmartScreen says Windows protected your PC / "isn't commonly downloaded":** click More info → Run anyway
-3. **File appears locked:** right-click the exe → Properties → tick Unblock → OK
-
-Why the warnings: the exe is unsigned (certificates are a yearly paid service), so Windows cannot verify the publisher and SmartScreen treats it as a low-reputation file - the portable zip and the installer alike. Packaging moved from onefile to onedir and the bundle has been trimmed, which already cuts the false-positive rate; if your antivirus still flags it, please open an issue.
 
 ### Features
 
