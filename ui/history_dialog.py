@@ -15,6 +15,7 @@ import time
 from PySide6.QtCore import QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QDialog,
     QHBoxLayout,
@@ -106,7 +107,7 @@ class HistoryDialog(QDialog):
     """List of recently sent commands, newest first."""
 
     fill_requested = Signal(str)     # put this text back in the send box
-    delete_requested = Signal(int)   # drop the entry at this row
+    delete_requested = Signal(list)  # drop the entries at these rows (U183: batch)
     clear_requested = Signal()       # forget everything
 
     def __init__(self, parent: QWidget | None = None):
@@ -126,8 +127,9 @@ class HistoryDialog(QDialog):
         self._build_list(layout)
         self._build_buttons(layout)
 
-        QShortcut(QKeySequence(Qt.Key.Key_Delete), self, activated=self._delete_current)
+        QShortcut(QKeySequence(Qt.Key.Key_Delete), self, activated=self._delete_selected)
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, activated=self.close)
+        QShortcut(QKeySequence("Ctrl+A"), self, activated=self._select_all_visible)
 
         self._restore_size()
         self._apply_filter()
@@ -151,6 +153,9 @@ class HistoryDialog(QDialog):
     def _build_list(self, layout: QVBoxLayout) -> None:
         """The monospace history list and the empty-state label."""
         self.list = QListWidget()
+        # U183: multi-select (Ctrl / Shift click, Ctrl+A) so entries can be deleted
+        # as a batch; Ctrl+A is handled by the shortcut above (QListWidget has none).
+        self.list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         mono = QFont()
         mono.setFamily(MONO_FAMILIES)
         self.list.setFont(mono)
@@ -159,6 +164,7 @@ class HistoryDialog(QDialog):
         self.list.itemDoubleClicked.connect(self._on_activate)
         self.list.itemActivated.connect(self._on_activate)   # Enter key
         self.list.currentRowChanged.connect(lambda _r: self._sync_buttons())
+        self.list.itemSelectionChanged.connect(self._sync_buttons)
         layout.addWidget(self.list, 1)
 
         self.empty_lbl = QLabel(tr("tx.history.empty"))
@@ -176,7 +182,7 @@ class HistoryDialog(QDialog):
         row.addSpacing(8)
         self.del_btn = QPushButton(tr("tx.history.delete"))
         self.del_btn.setProperty("secondary", True)    # quieter, sits next to fill
-        self.del_btn.clicked.connect(self._delete_current)
+        self.del_btn.clicked.connect(self._delete_selected)
         row.addWidget(self.del_btn)
 
         row.addStretch(1)                              # keep the destructive pair apart
@@ -270,10 +276,28 @@ class HistoryDialog(QDialog):
 
     def _sync_buttons(self) -> None:
         has_rows = self.list.count() > 0
-        has_sel = self.list.currentRow() >= 0 and has_rows and not self.list.currentItem().isHidden()
-        self.fill_btn.setEnabled(bool(has_sel))
-        self.del_btn.setEnabled(bool(has_sel))
+        selected = self._selected_rows()
+        one = self.list.currentRow() >= 0 and has_rows \
+            and not self.list.currentItem().isHidden()
+        self.fill_btn.setEnabled(bool(one))
+        self.del_btn.setEnabled(bool(selected))
+        self.del_btn.setText(tr("tx.history.delete.n", n=len(selected)) if len(selected) > 1
+                             else tr("tx.history.delete"))
         self.clear_btn.setEnabled(has_rows)
+
+    def _selected_rows(self) -> list:
+        """Visible selected rows, ascending (hidden rows are filtered out)."""
+        return sorted(i for i in range(self.list.count())
+                      if self.list.item(i).isSelected() and not self.list.item(i).isHidden())
+
+    def _select_all_visible(self) -> None:
+        """U183: Ctrl+A selects what is on screen - never the filtered-out rows."""
+        self.list.clearSelection()
+        for i in range(self.list.count()):
+            item = self.list.item(i)
+            if not item.isHidden():
+                item.setSelected(True)
+        self._sync_buttons()
 
     # -- actions -------------------------------------------------------------
 
@@ -287,10 +311,11 @@ class HistoryDialog(QDialog):
             self.fill_requested.emit(text)
             self.close()                        # match the double-click behaviour (P1.8)
 
-    def _delete_current(self) -> None:
-        row = self.list.currentRow()
-        if row >= 0 and not self.list.item(row).isHidden():
-            self.delete_requested.emit(row)
+    def _delete_selected(self) -> None:
+        """U183: drop every visible selected row in one batch."""
+        rows = self._selected_rows()
+        if rows:
+            self.delete_requested.emit(rows)
             self._disarm_clear()
 
     def _on_activate(self, item: QListWidgetItem) -> None:

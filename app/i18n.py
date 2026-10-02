@@ -412,6 +412,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.history.empty": {"zh": "还没有发送记录", "en": "Nothing sent yet"},
     "tx.history.close": {"zh": "关闭", "en": "Close"},
     "tx.history.delete": {"zh": "删除此条", "en": "Delete this entry"},
+    "tx.history.delete.n": {"zh": "删除选中 ({n})", "en": "Delete selected ({n})"},
     "tx.history.clear": {"zh": "清空发送历史", "en": "Clear the history"},
     "tx.history.clear.arm": {"zh": "确认清空？", "en": "Confirm clear?"},
     "tx.history.clear.tip": {"zh": "再次点击确认；会清空全部发送历史（不可撤销）",
@@ -425,6 +426,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.history.ago.hour": {"zh": "{n} 小时前", "en": "{n} h ago"},
     "tx.history.ago.day": {"zh": "{n} 天前", "en": "{n} d ago"},
     "tx.history.removed": {"zh": "已删除历史：{text}", "en": "Removed from history: {text}"},
+    "tx.history.removed.n": {"zh": "已删除 {n} 条发送历史", "en": "Removed {n} history entries"},
     "tx.history.cleared": {"zh": "已清空发送历史", "en": "Send history cleared"},
     # ---- file send (T6) ----
     "btn.send_file": {"zh": "发送文件", "en": "Send file"},

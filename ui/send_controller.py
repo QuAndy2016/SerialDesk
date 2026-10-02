@@ -218,7 +218,7 @@ def show_history(win: MainWindow) -> None:
     if win._history_dlg is None:
         win._history_dlg = HistoryDialog(win)
         win._history_dlg.fill_requested.connect(win._on_history_fill)
-        win._history_dlg.delete_requested.connect(win._remove_history_entry)
+        win._history_dlg.delete_requested.connect(win._remove_history_entries)
         win._history_dlg.clear_requested.connect(win._clear_history)
     win._history_dlg.set_history(win._send_history, win._history_meta)
     win._history_dlg.show()
@@ -294,16 +294,32 @@ def update_history_button(win: MainWindow) -> None:
     if win._history_dlg is not None:
         win._history_dlg.set_history(win._send_history, win._history_meta)
 
+def remove_history_entries(win: MainWindow, rows: list) -> None:
+    """Drop several entries at once (U183) and persist.
+
+    Rows are deleted from the highest index down so the earlier indices stay valid.
+    """
+    clean = sorted({int(r) for r in rows if 0 <= int(r) < len(win._send_history)},
+                   reverse=True)
+    if not clean:
+        return
+    removed = []
+    for row in clean:
+        text = win._send_history.pop(row)
+        win._history_meta.pop(text, None)
+        removed.append(text)
+    win._update_history_button()
+    win._schedule_history_save()
+    if len(removed) == 1:
+        win._notify(tr("tx.history.removed", text=removed[0]), "info", ms=3000)
+    else:
+        win._notify(tr("tx.history.removed.n", n=len(removed)), "info", ms=3000)
+
+
 def remove_history_entry(win: MainWindow, row: int) -> None:
     "remove history entry"
     """Drop one entry from the send history and persist (U77)."""
-    if not (0 <= row < len(win._send_history)):
-        return
-    removed = win._send_history.pop(row)
-    win._history_meta.pop(removed, None)
-    win._update_history_button()
-    win._schedule_history_save()
-    win._notify(tr("tx.history.removed", text=removed), "info", ms=3000)
+    remove_history_entries(win, [row])
 
 def clear_history(win: MainWindow) -> None:
     "clear history"
