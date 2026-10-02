@@ -560,3 +560,30 @@ def test_delete_button_reads_delete(app, win):
     app.processEvents()
     assert win.quick_panel.del_btn.text() == tr("qs.del")
     assert not win.quick_panel.del_btn.isEnabled()
+
+
+def test_line_ending_control_is_visible_but_disabled_in_hex(app, win):
+    """U184-A (2026-10-02): the picker must not vanish in HEX mode.
+
+    Hiding the whole group made the option look unsupported - the user could not see
+    that it existed or what state it was in. It now stays visible and switches off,
+    with the tooltip explaining that HEX is byte-exact.
+    """
+    from app.i18n import tr
+    was = win.tx_fmt_combo.currentIndex()
+    try:
+        win.tx_fmt_combo.setCurrentIndex(0)          # HEX
+        app.processEvents()
+        assert win._tx_mod_group.isVisibleTo(win)
+        assert not win.nl_combo.isEnabled()
+        assert not win.escape_check.isEnabled()
+        assert win.nl_combo.toolTip() == tr("tx.newline.hex.tip")
+        win.tx_fmt_combo.setCurrentIndex(1)          # ASCII
+        app.processEvents()
+        assert win._tx_mod_group.isVisibleTo(win)
+        assert win.nl_combo.isEnabled()
+        assert win.escape_check.isEnabled()
+        assert win.nl_combo.toolTip() == tr("tx.newline.tip")
+    finally:
+        win.tx_fmt_combo.setCurrentIndex(was)
+        app.processEvents()

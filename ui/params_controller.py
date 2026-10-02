@@ -254,7 +254,20 @@ def on_header_changed(win: MainWindow, text: str):
 
 def on_tx_fmt_changed(win: MainWindow, index: int):
     "on tx fmt changed"
-    win._tx_mod_group.setVisible(index == 1)
+    """U184-A: in HEX mode the line-ending / escape controls stay visible but disabled.
+
+    Hiding them (the old behaviour) made the option look unsupported - the user could
+    not see that the setting existed or what state it was in. HEX sends bytes exactly,
+    so the two controls switch off and the label explains why instead of vanishing.
+    """
+    ascii_mode = index == 1
+    win._tx_mod_group.setVisible(True)
+    for widget in (win.nl_combo, win.escape_check, win._nl_lbl):
+        widget.setEnabled(ascii_mode)
+    win.nl_combo.setToolTip(tr("tx.newline.tip" if ascii_mode else "tx.newline.hex.tip"))
+    win.escape_check.setToolTip(tr("tx.escape.tip" if ascii_mode else "tx.escape.hex.tip"))
+    win._nl_lbl.setToolTip(tr("tx.newline.tip" if ascii_mode else "tx.newline.hex.tip"))
+    win._tx_mod_group.setToolTip("" if ascii_mode else tr("tx.newline.hex.tip"))
     win._update_input_placeholder()   # U86: hint follows the send format
 
 def newline_bytes(win: MainWindow) -> bytes:

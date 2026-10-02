@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **HEX mode no longer hides the line-ending picker** (U184-A, Andy 2026-10-02): the send
+  box's line-ending and escape controls used to disappear in HEX mode, which made the
+  option look unsupported. They stay visible and switch off instead, the tooltip explains
+  that HEX sends bytes exactly (write `0D 0A` yourself), and the HEX placeholder says the
+  same thing. Behaviour is unchanged: only ASCII appends the ending.
 - **Selecting a quick-send row works in every mode** (Andy 2026-10-02): the row ticks
   used to be greyed out unless sequence mode was on, so "select a row, then delete" was
   impossible in normal use. Ticking and clicking both select now, and the button reads

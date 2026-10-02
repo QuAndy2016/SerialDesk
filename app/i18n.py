@@ -306,8 +306,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Hex format: space separated; 0x prefix and comma/dash separators also accepted",
     },
     "tx.placeholder.hex": {
-        "zh": "例如：01 03 00 00",
-        "en": "e.g. 01 03 00 00",
+        "zh": "例如：01 03 00 00（HEX 按字节原样发送，需要行尾请写 0D 0A）",
+        "en": "e.g. 01 03 00 00 (HEX sends bytes exactly - add 0D 0A yourself if you need an ending)",
     },
     "tx.placeholder.ascii": {"zh": "例如：AT+VERSION?", "en": "e.g. AT+VERSION?"},
     "tx.input.tip.ascii": {
@@ -372,6 +372,14 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.nl.cr": {"zh": "回车 CR", "en": "CR"},
     "tx.nl.lf": {"zh": "换行 LF", "en": "LF"},
     "tx.nl.crlf": {"zh": "回车+换行 CR LF", "en": "CR LF"},
+    "tx.newline.hex.tip": {
+        "zh": "HEX 模式按字节原样发送，不追加行尾；需要行尾请在内容末尾写 0D 0A，或切到 ASCII 模式用这个选择器",
+        "en": "HEX sends bytes exactly and appends nothing; write 0D 0A yourself, or switch to ASCII to use this picker",
+    },
+    "tx.escape.hex.tip": {
+        "zh": "转义符只在 ASCII 模式下解析；HEX 直接输入字节（如 0D 0A）即可",
+        "en": "Escapes apply to ASCII text only; in HEX just type the bytes (e.g. 0D 0A)",
+    },
     "tx.newline.tip": {
         "zh": "ASCII 模式下发完内容后追加的字节：无 / 回车 0D / 换行 0A / 回车+换行 0D 0A（AT 指令常用）",
         "en": "Bytes appended after the payload in ASCII mode: none / CR 0D / LF 0A / CR+LF 0D 0A (the usual choice for AT commands)",

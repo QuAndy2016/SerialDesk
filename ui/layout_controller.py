@@ -217,9 +217,7 @@ def fit_tx_edit_height(win: MainWindow) -> None:
         # measure the bottom of the fixed rows themselves - the action column's
         # container stretches, so its own geometry would report the row's bottom
         # U129: the options row sits above the input, the action toolbar below it
-        above_probes = [win.tx_settings_btn, win.send_file_btn]
-        if win._tx_mod_group.isVisible():
-            above_probes.append(win.nl_combo)
+        above_probes = [win.tx_settings_btn, win.send_file_btn, win.nl_combo]
         bottoms = [w.mapTo(win._tx_group, w.rect().bottomLeft()).y()
                    for w in above_probes if w.isVisible()]
         above = (max(bottoms) if bottoms else 0) + 6
