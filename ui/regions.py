@@ -276,6 +276,11 @@ def build_send_group(win: MainWindow) -> None:
     # layout squeezed the input to ~134 px (a control column ate ~83% of the
     # width) and capped its height at 90 px, so the send area looked like a toy.
     _build_payload_options(win, tx_layout)
+    # 2026-10-02 (Andy): lay the send area out by its labelled sections - "send
+    # content (text input)" above the box, "repeat send" beside the loop controls.
+    win._tx_content_lbl = QLabel(tr("tx.content.label"))
+    win._tx_content_lbl.setObjectName("payloadHint")   # same muted caption style
+    tx_layout.addWidget(win._tx_content_lbl)
     tx_row = _build_input_row(win)
     actions = _build_action_toolbar(win)
     act_row = QHBoxLayout()
@@ -474,6 +479,50 @@ def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     win.tx_size_lbl.setObjectName("payloadHint")
 
 
+def _build_repeat_controls(win: MainWindow) -> QHBoxLayout:
+    """The repeat-send cluster, labelled as its own group (2026-10-02).
+
+    Andy's annotated layout names the three parts of the send area: the content box,
+    the repeat controls (interval + count) and the send/history buttons. This row is
+    the middle one - a "Repeat send" caption in front of the toggle and its two
+    numbers, so the cluster no longer reads as one long run of unlabelled controls.
+    """
+    repeat_row = QHBoxLayout()
+    repeat_row.setSpacing(8)
+    win._repeat_grp_lbl = QLabel(tr("tx.repeat.group"))
+    win._repeat_grp_lbl.setObjectName("payloadHint")
+    repeat_row.addWidget(win._repeat_grp_lbl)
+    # U98: "Repeat send" starts and stops a process, so it is a toggle button that
+    # reads "Stop repeat" while running - a checkbox stood in for an action before.
+    win.repeat_btn = QPushButton(tr("tx.repeat"))
+    win.repeat_btn.setCheckable(True)
+    win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
+    win.repeat_btn.toggled.connect(win._on_repeat_toggled)
+    repeat_row.addWidget(win.repeat_btn)
+    win._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
+    repeat_row.addWidget(win._repeat_lbl)
+    win.repeat_ms = QLineEdit("1000")
+    win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
+    # U113: the label carries "(ms)", so the box only has to fit 60000
+    win.repeat_ms.setFixedWidth(win.repeat_ms.fontMetrics().horizontalAdvance("60000") + 22)
+    win.repeat_ms.setToolTip(tr("tx.interval.tip"))
+    win.repeat_ms.textChanged.connect(win._on_repeat_interval)
+    repeat_row.addWidget(win.repeat_ms)
+    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
+    # until stopped - the same "0 = endless" rule as the quick-send sequence.
+    win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
+    repeat_row.addWidget(win._repeat_cnt_lbl)
+    win.repeat_times = QSpinBox()
+    win.repeat_times.setRange(0, 9999)
+    win.repeat_times.setValue(0)
+    win.repeat_times.setSpecialValueText("\u221e")
+    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
+    win.repeat_times.setFixedWidth(
+        win.repeat_times.fontMetrics().horizontalAdvance("9999") + 26)
+    repeat_row.addWidget(win.repeat_times)
+    return repeat_row
+
+
 def _build_input_row(win: MainWindow) -> QHBoxLayout:
     """The payload box (one line, horizontal scroll) and the column separator."""
     tx_row = QHBoxLayout()
@@ -527,36 +576,7 @@ def _build_action_toolbar(win: MainWindow) -> QWidget:
     btn_row.addWidget(win.history_btn)
     act_col.addLayout(btn_row)
 
-    repeat_row = QHBoxLayout()
-    repeat_row.setSpacing(8)
-    # U98: "Repeat send" starts and stops a process, so it is a toggle button that
-    # reads "Stop repeat" while running - a checkbox stood in for an action before.
-    win.repeat_btn = QPushButton(tr("tx.repeat"))
-    win.repeat_btn.setCheckable(True)
-    win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
-    win.repeat_btn.toggled.connect(win._on_repeat_toggled)
-    repeat_row.addWidget(win.repeat_btn)
-    win._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
-    repeat_row.addWidget(win._repeat_lbl)
-    win.repeat_ms = QLineEdit("1000")
-    win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
-    # U113: the label carries "(ms)", so the box only has to fit 60000
-    win.repeat_ms.setFixedWidth(win.repeat_ms.fontMetrics().horizontalAdvance("60000") + 22)
-    win.repeat_ms.setToolTip(tr("tx.interval.tip"))
-    win.repeat_ms.textChanged.connect(win._on_repeat_interval)
-    repeat_row.addWidget(win.repeat_ms)
-    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
-    # until stopped - the same "0 = endless" rule as the quick-send sequence.
-    win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
-    repeat_row.addWidget(win._repeat_cnt_lbl)
-    win.repeat_times = QSpinBox()
-    win.repeat_times.setRange(0, 9999)
-    win.repeat_times.setValue(0)
-    win.repeat_times.setSpecialValueText("\u221e")
-    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
-    win.repeat_times.setFixedWidth(
-        win.repeat_times.fontMetrics().horizontalAdvance("9999") + 26)
-    repeat_row.addWidget(win.repeat_times)
+    repeat_row = _build_repeat_controls(win)
     # U130-fix: the row was built but never attached to the toolbar, so the repeat
     # controls had no parent and stayed invisible from v1.5.1 on (the layout became a
     # single-line toolbar there and this addLayout was lost).

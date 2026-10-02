@@ -136,6 +136,10 @@ def _retranslate_send(win: MainWindow) -> None:
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win._repeat_lbl.setText(tr("tx.interval.label"))
+    if hasattr(win, "_repeat_grp_lbl"):
+        win._repeat_grp_lbl.setText(tr("tx.repeat.group"))
+    if hasattr(win, "_tx_content_lbl"):
+        win._tx_content_lbl.setText(tr("tx.content.label"))
     win.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # U86 (set by the format below)
     win.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
     win._reset_act.setText(tr("cfg.reset"))
