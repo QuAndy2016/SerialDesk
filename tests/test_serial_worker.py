@@ -250,3 +250,81 @@ class TestAutoReconnect:
         finally:
             sw.time.sleep = real_sleep
         assert seen[-1] == "lost" and seen.count("lost") == 1
+
+
+class BatchPort:
+    """Hands out pre-set chunks and records how the worker read it."""
+
+    is_open = True
+    cts = dsr = cd = ri = False
+
+    def __init__(self, chunks):
+        self._chunks = [bytes(c) for c in chunks]
+        self.read_sizes = []
+
+    @property
+    def in_waiting(self):
+        return len(self._chunks[0]) if self._chunks else 0
+
+    def read(self, n):
+        self.read_sizes.append(n)
+        if not self._chunks:
+            return b""
+        data = self._chunks.pop(0)
+        return data[:n] if n > 0 else data
+
+    def write(self, data):
+        return len(data)
+
+    def close(self):
+        self.is_open = False
+
+
+class TestReceiveBatching:
+    """2026-10-03 (data-path P1): fewer cross-thread hops, and no busy sleep."""
+
+    def test_chunks_are_coalesced_into_one_signal(self):
+        from app.serial_worker import SerialWorker
+        w = SerialWorker()
+        w._port = BatchPort([b"\x01\x02", b"\x03\x04"])
+        seen = []
+        w.received.connect(lambda ts, data: seen.append(data))
+        w._pump_rx()                     # first chunk: batch open, under the cap
+        assert seen == []
+        w._rx_batch_ts -= 1.0            # the stream goes quiet for a while
+        w._pump_rx()                     # second chunk still joins the same batch
+        assert seen == []
+        w._rx_batch_ts -= 1.0
+        w._pump_rx()                     # nothing new -> flushed as one signal
+        assert seen == [b"\x01\x02\x03\x04"]
+
+    def test_an_idle_port_is_a_blocking_read_not_a_sleep_spin(self):
+        from app.serial_worker import SerialWorker
+        w = SerialWorker()
+        port = BatchPort([])
+        w._port = port
+        seen = []
+        w.received.connect(lambda ts, data: seen.append(data))
+        w._pump_rx()
+        assert port.read_sizes == [1]     # read(1) with a timeout, not sleep(0.001)
+        assert seen == []
+
+    def test_batch_flushes_at_the_size_cap(self):
+        from app.serial_worker import RX_BATCH_MAX, SerialWorker
+        payload = b"A" * RX_BATCH_MAX
+        w = SerialWorker()
+        w._port = BatchPort([payload])
+        seen = []
+        w.received.connect(lambda ts, data: seen.append(data))
+        w._pump_rx()
+        assert seen == [payload]
+
+    def test_closing_hands_over_what_was_already_read(self):
+        from app.serial_worker import SerialWorker
+        w = SerialWorker()
+        w._port = BatchPort([b"\x07"])
+        seen = []
+        w.received.connect(lambda ts, data: seen.append(data))
+        w._pump_rx()
+        w.close_port()                    # nothing already read may be dropped
+        assert seen == [b"\x07"]

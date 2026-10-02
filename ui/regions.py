@@ -859,6 +859,10 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     """The read-only receive view; it absorbs all spare height (U70)."""
     win.rx_view = QPlainTextEdit()
     win.rx_view.setReadOnly(True)
+    # 2026-10-03 (data-path P1): the pane is append-only and has no user-visible
+    # undo (the clear action keeps its own snapshot), so Qt's per-insert undo
+    # records are pure cost - they grow with every fragment under a data flood.
+    win.rx_view.setUndoRedoEnabled(False)
     # 2026-10-02 (Andy): the receive pane always soft-wraps now - the switch was removed.
     win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
     win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # U43

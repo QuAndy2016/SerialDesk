@@ -28,7 +28,9 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
 WRITE_TIMEOUT = 0.3         # seconds; a stuck write must not hang the app
-READ_TIMEOUT = 0.1          # seconds
+READ_TIMEOUT = 0.005        # seconds; a real wait, not a spin (see _read_chunk)
+RX_BATCH_MAX = 4096         # bytes; push a batch to the UI at this size
+RX_BATCH_MS = 10.0          # ms; or once the stream has been quiet this long
 SIGNAL_POLL_INTERVAL = 0.2  # seconds between modem-status reads
 MAX_TX_QUEUE = 64           # frames; protects memory if the port stops draining
 MAX_TX_PER_TICK = 2         # frames written per loop turn (keeps RX alive, U64)
@@ -70,6 +72,8 @@ class SerialWorker(QThread):
         self._auto_reconnect = False   # T14
         self._user_closed = True       # True = the user closed it; never auto-reopen
         self._device, self._baud, self._open_kwargs = "", 115200, {}
+        self._rx_batch = bytearray()   # 2026-10-03: coalesced read buffer
+        self._rx_batch_ts = 0.0        # when the current batch started
 
     # -- control (UI thread; never blocks on serial I/O) ---------------------
 
@@ -109,6 +113,7 @@ class SerialWorker(QThread):
         self._user_closed = True           # T14: stop any reconnect loop
         with self._tx_lock:
             self._tx_queue.clear()
+        self._flush_rx_batch()             # 2026-10-03: nothing already read is dropped
         # The worker owns the handle: if it is not running we may close directly,
         # otherwise it closes on the way out (closing inside a pending write can
         # block the caller for seconds and used to freeze the whole window).
@@ -276,6 +281,7 @@ class SerialWorker(QThread):
 
     def _handle_disconnect(self, reason: str) -> None:
         """Lost the port: report it, then reconnect if the user asked for it (T14)."""
+        self._flush_rx_batch()             # 2026-10-03: hand over what was already read
         with self._tx_lock:
             self._tx_queue.clear()
         self._close_port_safely()
@@ -300,6 +306,44 @@ class SerialWorker(QThread):
                 return
         self.disconnected.emit(reason)
 
+    # -- receive path (worker thread) ----------------------------------------
+
+    def _read_chunk(self) -> bytes:
+        """One read, without ever busy-sleeping.
+
+        The loop used to `time.sleep(0.001)` when nothing was waiting, but 1 ms is
+        unreachable on Windows (default timer granularity is 15.6 ms), so at high
+        baud rates the driver buffer could overflow between turns and bytes were
+        lost mid-frame. A read with a short timeout is a real wait the OS
+        implements, and it returns immediately when data is already buffered.
+        """
+        port = self._port
+        if port is None or not port.is_open:
+            return b""
+        waiting = port.in_waiting
+        return port.read(waiting if waiting else 1)
+
+    def _pump_rx(self) -> None:
+        """Read into the batch and hand it to the UI when it is worth a signal."""
+        data = self._read_chunk()
+        if data:
+            if not self._rx_batch:
+                self._rx_batch_ts = time.monotonic()
+            self._rx_batch.extend(data)
+            if len(self._rx_batch) >= RX_BATCH_MAX:
+                self._flush_rx_batch()
+            return
+        if self._rx_batch and (time.monotonic() - self._rx_batch_ts) * 1000.0 >= RX_BATCH_MS:
+            self._flush_rx_batch()
+
+    def _flush_rx_batch(self) -> None:
+        """Emit the coalesced batch as one received() signal (fewer cross-thread hops)."""
+        if not self._rx_batch:
+            return
+        data = bytes(self._rx_batch)
+        self._rx_batch.clear()
+        self.received.emit(time.monotonic(), data)
+
     # -- thread body ----------------------------------------------------------
 
     def run(self):
@@ -307,6 +351,7 @@ class SerialWorker(QThread):
         last_sig = 0.0
         while self._running:
             if self._port is None or not self._port.is_open:
+                self._flush_rx_batch()
                 time.sleep(0.05)
                 continue
             if not self._port.is_open:     # silently dropped (USB unplugged)
@@ -318,19 +363,14 @@ class SerialWorker(QThread):
                 if now - last_sig >= SIGNAL_POLL_INTERVAL:
                     last_sig = now
                     self._poll_signals()
-                waiting = self._port.in_waiting
-                if waiting:
-                    data = self._port.read(waiting)
-                    if data:
-                        self.received.emit(time.monotonic(), data)
-                else:
-                    time.sleep(0.001)
+                self._pump_rx()
             except (serial.SerialException, OSError) as exc:  # a failing read means the device
                 # went away; report it and let the reconnect logic take over
                 self.log.emit(f"read error: {exc}")
                 self._handle_disconnect(str(exc))    # T14: try to come back
                 continue
         # the worker closes its own handle on the way out (U64)
+        self._flush_rx_batch()
         self._close_port_safely()
         with self._sig_lock:
             self._sig_cache = {"open": False, "cts": False, "dsr": False,
