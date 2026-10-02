@@ -296,36 +296,36 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 ### Screenshots
 
 <p align="center">
-  <img src="assets/shot_overview_dark.jpg" width="49%" alt="Main window, dark theme">
-  <img src="assets/shot_overview_light.jpg" width="49%" alt="Main window, light theme">
+  <img src="assets/shot_en_overview_dark.jpg" width="49%" alt="Main window, dark theme">
+  <img src="assets/shot_en_overview_light.jpg" width="49%" alt="Main window, light theme">
   <br>
-  <sub>Main window: dark / light (Chinese + English, theme can follow the system)</sub>
+  <sub>Main window: dark / light (English UI shown; Chinese + English, theme can follow the system)</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot_receive.jpg" width="49%" alt="Receive area">
-  <img src="assets/shot_send.jpg" width="49%" alt="Send area">
+  <img src="assets/shot_en_receive.jpg" width="49%" alt="Receive area">
+  <img src="assets/shot_en_send.jpg" width="49%" alt="Send area">
   <br>
   <sub>Receive area (keyword highlight · view filter · timestamps) · Send area (input left, send + repeat right)</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot_quicksend.jpg" width="49%" alt="Quick-send panel">
-  <img src="assets/shot_dlg_history.jpg" width="49%" alt="Send history">
+  <img src="assets/shot_en_quicksend.jpg" width="49%" alt="Quick-send panel">
+  <img src="assets/shot_en_dlg_history.jpg" width="49%" alt="Send history">
   <br>
   <sub>Quick-send panel (sequence mode · sent counter · the row being sent) · Send history</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot_dlg_rules.jpg" width="49%" alt="Auto-reply rules">
-  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="Port settings">
+  <img src="assets/shot_en_dlg_rules.jpg" width="49%" alt="Auto-reply rules">
+  <img src="assets/shot_en_dlg_port_settings.jpg" width="49%" alt="Port settings">
   <br>
   <sub>Auto-reply rules · Port settings (data bits / stop bits / parity / flow control)</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot_dlg_autosave.jpg" width="49%" alt="Log saving settings">
-  <img src="assets/shot_dlg_shortcuts.jpg" width="49%" alt="Shortcut reference">
+  <img src="assets/shot_en_dlg_autosave.jpg" width="49%" alt="Log saving settings">
+  <img src="assets/shot_en_dlg_shortcuts.jpg" width="49%" alt="Shortcut reference">
   <br>
   <sub>Log saving settings · Shortcut reference</sub>
 </p>
