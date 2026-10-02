@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v1.8.7] - 2026-10-02
 
 ### Added
 
@@ -9,6 +9,16 @@
   delete button reads "Delete selected (N)" and greys out with nothing selected, and
   one click drops the whole selection (indices removed high-to-low, metadata cleaned,
   config persisted). Enter/double-click fill is unchanged.
+
+### Internal quality (no user-visible change)
+
+- Documentation: the README download section now describes each release asset
+  (installer, portable zip and their checksums), the feature list became five
+  categorised tables with worked examples for the `{i}` placeholder, a development
+  progress block was added, and the "If Windows blocks it" section was dropped.
+
+
+## [Unreleased]
 
 
 ## [v1.8.6] - 2026-10-02

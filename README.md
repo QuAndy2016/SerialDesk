@@ -181,7 +181,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 ## 开发进度
 
-- **已发布**：75 个版本标签（最新 **v1.8.6**），135 次提交，147 条自动化测试全绿
+- **已发布**：76 个版本标签（最新 **v1.8.7**），143 次提交，150 条自动化测试全绿
 - **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快速发送（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包、CI 门禁（评审电池 + UI 门禁 + 147 测试）
 - **待开发**：33 项（协议解析层、波形显示、小工具箱、多串口、终端模式等；完整清单在开发任务文档里）
 
@@ -213,7 +213,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.3** | 发送区改版：输入框在左、发送 / 历史 / 循环控件成列在右（发送按钮顺手），面板最小高度 335→235px | ✅ 已完成 |
 | **v1.8.4** | 发送区收敛为两段：设置行在上，下面一行左右分栏（左输入框 / 右发送·历史·循环紧凑列，与输入框顶对齐） | ✅ 已完成 |
 | **v1.8.5** | 发送区压到约两行按钮高、按钮缩小并列，输入框默认自动换行 + 垂直滚动，数据区默认获得更多高度 | ✅ 已完成 |
-| **v1.8.6** | 修复：发送历史列表跟随应用主题（非 Windows 平台原本会发白）；README 图廊重做（内容饱满、整体图整宽、中英各 10 张） | ✅ 本次发布 |
+| **v1.8.6** | 修复：发送历史列表跟随应用主题（非 Windows 平台原本会发白）；README 图廊重做（内容饱满、整体图整宽、中英各 10 张） | ✅ 已完成 |
+| **v1.8.7** | 发送历史支持多选（Ctrl/Shift）与 Ctrl+A 全选批量删除；README 文档大幅重整（下载章节按资产逐个说明、功能分类表格 + `{i}` 示例、开发进度块） | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -442,7 +443,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 75 version tags (latest **v1.8.6**), 135 commits, 147 automated tests green
+- **Released**: 76 version tags (latest **v1.8.7**), 143 commits, 150 automated tests green
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, the Windows installer and portable zip, and the CI gate (review battery + UI gate + 147 tests)
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
@@ -474,7 +475,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.8.3** | Send area re-planned: payload box on the left, Send / History / repeat controls in a column on the right (the primary button under the hand); pane minimum height 335→235 px | ✅ Done |
 | **v1.8.4** | Send area is two bands again: settings row on top, then one row split left / right (input box | compact Send / History / repeat column, flush with the box) | ✅ Done |
 | **v1.8.5** | Send pane squeezed to about two button rows with smaller side-by-side buttons, the input wraps + scrolls by default, and the data area gets more height by default | ✅ Done |
-| **v1.8.6** | Fix: the send-history list follows the app theme (it rendered light off-Windows); README gallery rebuilt (content-dense shots, full-width overviews, 10 shots per language) | ✅ This release |
+| **v1.8.6** | Fix: the send-history list follows the app theme (it rendered light off-Windows); README gallery rebuilt (content-dense shots, full-width overviews, 10 shots per language) | ✅ Done |
+| **v1.8.7** | Send history takes multi-select (Ctrl/Shift) and Ctrl+A with batch delete; README reworked (download section per release asset, categorised feature tables with a `{i}` example, progress block) | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start
