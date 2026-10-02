@@ -181,7 +181,7 @@ def lock_control_widths(win: MainWindow) -> None:
     controls = (win._port_lbl, win._baud_lbl, win.refresh_btn, win.open_btn,
                 win._settings_btn, win._crc_lbl, win._repeat_lbl,
                 win.tx_fmt_combo, win.checksum_combo,
-                win.ts_check, win.echo_tx_check, win.autoscroll_check,
+                win.ts_check, win.autoscroll_check,
                 win.nl_combo, win.escape_check,
                 win.save_log_btn, win.save_log_as_btn, win.clear_btn,
                 win.send_file_btn, win.repeat_btn, win.send_btn, win.history_btn)

@@ -625,12 +625,15 @@ def _link_checkbox(box: QCheckBox, action: QAction) -> None:
 
 
 def _build_more_controls(win: MainWindow) -> QToolButton:
-    """The hidden switches and the More menu that mirrors them (U164)."""
+    """The hidden switches and the More menu that mirrors them (U164/U179).
+
+    U179: auto-scroll is high-frequency (toggled while reading the data), so it is
+    a normal row control again; only pause, wrap and the log "save as" stay here.
+    """
     win.autoscroll_check = QCheckBox(tr("rx.autoscroll"), win)   # U43
     win.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
     win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
     win.autoscroll_check.toggled.connect(win._on_autoscroll_toggled)
-    win.autoscroll_check.hide()
 
     win.pause_check = QCheckBox(tr("rx.pause"), win)
     win.pause_check.setToolTip(tr("rx.pause.tip"))
@@ -653,8 +656,6 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.more_btn.setAccessibleName(tr("btn.more"))
     win.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
     win.more_menu = QMenu(win.more_btn)
-    win.act_autoscroll = win.more_menu.addAction(tr("rx.autoscroll"))
-    win.act_autoscroll.setToolTip(tr("rx.autoscroll.tip"))
     win.act_pause = win.more_menu.addAction(tr("rx.pause"))
     win.act_pause.setToolTip(tr("rx.pause.tip"))
     win.act_wrap = win.more_menu.addAction(tr("rx.wrap"))
@@ -662,9 +663,8 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.more_menu.addSeparator()
     win.act_save_as = win.more_menu.addAction(tr("btn.save_log_as"))
     win.act_save_as.triggered.connect(win.on_save_log_as)
-    for action in (win.act_autoscroll, win.act_pause, win.act_wrap):
+    for action in (win.act_pause, win.act_wrap):
         action.setCheckable(True)
-    _link_checkbox(win.autoscroll_check, win.act_autoscroll)
     _link_checkbox(win.pause_check, win.act_pause)
     _link_checkbox(win.wrap_check, win.act_wrap)
     win.more_btn.setMenu(win.more_menu)
@@ -691,14 +691,11 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.ts_check.toggled.connect(win._on_timestamp_toggled)
     rx_opts.addWidget(win.ts_check)
 
+    more = _build_more_controls(win)        # creates the hidden switches + the menu
     rx_opts.addSpacing(12)
-    win.echo_tx_check = QCheckBox(tr("rx.echo_tx"))
-    win.echo_tx_check.setChecked(True)          # echo sent data by default (U26)
-    win.echo_tx_check.setToolTip(tr("rx.echo_tx.tip"))
-    rx_opts.addWidget(win.echo_tx_check)
-
+    rx_opts.addWidget(win.autoscroll_check)   # U179: high-frequency -> back in the row
     rx_opts.addSpacing(12)
-    rx_opts.addWidget(_build_more_controls(win))
+    rx_opts.addWidget(more)
 
     rx_opts.addSpacing(18)
     win.save_log_btn = QPushButton(tr("btn.save_log_quick"))

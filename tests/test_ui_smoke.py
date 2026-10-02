@@ -382,14 +382,15 @@ def test_quick_send_seeds_examples_on_first_run(app, tmp_path, monkeypatch):
 
 
 def test_more_menu_holds_the_low_frequency_switches(app, win):
-    """U164: auto-scroll/pause/wrap/save-as left the row but stay alive and wired."""
+    """U164/U179: only pause/wrap/save-as live in the More menu; auto-scroll is back
+    in the row because it is high frequency."""
     assert win.more_btn.menu() is win.more_menu
-    for widget in (win.autoscroll_check, win.pause_check, win.wrap_check,
-                   win.save_log_as_btn):
+    for widget in (win.pause_check, win.wrap_check, win.save_log_as_btn):
         assert not widget.isVisible()
-    assert win.act_autoscroll.isCheckable() and win.act_pause.isCheckable()
-    assert win.act_wrap.isCheckable()
-    assert win.act_autoscroll.isChecked() == win.autoscroll_check.isChecked()
+    assert win.act_pause.isCheckable() and win.act_wrap.isCheckable()
+    assert win.act_pause.isChecked() == win.pause_check.isChecked()
+    row = win.ts_check.parentWidget()
+    assert row.isAncestorOf(win.autoscroll_check)
     assert win.act_wrap.isChecked() == win.wrap_check.isChecked()
     assert win.act_save_as.text()          # the "Save as" action is in the menu
 
@@ -416,9 +417,8 @@ def test_receive_row_keeps_the_low_frequency_controls_out(app, win):
     ownership of the controls does not.
     """
     row = win.ts_check.parentWidget()
-    for widget in (win.echo_tx_check, win.save_log_btn, win.clear_btn,
+    for widget in (win.autoscroll_check, win.save_log_btn, win.clear_btn,
                    win.rx_filter_combo):
         assert row.isAncestorOf(widget)
-    for widget in (win.autoscroll_check, win.pause_check, win.wrap_check,
-                   win.save_log_as_btn):
+    for widget in (win.pause_check, win.wrap_check, win.save_log_as_btn):
         assert not row.isAncestorOf(widget)

@@ -169,7 +169,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "split.tlv.crc.tip": {"zh": "帧尾带 CRC-16/Modbus 校验；校验失败的帧丢弃并重新同步", "en": "Frame ends with a CRC-16/Modbus check; a bad frame is dropped and the stream resynchronises"},
     "qs.example.tip": {"zh": "首次运行示例：可直接发送，或改成你的指令；不需要就清空", "en": "Seeded example: send it as-is, edit it, or clear the row"},
     "btn.more": {"zh": "更多", "en": "More"},
-    "btn.more.tip": {"zh": "自动滚动 / 暂停显示 / 自动换行 / 另存为…", "en": "Auto-scroll / Pause / Wrap / Save as…"},
+    "btn.more.tip": {"zh": "暂停显示 / 自动换行 / 日志另存为…", "en": "Pause / Wrap / Save log as…"},
     "split.tip": {
         "zh": "分包分行方式\n自动：按波特率 3.5 字符时间\n手动：指定毫秒间隔\n按帧头：识别帧头字符串分行",
         "en": "How frames are split\nAuto: 3.5-char time by baud rate\nManual: fixed millisecond gap\nBy header: split on the header string",
@@ -188,14 +188,9 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "btn.clear": {"zh": "清空", "en": "Clear"},
     "btn.clear.all": {"zh": "清空显示与计数", "en": "Clear display and counters"},
-    "rx.echo_tx": {"zh": "显示发送", "en": "Echo TX"},
-    "rx.echo_tx.tip": {
-        "zh": "在接收区回显发送的数据：TX 行以 -> 标记并染色，RX 行以 <- 标记，两者等宽不会打乱 HEX 对齐；取消勾选则只显示接收数据",
-        "en": "Echo sent data into the receive pane: TX lines are marked with -> and coloured, RX lines with <-; equal-width markers keep HEX columns aligned. Untick to show received data only",
-    },
     # ---- receive log to file (T4) ----
     "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},
-    "btn.save_log_as": {"zh": "另存为…", "en": "Save as…"},
+    "btn.save_log_as": {"zh": "日志另存为…", "en": "Save log as…"},
     "log.quick.tip": {
         "zh": "一键把接收区内容保存到 logs/ 目录（文件名带时间戳），状态栏会给出完整路径",
         "en": "Save the receive pane into logs/ in one click (timestamped file name); the exact path is shown in the status bar",

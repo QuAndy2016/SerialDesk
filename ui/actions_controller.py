@@ -210,8 +210,12 @@ def stop_repeat(win: MainWindow):
 
 def echo_tx(win: MainWindow, data: bytes) -> None:
     "echo tx"
-    """Mirror sent bytes into the receive pane as a '->' line (U26)."""
-    if not win.echo_tx_check.isChecked() or win._file_timer.isActive():
+    """Mirror sent bytes into the receive pane as a '->' line (U26).
+
+    U178: TX is always captured now; the row's view filter (all / RX only / TX only)
+    is the single visibility control, so the old "Echo TX" checkbox is gone.
+    """
+    if win._file_timer.isActive():
         return
     if win.rx_view.document().characterCount() > 1:
         win._emit_rx_text("\n", tx=True)
@@ -594,7 +598,7 @@ def apply_accessible_names(win: MainWindow) -> None:
     """U122: screen readers need a name per control; the tooltip is the best source."""
     names = ("port_combo", "refresh_btn", "baud_combo", "open_btn", "rx_fmt_combo",
              "params_summary", "_settings_btn", "_panel_btn", "split_combo",
-             "split_ms_edit", "header_edit", "ts_check", "echo_tx_check",
+             "split_ms_edit", "header_edit", "ts_check",
              "autoscroll_check", "wrap_check", "rx_filter_combo", "save_log_btn", "save_log_as_btn", "clear_btn",
              "rx_view", "tx_edit", "nl_combo", "escape_check", "send_btn",
              "history_btn", "repeat_btn", "repeat_ms", "send_file_btn",
@@ -618,7 +622,7 @@ def setup_tab_order(win: MainWindow) -> None:
     """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
     names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
              "split_combo", "split_ms_edit", "header_edit", "rx_filter_combo", "ts_check",
-             "echo_tx_check", "autoscroll_check", "wrap_check",
+             "autoscroll_check", "wrap_check",
              "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
              "nl_combo", "escape_check",   # U121: the two pickers live in a popup
              "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
