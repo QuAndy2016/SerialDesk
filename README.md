@@ -86,7 +86,10 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 - **DTR/RTS 控制 + 信号线监视** —— 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新）
 - **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化；开关与规则入口都在「设置」菜单，不再占用发送区空间
 - **配置导入导出** —— 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复
-- **指令序列** —— 快速发送面板可切序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化流程）
+- **指令序列** —— 快速发送面板可切序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化流程）；运行中头部显示「已发 N 次」计数，正在发送的那一行高亮指示
+- **发送内容自动递增 {i}** —— 占位符在发送前替换为递增计数：`{i}` / `{i:N}` / `{i:N:le}`，可设起始值、步长、位宽、字节序、进制与回绕，历史只记模板
+- **命名快捷指令** —— 每条快速发送行可填名称 + 备注（行内两行显示，右键编辑备注），旧配置无损迁移
+- **接收区关键词高亮条** —— 常驻高亮条：输入即高亮、不抢占滚动位置，大小写可选；新到的数据同样即时高亮
 - **背景 QThread 读取** —— UI 永不卡顿
 
 ### 界面预览
@@ -115,7 +118,11 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.2.0** | 发送区与快速发送面板的设计改进：数据区优先的高度分配、换行符选择、设置入口、选中态生命周期、行内两段式细节 | ✅ 本次发布 |
 | **v1.3.0** | 快速发送面板与发送区空间优化：单行条目 + 属性芯片、多选删除、发送选项芯片、输入框吸收富余高度、面板折叠零占位 | ✅ 本次发布 |
 | **v1.4.0** | 质量批：键盘焦点环与无障碍名、诊断信息与崩溃日志、状态栏计数合并（等宽）、快捷键一览、CI 测试门禁 | ✅ 本次发布 |
-| **v1.5.0** | 启动时静默检查新版本（可关、失败静默、不发送本机信息），有新版本时状态栏提示 + 设置菜单直达下载页 | ✅ 本次发布 |
+| **v1.5.0** | 启动时静默检查新版本（可关、失败静默、不发送本机信息），有新版本时状态栏提示 + 设置菜单直达下载页 | ✅ 已完成 |
+| **v1.6.0 ~ v1.6.3** | UI 批 A-D：居中图标与双折角、四类收/发过滤、接收行重排、面板标题、清空分体按钮、发送框换行、端口下拉显示全名 | ✅ 已完成 |
+| **v1.7.0** | 序列循环轮数、重复发送次数，UI 批 A-D 收口（图标重绘、行重排、过滤缺陷修复） | ✅ 已完成 |
+| **v1.8.0** | 发送区 `{i}` 自动递增、接收区常驻关键词高亮条、快速发送命令名称 + 备注（两行、无损迁移） | ✅ 已完成 |
+| **v1.8.1** | 修复与打磨：新数据即时高亮、序列「已发 N 次」计数 + 当前发送行高亮、折叠控件去重、SpinBox 上下箭头与清空下拉箭头放大 | ✅ 本次发布 |
 | v1.1+ | 波形显示（pyqtgraph）、TCP / UDP 调试、协议解析面板 | 计划中（按用户反馈排优先级）|
 
 ## 快速开始
@@ -249,7 +256,10 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 - **DTR/RTS control + status lines** — drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms)
 - **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted, and both the switch and the editor now live in Settings instead of taking up send-area space
 - **Config import / export** — quick-send list, theme, language, send history and auto-reply rules in one JSON file; import it on another machine to restore everything
-- **Command sequence** — sequence mode in the quick-send panel: each row has its own delay, press Run to fire them in order (power-on timing, AT init flows)
+- **Command sequence** — sequence mode in the quick-send panel: each row has its own delay, press Run to fire them in order (power-on timing, AT init flows); the header shows a "sent N times" counter and the row being sent is highlighted
+- **Auto-increment placeholder {i}** — a placeholder replaced by a running counter before sending: `{i}` / `{i:N}` / `{i:N:le}` with configurable start, step, width, endianness, radix and wrap; history keeps the template only
+- **Named quick commands** — every quick-send row can carry a name and a free-text note (two-line row, right-click to edit the note), and old configs migrate losslessly
+- **Receive keyword highlight bar** — an always-on highlight bar: it highlights as you type without stealing the scroll position, with a case switch; rows that arrive later are highlighted too
 - **Background QThread reading** — the UI never blocks
 
 ### Screenshots
@@ -279,6 +289,10 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 | **v1.3.0** | Quick-send and send area: one-line rows with a property chip, multi-select delete, an options chip, an input box that owns the pane's spare height, and a fold that costs no width | ✅ This release |
 | **v1.4.0** | Quality pass: focus rings and accessible names, diagnostics plus a crash log, one monospace counter, a shortcut reference, and a CI test gate | ✅ This release |
 | **v1.5.0** | A quiet startup update check (disable-able, fails silently, sends nothing about this machine) with a status-bar note and a Settings link to the download page | ✅ This release |
+| **v1.6.0 ~ v1.6.3** | UI batches A-D: centred icons and double chevrons, a four-way RX/TX filter, a receive-row re-plan, panel titles, the clear split button, send-box wrapping, full device names in the port dropdown | ✅ Done |
+| **v1.7.0** | Sequence loop count and repeat-send count, closing out UI batches A-D (regenerated icons, row re-plan, filter fixes) | ✅ Done |
+| **v1.8.0** | `{i}` auto-increment in the send box, a persistent receive keyword highlight bar, named quick-send commands with notes (two-line rows, lossless migration) | ✅ Done |
+| **v1.8.1** | Fixes and polish: live highlighting for newly received rows, a "sent N times" sequence counter plus a highlight on the row being sent, the duplicate fold control removed, and larger spin-box / clear-dropdown arrows | ✅ This release |
 | v1.1+ | Waveform view (pyqtgraph), TCP / UDP, protocol analyser panel | Planned (prioritised by user feedback) |
 
 ### Quick start

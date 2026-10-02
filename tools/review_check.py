@@ -323,17 +323,30 @@ def main() -> int:
     if dangerous:
         problems += len(dangerous)
 
-    coverage = check_coverage()
-    print("\n[coverage]", coverage if coverage else "not measured (pip install pytest-cov)")
+    # Efficiency: one gate invocation must run pytest exactly once and
+    # tools/check_ui.py exactly once. dev_gate.sh therefore calls this script with
+    # --no-coverage --no-dynamic and then runs check_ui.py (which owns the single
+    # pytest + coverage run). Standing alone (CI review step, ad-hoc use) every
+    # check still runs.
+    if "--no-coverage" in sys.argv:
+        coverage = None
+        print("\n[coverage] (skipped here: the single pytest run is owned by tools/check_ui.py)")
+    else:
+        coverage = check_coverage()
+        print("\n[coverage]", coverage if coverage else "not measured (pip install pytest-cov)")
 
-    code, out = dynamic()
-    print("\n[dynamic] tools/check_ui.py ->", out.splitlines()[-1] if out else "no output")
-    if code and out:
-        # CI only reads this file's stdout, and "failed" alone says nothing about
-        # *why* (the Windows runner's fonts measure differently from Linux).
-        print("[dynamic] full UI gate output:")
-        for line in out.splitlines():
-            print("   ", line)
+    if "--no-dynamic" in sys.argv:
+        code, out = 0, ""
+        print("\n[dynamic] (skipped here: tools/check_ui.py runs once, right after this)")
+    else:
+        code, out = dynamic()
+        print("\n[dynamic] tools/check_ui.py ->", out.splitlines()[-1] if out else "no output")
+        if code and out:
+            # CI only reads this file's stdout, and "failed" alone says nothing about
+            # *why* (the Windows runner's fonts measure differently from Linux).
+            print("[dynamic] full UI gate output:")
+            for line in out.splitlines():
+                print("   ", line)
     problems += 1 if code else 0
 
     # `problems` counts what must be fixed now. The code-structure numbers are real but

@@ -51,8 +51,8 @@ QPushButton[secondary="true"] { background: $surface_1; border: 1px solid $borde
 QPushButton[secondary="true"]:hover { background: $border_muted; border-color: $border_hover_soft; }
 QToolButton#clearBtn { background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 8px; }
 QToolButton#clearBtn:hover { background: $border_strong; }
-QToolButton#clearBtn::menu-button { width: 16px; border: none; border-left: 1px solid $border_strong; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 8px; height: 5px; }
+QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid $border_strong; }
+QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
@@ -67,7 +67,7 @@ QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
-QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 10px; height: 6px; }
+QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 12px; height: 12px; }
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
 QComboBox QAbstractItemView {
     background: $surface_1;
@@ -81,9 +81,9 @@ QSpinBox {
     padding: 3px 6px;
 }
 QSpinBox:hover { border-color: $accent; }
-QSpinBox::up-button, QSpinBox::down-button { width: 16px; border: none; background: transparent; }
-QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 8px; height: 5px; }
-QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 8px; height: 5px; }
+QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
+QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 14px; height: 14px; }
+QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QPlainTextEdit {
     background: $surface_input;
     border: 1px solid $border_muted;
@@ -116,9 +116,7 @@ QToolButton#settingsBtn { color: $text_primary; background: transparent; border:
 QToolButton#settingsBtn:hover { background: $border_muted; border-color: $border_hover; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: $surface_pressed; border-color: $accent; }
 QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
-/* U106: quick-send panel fold/unfold - a themed icon button, both directions */
-QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsCollapse:hover { background: $border_muted; border-color: $border_hover_rail; }
+/* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
 /* U118/U121: the property chip (row properties, send options) */
 QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $border_muted; }
@@ -151,6 +149,7 @@ QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: trans
 QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* U167: accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow[sending="true"] { background: rgba(210, 210, 225, 0.18); border: 1px solid $accent; }   /* S3: the row being sent right now */
 QFrame#qsRow:hover { background: $border_muted; }   /* U163-I3: row hover feedback */
 """
 
@@ -191,8 +190,8 @@ QPushButton[secondary="true"] { background: $surface_secondary; border: 1px soli
 QPushButton[secondary="true"]:hover { background: $surface_secondary_hover; border-color: $border_hover; }
 QToolButton#clearBtn { background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 8px; }
 QToolButton#clearBtn:hover { background: $surface_soft; }
-QToolButton#clearBtn::menu-button { width: 16px; border: none; border-left: 1px solid $border_strong; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 8px; height: 5px; }
+QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid $border_strong; }
+QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
@@ -206,7 +205,7 @@ QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
-QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 10px; height: 6px; }
+QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 12px; height: 12px; }
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
 QComboBox QAbstractItemView {
     background: $surface_1;
@@ -220,9 +219,9 @@ QSpinBox {
     padding: 3px 6px;
 }
 QSpinBox:hover { border-color: $accent; }
-QSpinBox::up-button, QSpinBox::down-button { width: 16px; border: none; background: transparent; }
-QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_light.png); width: 8px; height: 5px; }
-QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 8px; height: 5px; }
+QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
+QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_light.png); width: 14px; height: 14px; }
+QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 14px; height: 14px; }
 QPlainTextEdit {
     background: $surface_1;
     border: 1px solid $border_muted;
@@ -254,9 +253,7 @@ QToolButton#settingsBtn { color: $text_primary; background: transparent; border:
 QToolButton#settingsBtn:hover { background: $surface_hover; border-color: $border_hover; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: $surface_pressed; border-color: $accent; }
 QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
-/* U106: quick-send panel fold/unfold - a themed icon button, both directions */
-QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_light.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsCollapse:hover { background: $surface_hover; border-color: $border_hover_rail; }
+/* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
 /* U118/U121: the property chip (row properties, send options) */
 QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $surface_hover; }
@@ -289,6 +286,7 @@ QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: trans
 QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* U167: accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(70, 70, 100, 0.08); border: 1px solid rgba(70, 70, 100, 0.20); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow[sending="true"] { background: rgba(70, 70, 100, 0.14); border: 1px solid $accent; }   /* S3: the row being sent right now */
 QFrame#qsRow:hover { background: $surface_hover; }   /* U163-I3: row hover feedback */
 """
 

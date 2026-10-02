@@ -33,8 +33,8 @@ ICON_COLOURS = {
 
 #: filename -> (width, height, glyph, theme)  width/height are the QSS display sizes
 ICONS = {
-    "arrow_down_%s.png": (10, 6, "down"),
-    "arrow_up_%s.png": (8, 5, "up"),
+    "arrow_down_%s.png": (14, 14, "down"),   # B4: was 10x6 - too small next to a spin box
+    "arrow_up_%s.png": (14, 14, "up"),       # B4: was 8x5
     "arrow_left_%s.png": (8, 12, "left"),
     "arrow_right_%s.png": (8, 12, "right"),
     "gear_%s.png": (14, 14, "gear"),

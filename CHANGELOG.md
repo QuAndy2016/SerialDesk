@@ -1,5 +1,41 @@
 # Changelog
 
+## [v1.8.1] - 2026-10-02
+
+### Fixed
+
+- **Newly received rows are highlighted again** (B1): the keyword search used to run only
+  when the query changed, so data arriving afterwards never matched. The search now re-runs
+  (coalesced to one pass ~120 ms after the last fragment) while the highlight bar is visible.
+- **The duplicate fold control is gone** (B3): the quick-send panel header carried its own
+  fold arrow next to the loop spin box, duplicating the always-visible toggle beside Settings.
+  The header one was removed; folding stays on the button beside Settings (and the hover rail).
+
+### Added
+
+- **Sequence "sent N times" counter** (S2): the quick-send header shows how many sequence
+  rounds have been sent, cleared when a new run starts.
+- **The row being sent is highlighted** (S3): while a sequence runs, the current row gets an
+  accent border so it is obvious which command is on the wire.
+
+### Changed
+
+- **Spin-box arrows are readable at last** (B4): up/down arrows went from 8x5 px inside a
+  16 px button to a 14x14 px glyph in a 22 px hit target (all spin boxes: loop count, repeat
+  interval, increment parameters, split sizes).
+- **The clear split button's dropdown arrow matches** (S1): 8x5 -> 14x14 px, with a 22 px
+  menu button.
+
+### Internal quality (no user-visible change)
+
+- **One gate run executes the suite once**: `tools/dev_gate.sh` now calls the review battery
+  with `--no-coverage --no-dynamic` and lets `tools/check_ui.py` own the single pytest +
+  coverage run (previously pytest ran three times and `check_ui.py` twice per gate). CI gate
+  time drops from ~479 s to ~200 s.
+- **Gate results are stamped per tree**: `dev_gate.sh` writes a HEAD+diff hash on success and
+  the pre-commit hook skips an identical tree, so "run once, then commit" is one gate run.
+
+
 ## [v1.8.0] - 2026-10-02
 
 ### Added

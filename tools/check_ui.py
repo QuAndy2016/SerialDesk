@@ -169,7 +169,21 @@ def check_min_width() -> int:
 
 
 def check_tests() -> int:
-    proc = run([sys.executable, "-m", "pytest", "-q"])
+    """Run the pytest suite once, with coverage.
+
+    This is the only pytest invocation in a normal gate run (dev_gate.sh calls
+    review_check.py with --no-coverage --no-dynamic first), so the coverage number
+    and the test result come from the same run.
+    """
+    proc = run([sys.executable, "-m", "pytest", "-q", "--cov=app", "--cov=ui",
+                "--cov-report=term"])
+    text = (proc.stdout or "") + (proc.stderr or "")
+    total = None
+    for line in text.splitlines():
+        if line.strip().startswith("TOTAL"):
+            total = line.split()[-1]
+    if total:
+        print("[coverage]", total, "(single pytest run for the whole gate)")
     tail = (proc.stdout or proc.stderr).strip().splitlines()[-1:] or [""]
     print("[tests]", tail[0])
     return proc.returncode
@@ -177,7 +191,9 @@ def check_tests() -> int:
 
 def main() -> int:
     results = {"contrast": check_contrast(), "overflow": check_overflow(),
-               "min-width": check_min_width(), "tests": check_tests()}
+               "min-width": check_min_width()}
+    if "--no-tests" not in sys.argv:
+        results["tests"] = check_tests()
     bad = [name for name, code in results.items() if code]
     print("\nUI gate:", "FAILED -> " + ", ".join(bad) if bad else "all clear")
     return 1 if bad else 0

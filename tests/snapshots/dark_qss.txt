@@ -30,8 +30,8 @@ QPushButton[secondary="true"] { background: #2d2d3d; border: 1px solid #4a4a5a; 
 QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #838397; }
 QToolButton#clearBtn { background: #3a3a4a; border: 1px solid #4a4a5a; border-radius: 4px; padding: 4px 8px; }
 QToolButton#clearBtn:hover { background: #4a4a5a; }
-QToolButton#clearBtn::menu-button { width: 16px; border: none; border-left: 1px solid #4a4a5a; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 8px; height: 5px; }
+QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid #4a4a5a; }
+QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: #2d2d3d;
     border: 1px solid #4a4a5a;
@@ -46,7 +46,7 @@ QPushButton:focus, QToolButton:focus { border: 1px solid #8be9fd; }
 QCheckBox:focus { color: #8be9fd; }
 QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
 QComboBox::drop-down { border: none; border-left: 1px solid #4a4a5a; width: 22px; }
-QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 10px; height: 6px; }
+QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 12px; height: 12px; }
 QComboBox[invalid="true"] { border: 1px solid #ff4136; }
 QComboBox QAbstractItemView {
     background: #2d2d3d;
@@ -60,9 +60,9 @@ QSpinBox {
     padding: 3px 6px;
 }
 QSpinBox:hover { border-color: #8be9fd; }
-QSpinBox::up-button, QSpinBox::down-button { width: 16px; border: none; background: transparent; }
-QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 8px; height: 5px; }
-QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 8px; height: 5px; }
+QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
+QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 14px; height: 14px; }
+QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QPlainTextEdit {
     background: #16161f;
     border: 1px solid #3a3a4a;
@@ -95,9 +95,7 @@ QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px s
 QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #83839f; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #2f2f3d; border-color: #8be9fd; }
 QFrame#connDivider { background: #4a4a5a; max-width: 1px; border: none; }
-/* U106: quick-send panel fold/unfold - a themed icon button, both directions */
-QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsCollapse:hover { background: #3a3a4a; border-color: #83839f; }
+/* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
 /* U118/U121: the property chip (row properties, send options) */
 QToolButton#qsChip { color: #a9a9bd; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
 QToolButton#qsChip:hover { color: #d4d4d4; border-color: #83839f; background: #3a3a4a; }
@@ -130,4 +128,5 @@ QLabel#qsTitle { color: #d4d4d4; font-weight: bold; background: transparent; }  
 QFrame#qsTitleBar { background: #8be9fd; border-radius: 1px; }   /* U167: accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow[sending="true"] { background: rgba(210, 210, 225, 0.18); border: 1px solid #8be9fd; }   /* S3: the row being sent right now */
 QFrame#qsRow:hover { background: #3a3a4a; }   /* U163-I3: row hover feedback */

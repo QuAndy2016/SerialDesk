@@ -519,6 +519,27 @@ def on_find_text_changed(win: MainWindow) -> None:
     update_find_count(win)
 
 
+def refresh_find_highlights(win: MainWindow) -> None:
+    """B1 (2026-10-02): recompute the matches and re-apply them.
+
+    Called (throttled) after new data lands in the receive pane, so rows that
+    arrive while a query is active get highlighted too. Keeps the current match
+    index when it is still in range instead of jumping back to the first hit.
+    """
+    if not getattr(win, "_find_bar", None) or not win._find_bar.isVisible():
+        return
+    text = win.find_edit.text()
+    if not text:
+        return
+    matches = _collect_find_matches(win, text, find_case_sensitive(win))
+    win._find_matches = matches
+    win._find_query = text
+    index = getattr(win, "_find_index", 0)
+    win._find_index = min(index, len(matches) - 1) if matches else 0
+    _apply_find_highlights(win, matches, win._find_index)
+    update_find_count(win)
+
+
 def on_find_case_toggled(win: MainWindow, checked: bool) -> None:
     "on find case toggled"
     """U181: remember the case switch and re-run the search."""

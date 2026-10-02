@@ -131,6 +131,7 @@ class QuickSendPanel(QWidget):
         self._seq_queue: list[dict] = []
         self._seq_index = 0
         self._seq_round = 1
+        self._seq_sent = 0            # S2: completed sequence rounds shown in the head
         self._folded = False
         self._build_ui()
         self._load()
@@ -170,6 +171,11 @@ class QuickSendPanel(QWidget):
         head.addStretch(1)
         self.count_label = QLabel("0/99")
         head.addWidget(self.count_label)
+        # S2 (2026-10-02): how many sequence rounds have already been sent.
+        self.seq_sent_lbl = QLabel("")
+        self.seq_sent_lbl.setObjectName("qsSeqSent")
+        self.seq_sent_lbl.setToolTip(tr("qs.seq.sent.tip"))
+        head.addWidget(self.seq_sent_lbl)
         # U170: the round count lives in the head row (which has slack next to the
         # title), so the sequence row below does not grow and widen the whole panel.
         head.addSpacing(10)
@@ -183,16 +189,9 @@ class QuickSendPanel(QWidget):
         self.seq_loops.setFixedWidth(
             self.seq_loops.fontMetrics().horizontalAdvance("9999") + 26)
         head.addWidget(self.seq_loops)
-        # U106: the fold control sits at the trailing edge (matching the side it folds
-        # towards), is a themed icon button instead of a text glyph, has a 24x24 hit
-        # target, and toggles both ways.
-        self._collapse_btn = QToolButton()
-        self._collapse_btn.setObjectName("qsCollapse")
-        self._collapse_btn.setAutoRaise(True)
-        self._collapse_btn.setMinimumSize(24, 24)
-        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
-        self._collapse_btn.clicked.connect(lambda: self.collapsed_changed.emit(True))
-        head.addWidget(self._collapse_btn)
+        # B3 (2026-10-02): the fold control that used to sit here (right of the loop
+        # spin box) duplicated the always-visible panel toggle next to Settings, so it
+        # was removed. The panel is folded from that one control (and the hover rail).
         layout.addLayout(head)
 
     def _build_sequence_row(self, layout: QVBoxLayout) -> None:
@@ -291,6 +290,7 @@ class QuickSendPanel(QWidget):
         row = QFrame()
         row.setObjectName("qsRow")
         row.setProperty("selected", False)
+        row.setProperty("sending", False)   # S3: the row the sequence is sending now
         row.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         row.setToolTip(tr("qs.row.tip"))
         row.installEventFilter(self)
@@ -687,12 +687,36 @@ class QuickSendPanel(QWidget):
         self._seq_running = True
         self._seq_index = 0
         self._seq_round = 1
+        self._seq_sent = 0
+        self._update_seq_sent()
         self.seq_btn.setText(tr("qs.stop"))
         self._seq_send_current()
+
+    def _mark_sending(self, entry: dict) -> None:
+        """S3: highlight the row the sequence is sending right now (one at a time)."""
+        for other in self._rows:
+            on = other is entry
+            if bool(other["widget"].property("sending")) != on:
+                other["widget"].setProperty("sending", on)
+                other["widget"].style().unpolish(other["widget"])
+                other["widget"].style().polish(other["widget"])
+
+    def _clear_sending(self) -> None:
+        """S3: drop the in-progress highlight from every row."""
+        for entry in self._rows:
+            if bool(entry["widget"].property("sending")):
+                entry["widget"].setProperty("sending", False)
+                entry["widget"].style().unpolish(entry["widget"])
+                entry["widget"].style().polish(entry["widget"])
+
+    def _update_seq_sent(self) -> None:
+        """S2: show how many sequence rounds have been sent (empty before the first)."""
+        self.seq_sent_lbl.setText(tr("qs.seq.sent", n=self._seq_sent) if self._seq_sent else "")
 
     def _seq_send_current(self) -> None:
         """Send the current row, then wait that row's delay before moving on."""
         entry = self._seq_queue[self._seq_index]
+        self._mark_sending(entry)
         payload = self._payload_for(entry)
         if payload is not None:
             self.send_payload.emit(payload)
@@ -741,6 +765,8 @@ class QuickSendPanel(QWidget):
 
     def _finish_sequence(self) -> None:
         loops = self._seq_loops_value()
+        self._seq_sent += 1            # S2: one full round finished
+        self._update_seq_sent()
         if loop_should_continue(self._seq_round, loops):
             self._seq_round += 1
             self._seq_index = 0
@@ -750,6 +776,7 @@ class QuickSendPanel(QWidget):
         self._seq_timer.stop()
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
+        self._clear_sending()
         self.log.emit(tr("qs.seq.done.n", n=max(1, self._seq_round)))
         self._seq_index = 0
         self._seq_round = 1
@@ -760,6 +787,7 @@ class QuickSendPanel(QWidget):
         self._seq_timer.stop()
         self._seq_running = False
         self.seq_btn.setText(tr("qs.run"))
+        self._clear_sending()
         self._seq_index = 0
         self._seq_round = 1
         self._seq_queue = []
@@ -822,7 +850,7 @@ class QuickSendPanel(QWidget):
         self.seq_check.setToolTip(tr("qs.seq.tip"))
         self.seq_btn.setText(tr("qs.stop") if self._seq_running else tr("qs.run"))
         self.seq_btn.setToolTip(tr("qs.seq.tip"))
-        self._collapse_btn.setToolTip(tr("qs.collapse.tip"))
+        self.seq_sent_lbl.setToolTip(tr("qs.seq.sent.tip"))
         self._rail.set_label(tr("qs.title"))
         self._rail.setToolTip(tr("qs.rail.tip"))
         for entry in self._rows:

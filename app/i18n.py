@@ -503,10 +503,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "status.closed": {"zh": "串口已关闭", "en": "Port closed"},
     "log.send_error": {"zh": "发送内容错误: {e}", "en": "Send error: {e}"},
     # ---- quick send panel ----
-    "qs.collapse.tip": {
-        "zh": "折叠快速发送面板，把宽度让给数据显示区（Ctrl+B 可再展开）",
-        "en": "Collapse the quick-send panel to free width for the log (Ctrl+B reopens it)",
-    },
+    "qs.seq.sent": {"zh": "已发 {n} 次", "en": "Sent {n}x"},
+    "qs.seq.sent.tip": {"zh": "本序列已完成的发送轮数", "en": "Sequence rounds completed so far"},
     "menu.quick_panel": {"zh": "显示快速发送面板", "en": "Show the quick-send panel"},
     "menu.quick_panel.tip": {"zh": "显示/隐藏快速发送面板 (Ctrl+B)", "en": "Show or hide the quick-send panel (Ctrl+B)"},
     "qs.collapsed": {

@@ -230,8 +230,36 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
         win._cur_line_tx = False
     if _frag_visible(win, kind):
         _insert_rx_fragment(win, text, kind)
+        _schedule_find_refresh(win)
     if log:
         win._log_append(text)
+
+
+def _schedule_find_refresh(win: MainWindow) -> None:
+    """B1 (2026-10-02): re-highlight after new data arrived, throttled.
+
+    The keyword highlighter used to be computed only when the query changed, so
+    freshly received rows were never highlighted. Re-running the search on every
+    fragment would be wasteful, so the work is coalesced into one pass ~120 ms
+    after the last fragment, and only while the highlight bar is visible with a
+    non-empty query (otherwise this is a no-op).
+    """
+    bar = getattr(win, "_find_bar", None)
+    if bar is None or not bar.isVisible() or not win.find_edit.text():
+        return
+    timer = getattr(win, "_find_refresh_timer", None)
+    if timer is None:
+        timer = QTimer(win)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: _run_find_refresh(win))
+        win._find_refresh_timer = timer
+    timer.start(120)
+
+
+def _run_find_refresh(win: MainWindow) -> None:
+    """B1: recompute and re-apply the receive-pane highlights (deferred import)."""
+    from ui.actions_controller import refresh_find_highlights
+    refresh_find_highlights(win)
 
 
 def rebuild_rx_view(win: MainWindow) -> None:

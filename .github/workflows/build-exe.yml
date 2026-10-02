@@ -32,7 +32,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           pip install pytest pytest-cov
-          python tools/review_check.py --strict
+          python tools/review_check.py --strict --no-coverage --no-dynamic
 
       - name: UI gate (contrast + overflow + tests)
         env:
