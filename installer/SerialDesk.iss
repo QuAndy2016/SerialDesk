@@ -50,8 +50,9 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName} / 运行 Se
 ; user data (config.json / logs) lives in %APPDATA%\SerialDesk and is intentionally kept
 
 [Code]
-; U163d: on uninstall, ask whether the per-user settings and logs should go too.
-; They live in %APPDATA%\SerialDesk and are otherwise intentionally kept.
+// U163d: on uninstall, ask whether the per-user settings and logs should go too.
+// They live in %APPDATA%\SerialDesk and are otherwise intentionally kept.
+// (Note: inside [Code] only // and { } are comments; ';' is rejected by the Pascal compiler.)
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Choice: Integer;

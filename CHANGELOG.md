@@ -35,6 +35,9 @@
 
 ### Internal quality (no user-visible change)
 
+- **Windows installer build fixed**: the `[Code]` section added in U163c-e used `;`
+  comments, which the Inno Setup Pascal compiler rejects (`'BEGIN' expected`); switched to
+  `//`. This only affected the installer packaging step, not the app itself.
 - Broad `except` blocks narrowed (A3); dialog smoke tests added (A4).
 - Review battery / UI gate threaded through a single `tools/dev_gate.sh` entry point.
 
