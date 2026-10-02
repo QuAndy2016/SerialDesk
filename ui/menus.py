@@ -179,11 +179,6 @@ def _build_config_menu(win: MainWindow) -> None:
         lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log_dir())))
     win._cfg_menu.addAction(win._open_log_dir_act)
 
-    # N2/U163: counters are zeroed separately from clearing the display
-    win._reset_counters_act = QAction(tr("menu.reset_counters"), win)
-    win._reset_counters_act.triggered.connect(win._reset_counters)
-    win._cfg_menu.addAction(win._reset_counters_act)
-
 
 def _build_io_section(win: MainWindow) -> None:
     """Auto-save, auto-reply rules, auto-reconnect, shortcuts and the about box."""

@@ -458,22 +458,13 @@ def on_clear(win: MainWindow):
         win._notify(tr("rx.cleared"), "warn", ms=5000)
 
 
-def on_reset_counters(win: MainWindow) -> None:
-    "on reset counters"
-    """Zero the RX/TX byte and send counters, leaving the display alone (N2/U163)."""
-    win.rx_bytes = 0
-    win.tx_bytes = 0
-    win._sent_count = 0
-    win.update_counts()
-    win._notify(tr("rx.counters_reset"), "info", ms=3000)
-
-
 def on_clear_and_counters(win: MainWindow) -> None:
     "on clear and counters"
-    """U169: clear the pane and zero the counters in one step (menu item).
+    """U169/2026-10-02: clear the pane and zero the counters in one step.
 
-    on_clear runs first, so the undo snapshot still holds the pre-clear counters
-    and undoing brings both the text and the numbers back.
+    This is the only clear action now (Andy: one button, one meaning). on_clear runs
+    first, so the undo snapshot still holds the pre-clear counters and undoing brings
+    both the text and the numbers back.
     """
     on_clear(win)
     win.rx_bytes = 0

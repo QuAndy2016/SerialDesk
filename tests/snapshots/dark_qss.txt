@@ -28,10 +28,6 @@ QPushButton:pressed { background: #2a2a3a; }
 QPushButton:disabled { color: #989898; background: #2a2a35; }
 QPushButton[secondary="true"] { background: #2d2d3d; border: 1px solid #4a4a5a; color: #cfcfcf; }
 QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #838397; }
-QToolButton#clearBtn { background: #3a3a4a; border: 1px solid #4a4a5a; border-radius: 4px; padding: 4px 8px; }
-QToolButton#clearBtn:hover { background: #4a4a5a; }
-QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid #4a4a5a; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: #2d2d3d;
     border: 1px solid #4a4a5a;

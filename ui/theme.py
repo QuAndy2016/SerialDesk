@@ -49,10 +49,6 @@ QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
 QPushButton[secondary="true"] { background: $surface_1; border: 1px solid $border_strong; color: $text_secondary; }
 QPushButton[secondary="true"]:hover { background: $border_muted; border-color: $border_hover_soft; }
-QToolButton#clearBtn { background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 8px; }
-QToolButton#clearBtn:hover { background: $border_strong; }
-QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid $border_strong; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
@@ -194,10 +190,6 @@ QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
 QPushButton[secondary="true"] { background: $surface_secondary; border: 1px solid $border_secondary; color: $text_secondary; }
 QPushButton[secondary="true"]:hover { background: $surface_secondary_hover; border-color: $border_hover; }
-QToolButton#clearBtn { background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 8px; }
-QToolButton#clearBtn:hover { background: $surface_soft; }
-QToolButton#clearBtn::menu-button { width: 22px; border: none; border-left: 1px solid $border_strong; }
-QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 14px; height: 14px; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;

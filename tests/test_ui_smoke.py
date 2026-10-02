@@ -222,15 +222,20 @@ def test_clean_copy_strips_timestamps_and_markers(app, win):
     assert "<- " in win.rx_view.toPlainText()   # raw still shows the marker
 
 
-def test_reset_counters_keeps_display(app, win):
-    # U163-N2: zeroing the counters must not clear the pane
+def test_clear_button_clears_display_and_counters(app, win):
+    """2026-10-02 (Andy): one clear action - display + counters.
+
+    The split button (clear display / clear+counters / reset counters) is gone; the
+    single Clear button and Ctrl+L both zero the counters as well.
+    """
     win.rx_view.clear()
     win._emit_rx_text("DATA")
     win.rx_bytes, win.tx_bytes, win._sent_count = 42, 7, 3
-    win._reset_counters()
+    win._on_clear_and_counters()
     app.processEvents()
     assert (win.rx_bytes, win.tx_bytes, win._sent_count) == (0, 0, 0)
-    assert "DATA" in win.rx_view.toPlainText()
+    assert "DATA" not in win.rx_view.toPlainText()
+    assert not hasattr(win, "_reset_counters") and not hasattr(win, "_clear_menu")
 
 
 def test_focus_inside_row_selects_it(app, win):

@@ -9,6 +9,11 @@
   setting to hunt for.
 - **The receive pane always wraps** (Andy 2026-10-02): the "Wrap" item left the More menu
   as well; long RX lines wrap by default.
+- **One Clear action** (Andy 2026-10-02): the receive area's split button (clear display /
+  clear + counters / reset counters, drawn with a grey fill and a dropdown glyph that read
+  as a tick) is a single plain "Clear" button now - one click clears the display and the
+  counters together, still undoable within 5 s. The duplicate "reset counters" entry left
+  the Settings menu and Ctrl+L does the same thing.
 
 
 ## [v1.8.7] - 2026-10-02

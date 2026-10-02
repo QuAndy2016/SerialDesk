@@ -125,7 +125,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "find.count.tip": {"zh": "当前命中 / 总数", "en": "current hit / total"},
 
     "rx.cleared": {"zh": "已清空接收区（5 秒内可撤销）", "en": "Receive pane cleared (undo within 5 s)"},
-    "rx.counters_reset": {"zh": "计数已清零（显示不变）", "en": "Counters reset (display untouched)"},
     "rx.undo.done": {"zh": "已恢复清空前的显示", "en": "Display restored"},
     "undo.label": {"zh": "撤销", "en": "Undo"},
     "find.label": {"zh": "高亮", "en": "Highlight"},
@@ -137,7 +136,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "find.close.tip": {"zh": "关闭查找（Esc）", "en": "Close the find bar (Esc)"},
     "find.none": {"zh": "未找到: {text}", "en": "Not found: {text}"},
     "sc.send.tip": {"zh": "发送（Ctrl+Enter）", "en": "Send (Ctrl+Enter)"},
-    "sc.clear.tip": {"zh": "清空显示（Ctrl+L，可撤销）", "en": "Clear the display (Ctrl+L, undoable)"},
+    "sc.clear.tip": {"zh": "清空显示与计数（Ctrl+L，5 秒内可撤销）", "en": "Clear the display and the counters (Ctrl+L, undoable within 5 s)"},
     "sc.save.tip": {"zh": "保存接收日志（Ctrl+S）", "en": "Save receive log (Ctrl+S)"},
     "sc.open.tip": {"zh": "打开/关闭串口（F5）", "en": "Open/close the port (F5)"},
     "rx.cap": {
@@ -212,7 +211,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Tick to prefix every receive line with a timestamp, always shaped like [04:02:10.456]",
     },
     "btn.clear": {"zh": "清空", "en": "Clear"},
-    "btn.clear.all": {"zh": "清空显示与计数", "en": "Clear display and counters"},
     # ---- receive log to file (T4) ----
     "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},
     "btn.save_log_as": {"zh": "日志另存为…", "en": "Save log as…"},
@@ -331,7 +329,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "update.none": {"zh": "已是最新版本", "en": "You are up to date"},
     "update.fail": {"zh": "检查更新失败（网络或服务不可用）", "en": "Update check failed (network or service unavailable)"},
     "menu.open_log_dir": {"zh": "打开日志目录", "en": "Open logs folder"},
-    "menu.reset_counters": {"zh": "清零计数", "en": "Reset counters"},
     "about.copy": {"zh": "复制诊断信息", "en": "Copy diagnostics"},
     "about.copied": {"zh": "诊断信息已复制到剪贴板", "en": "Diagnostics copied to the clipboard"},
     "menu.shortcuts": {"zh": "快捷键一览…", "en": "Keyboard shortcuts…"},

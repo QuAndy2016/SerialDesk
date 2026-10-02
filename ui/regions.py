@@ -796,18 +796,13 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addStretch(1)
     # U169: 清空 is a split button - one click clears the display (unchanged), and
     # the menu exposes the counter actions, which used to be buried in Settings.
-    win.clear_btn = QToolButton()
-    win.clear_btn.setObjectName("clearBtn")
-    win.clear_btn.setText(tr("btn.clear"))
+    # 2026-10-02 (Andy): one plain button, one meaning - clear the display AND the
+    # counters. The split button (clear display / clear+counters / reset counters) was
+    # confusing: three entry points, a grey fill and a dropdown glyph that read as a
+    # tick. The undo toast still covers an accidental click.
+    win.clear_btn = QPushButton(tr("btn.clear"))
     win.clear_btn.setToolTip(tr("sc.clear.tip"))
-    win.clear_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-    win.clear_btn.clicked.connect(win.on_clear)
-    win._clear_menu = QMenu(win.clear_btn)
-    win._act_clear_all = win._clear_menu.addAction(tr("btn.clear.all"))
-    win._act_clear_all.triggered.connect(win._on_clear_and_counters)
-    win._act_reset_counters = win._clear_menu.addAction(tr("menu.reset_counters"))
-    win._act_reset_counters.triggered.connect(win._reset_counters)
-    win.clear_btn.setMenu(win._clear_menu)
+    win.clear_btn.clicked.connect(win._on_clear_and_counters)
     rx_opts.addWidget(win.clear_btn)
 
 def _build_status_counters(win: MainWindow) -> None:

@@ -600,7 +600,7 @@ def setup_shortcuts(win: MainWindow) -> None:
     """Daily-flow keyboard shortcuts (U39)."""
     for seq, handler in (
         ("Ctrl+Return", win.on_send),
-        ("Ctrl+L", win.on_clear),
+        ("Ctrl+L", win._on_clear_and_counters),
         ("Ctrl+S", win.on_save_log_quick),
         ("Ctrl+K", lambda: win.tx_edit.setFocus()),
         ("F5", win.toggle_open),
