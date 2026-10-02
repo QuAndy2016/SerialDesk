@@ -89,9 +89,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "rx.filter.tip": {"zh": "过滤接收区显示：全部 / 只看接收 / 只看发送", "en": "Filter the receive pane: all / RX only / TX only"},
     "rx.wrap": {"zh": "自动换行", "en": "Wrap"},
     "rx.wrap.tip": {"zh": "长行自动折行显示；关闭时超长行横向滚动", "en": "Soft-wrap long lines; when off, long lines scroll horizontally"},
-    "tx.wrap": {"zh": "发送框换行", "en": "Wrap input"},
-    "tx.wrap.tip": {"zh": "发送输入框内长内容自动折行；关闭时横向滚动（长 HEX 串默认不折行，便于整行核对）",
-                    "en": "Soft-wrap long content in the send box; when off it scrolls horizontally (a long HEX string stays on one line by default)"},
     # ---- U180 send auto-increment ----
     "inc.chip": {"zh": "递增", "en": "Increment"},
     "inc.chip.on": {"zh": "递增 ✓", "en": "Increment ✓"},

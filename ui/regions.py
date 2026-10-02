@@ -437,13 +437,6 @@ def _build_text_decorations(win: MainWindow) -> QWidget:
     win.escape_check.setChecked(True)
     win.escape_check.setToolTip(tr("tx.escape.tip"))
     mod_row.addWidget(win.escape_check)
-    # U165/2026-10-02: the send box soft-wraps by default now (Andy: long payloads
-    # should wrap and scroll instead of running off the edge), still switchable.
-    win.tx_wrap_check = QCheckBox(tr("tx.wrap"))
-    win.tx_wrap_check.setChecked(bool(load_config().get("tx_wrap_on", True)))
-    win.tx_wrap_check.setToolTip(tr("tx.wrap.tip"))
-    win.tx_wrap_check.toggled.connect(win._on_tx_wrap_toggled)
-    mod_row.addWidget(win.tx_wrap_check)
     return group
 
 
@@ -483,11 +476,9 @@ def _build_payload_box(win: MainWindow) -> QWidget:
     # to take the sizeHint out of the minimum; the box still expands into spare height.
     from PySide6.QtWidgets import QSizePolicy
     win.tx_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
-    # U130 -> 2026-10-02: long payloads wrap and scroll by default now (Andy).
-    win.tx_edit.setLineWrapMode(
-        QPlainTextEdit.LineWrapMode.WidgetWidth
-        if load_config().get("tx_wrap_on", True)
-        else QPlainTextEdit.LineWrapMode.NoWrap)
+    # U130 -> 2026-10-02 (Andy): the send box always wraps - the "wrap input" switch was
+    # removed, long payloads wrap with a vertical scrollbar by default.
+    win.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
     win._update_input_placeholder()   # U86: keep the format-specific hint
     win.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
     win.tx_edit.textChanged.connect(win._check_hex_input)

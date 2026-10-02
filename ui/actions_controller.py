@@ -331,18 +331,6 @@ def on_wrap_toggled(win: MainWindow, checked: bool) -> None:
     save_config(config)
 
 
-def on_tx_wrap_toggled(win: MainWindow, checked: bool) -> None:
-    "on tx wrap toggled"
-    """U165: soft-wrap the send box and remember it (default off, per U130)."""
-    win.tx_edit.setLineWrapMode(
-        QPlainTextEdit.LineWrapMode.WidgetWidth if checked
-        else QPlainTextEdit.LineWrapMode.NoWrap)
-    config = load_config()
-    config["tx_wrap_on"] = bool(checked)
-    save_config(config)
-    win._fit_tx_edit_height()
-
-
 def _frag_kind(frag) -> int:
     """Kind stamped on a fragment: side bit + meta bit (app.display.frag_kind).
 
