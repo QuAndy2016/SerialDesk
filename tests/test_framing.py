@@ -67,3 +67,40 @@ class TestFrameAssembler:
         fa = FrameAssembler()
         fa.feed(1.0, b"")
         assert not fa.has_pending()
+
+
+def test_split_fixed_cuts_and_keeps_remainder():
+    # B3: fixed-length framing keeps the partial tail for the next chunk
+    from app.framing import split_fixed
+    frames, rest = split_fixed(b"ABCDEFGHIJ", 4)
+    assert frames == [b"ABCD", b"EFGH"]
+    assert rest == b"IJ"
+
+
+def test_split_delimited_start_end_and_start_start():
+    from app.framing import split_delimited
+    frames, rest = split_delimited(b"$A*$B*$C", b"$", b"*")
+    assert frames == [b"$A*", b"$B*"]
+    assert rest == b"$C"
+    frames, rest = split_delimited(b"<1><2><3", b"<", b"")
+    assert frames == [b"<1>", b"<2>"]
+    assert rest == b"<3"
+
+
+def test_split_length_prefixed_with_and_without_crc():
+    from app.framing import split_length_prefixed, crc16_modbus
+    payload = b"HELLO"
+    buf = bytes([len(payload)]) + payload + bytes([3]) + b"ABC"
+    frames, rest = split_length_prefixed(buf, 1)
+    assert frames == [b"HELLO", b"ABC"] and rest == b""
+    crc = crc16_modbus(payload)
+    buf = bytes([len(payload)]) + payload + crc.to_bytes(2, "big")
+    frames, rest = split_length_prefixed(buf, 1, crc_bytes=2)
+    assert frames == [b"HELLO"] and rest == b""
+
+
+def test_split_length_prefixed_drops_bad_crc():
+    from app.framing import split_length_prefixed
+    buf = bytes([3]) + b"ABC" + b"\x00\x00"      # wrong CRC
+    frames, rest = split_length_prefixed(buf, 1, crc_bytes=2)
+    assert frames == [] and rest == b""

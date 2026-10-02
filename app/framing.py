@@ -86,3 +86,86 @@ class FrameAssembler:
         self._buf.clear()
         self._first_ts = None
         self._start_new_line = True
+
+
+# -- B3: stream splitters (pure, Qt-free) -----------------------------------
+#
+# The time-based FrameAssembler above decides *where a line breaks*; these
+# helpers decide *what a frame is* from the bytes themselves. They are pure so
+# each rule can be unit-tested without a serial port or a QApplication.
+
+
+def split_fixed(buf: bytes, size: int) -> tuple[list[bytes], bytes]:
+    """Cut ``buf`` into fixed-size frames; returns (frames, remainder)."""
+    if size <= 0:
+        return [], bytes(buf)
+    whole = len(buf) - (len(buf) % size)
+    frames = [bytes(buf[i:i + size]) for i in range(0, whole, size)]
+    return frames, bytes(buf[whole:])
+
+
+def split_delimited(buf: bytes, start: bytes, end: bytes = b"",
+                    include: bool = True) -> tuple[list[bytes], bytes]:
+    """Cut frames delimited by ``start``..``end`` (``end`` empty = start-to-start).
+
+    Returns (frames, remainder); an unterminated tail stays in the remainder so
+    the caller can wait for the next chunk.
+    """
+    frames: list[bytes] = []
+    i = 0
+    while True:
+        s = buf.find(start, i) if start else i
+        if s < 0:
+            return frames, bytes(buf[i:])
+        if end:
+            e = buf.find(end, s + len(start))
+            if e < 0:
+                return frames, bytes(buf[s:])
+            stop = e + len(end)
+            seg = buf[s:stop] if include else buf[s + len(start):e]
+        else:
+            nxt = buf.find(start, s + len(start))
+            if nxt < 0:
+                return frames, bytes(buf[s:])
+            stop = nxt
+            seg = buf[s:stop]
+        frames.append(bytes(seg))
+        i = stop
+
+
+def split_length_prefixed(buf: bytes, prefix_bytes: int = 1, little: bool = False,
+                          crc_bytes: int = 0) -> tuple[list[bytes], bytes]:
+    """Cut frames whose first ``prefix_bytes`` bytes hold the payload length.
+
+    ``crc_bytes`` (0 or 2, CRC-16/Modbus over the payload) is validated and
+    stripped when present; an odd/too-short tail stays in the remainder.
+    """
+    frames: list[bytes] = []
+    off = 0
+    while True:
+        if len(buf) - off < prefix_bytes:
+            return frames, bytes(buf[off:])
+        raw = bytes(buf[off:off + prefix_bytes])
+        n = int.from_bytes(raw, "little" if little else "big")
+        need = prefix_bytes + n + crc_bytes
+        if len(buf) - off < need:
+            return frames, bytes(buf[off:])
+        payload = bytes(buf[off + prefix_bytes:off + prefix_bytes + n])
+        if crc_bytes:
+            got = int.from_bytes(buf[off + need - crc_bytes:off + need],
+                                 "little" if little else "big")
+            if got != crc16_modbus(payload):
+                off += need          # bad CRC: drop the frame and resync
+                continue
+        frames.append(payload)
+        off += need
+
+
+def crc16_modbus(data: bytes) -> int:
+    """CRC-16/Modbus (poly 0xA001, init 0xFFFF) - the check Modbus RTU uses."""
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
+    return crc & 0xFFFF

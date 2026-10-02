@@ -150,7 +150,7 @@ def probe_updates_worker(win: MainWindow, manual: bool = False) -> None:
     """Worker thread: one GET, five-second timeout, no exceptions escape."""
     try:
         tag = update_check.fetch_latest_tag(raise_on_error=manual)
-    except Exception:            # noqa: BLE001 - a check must never break the app
+    except (OSError, ValueError, KeyError):   # a check must never break the app
         if manual:
             win._update_probe.checked.emit(False, "")
         return

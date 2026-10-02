@@ -426,7 +426,7 @@ def apply_native_dark(widget: QWidget, dark: bool) -> None:
         setter = getattr(QGuiApplication.styleHints(), "setColorScheme", None)
         if setter is not None:
             setter(Qt.ColorScheme.Dark if dark else Qt.ColorScheme.Light)
-    except Exception:  # noqa: BLE001 - older Qt / headless
+    except (AttributeError, TypeError, RuntimeError):  # older Qt / headless
         pass
     if not sys.platform.startswith("win"):
         return
@@ -440,7 +440,7 @@ def apply_native_dark(widget: QWidget, dark: bool) -> None:
                 if ctypes.windll.dwmapi.DwmSetWindowAttribute(
                         hwnd, attr, ctypes.byref(value), ctypes.sizeof(value)) == 0:
                     break
-            except Exception:  # noqa: BLE001 - try the next attribute id
+            except (OSError, AttributeError):  # try the next attribute id
                 continue
-    except Exception:  # noqa: BLE001 - never break theming
+    except (OSError, AttributeError, ValueError):  # never break theming
         pass

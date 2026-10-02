@@ -87,7 +87,7 @@ class SerialWorker(QThread):
                 timeout=READ_TIMEOUT,
                 write_timeout=WRITE_TIMEOUT,   # U52: never block forever on write
             )
-        except Exception as exc:  # noqa: BLE001 - surface any serial error
+        except (serial.SerialException, OSError, ValueError, TypeError) as exc:  # surface any serial error
             self.log.emit(f"open failed: {exc}")
             self.error.emit(str(exc))
             self.opened.emit(False)
@@ -155,7 +155,7 @@ class SerialWorker(QThread):
         if self._port is not None and self._port.is_open:
             try:
                 self._port.dtr = bool(value)
-            except Exception as exc:  # noqa: BLE001 - driver-specific; a control line
+            except (serial.SerialException, OSError, ValueError, TypeError) as exc:  # a control line
                 # must never take the UI down, the failure is reported instead
                 self.log.emit(f"dtr failed: {exc}")
 
@@ -164,7 +164,7 @@ class SerialWorker(QThread):
         if self._port is not None and self._port.is_open:
             try:
                 self._port.rts = bool(value)
-            except Exception as exc:  # noqa: BLE001 - same as DTR: report, never raise
+            except (serial.SerialException, OSError, ValueError, TypeError) as exc:  # same as DTR: report, never raise
                 self.log.emit(f"rts failed: {exc}")
 
     def signals(self) -> dict:
@@ -179,7 +179,7 @@ class SerialWorker(QThread):
         if self._port is not None:
             try:
                 self._port.close()
-            except Exception:  # noqa: BLE001 - closing a half-dead handle can raise
+            except (serial.SerialException, OSError):  # closing a half-dead handle can raise
                 # anything; swallowing it guarantees close() always completes
                 pass
             self._port = None
@@ -194,7 +194,7 @@ class SerialWorker(QThread):
                 """Read one modem-status line, treating a missing line as not asserted."""
                 try:
                     return bool(getattr(port, name))
-                except Exception:  # noqa: BLE001 - some USB-serial chips do not expose
+                except (serial.SerialException, OSError, AttributeError):  # some USB-serial chips do not expose
                     # every modem line; "not asserted" is the truthful reading
                     return False
 
@@ -230,7 +230,7 @@ class SerialWorker(QThread):
                     self.log.emit("send skipped: CTS not asserted")
                     self.send_error.emit("cts", "")
                     return
-            except Exception:  # noqa: BLE001 - a wedged driver reports nothing
+            except (serial.SerialException, OSError):  # a wedged driver reports nothing
                 self.log.emit("send skipped: CTS unreadable")
                 self.send_error.emit("cts", "")
                 return
@@ -244,7 +244,7 @@ class SerialWorker(QThread):
             self._tx_degraded = True        # U65: stop feeding a stuck driver
             self.log.emit(f"send timeout: {exc}")
             self.send_error.emit("timeout", str(exc))
-        except Exception as exc:  # noqa: BLE001 - any other write failure is surfaced
+        except (serial.SerialException, OSError) as exc:  # any other write failure is surfaced
             # to the user with the driver's own text, then the caller decides
             self.log.emit(f"send failed: {exc}")
             self.send_error.emit("io", str(exc))
@@ -267,7 +267,7 @@ class SerialWorker(QThread):
                 timeout=READ_TIMEOUT,
                 write_timeout=WRITE_TIMEOUT,
             )
-        except Exception as exc:  # noqa: BLE001 - device still away
+        except (serial.SerialException, OSError) as exc:  # device still away
             self.log.emit(f"reconnect failed: {exc}")
             return False
         self._tx_degraded = False
@@ -325,7 +325,7 @@ class SerialWorker(QThread):
                         self.received.emit(time.monotonic(), data)
                 else:
                     time.sleep(0.001)
-            except Exception as exc:  # noqa: BLE001 - a failing read means the device
+            except (serial.SerialException, OSError) as exc:  # a failing read means the device
                 # went away; report it and let the reconnect logic take over
                 self.log.emit(f"read error: {exc}")
                 self._handle_disconnect(str(exc))    # T14: try to come back

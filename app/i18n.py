@@ -549,7 +549,7 @@ def current() -> str:
         return _lang
     try:
         return "zh" if QLocale.system().language() == QLocale.Language.Chinese else "en"
-    except Exception:      # noqa: BLE001 - no Qt platform at all (headless CI or a
+    except (RuntimeError, AttributeError):   # no Qt platform at all (headless CI or a
         # broken locale): Chinese as the safe default rather than a crash
         return "zh"
 
