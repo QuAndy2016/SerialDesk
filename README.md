@@ -139,6 +139,14 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
   <sub>快捷键一览</sub>
 </p>
 
+## 开发进度
+
+- **已发布**：75 个版本标签（最新 **v1.8.6**），135 次提交，147 条自动化测试全绿
+- **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快速发送（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包、CI 门禁（评审电池 + UI 门禁 + 147 测试）
+- **待开发**：33 项（协议解析层、波形显示、小工具箱、多串口、终端模式等；完整清单在开发任务文档里）
+
+**下一个开发任务（仅此一项）**：声明式协议解析（B4-P1）—— 免脚本的字段化解析：帧头 / 字段长度 / 数据类型（含 float、大小端）/ 校验规则，内置 Modbus RTU、AT、NMEA 模板；先做纯解析内核 + 单测，再接字段面板。
+
 ## 路线图
 
 | 版本 | 内容 | 状态 |
@@ -166,7 +174,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.4** | 发送区收敛为两段：设置行在上，下面一行左右分栏（左输入框 / 右发送·历史·循环紧凑列，与输入框顶对齐） | ✅ 已完成 |
 | **v1.8.5** | 发送区压到约两行按钮高、按钮缩小并列，输入框默认自动换行 + 垂直滚动，数据区默认获得更多高度 | ✅ 已完成 |
 | **v1.8.6** | 修复：发送历史列表跟随应用主题（非 Windows 平台原本会发白）；README 图廊重做（内容饱满、整体图整宽、中英各 10 张） | ✅ 本次发布 |
-| v1.1+ | 波形显示（pyqtgraph）、TCP / UDP 调试、协议解析面板 | 计划中（按用户反馈排优先级）|
+| **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
 
@@ -352,6 +360,14 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
   <sub>Shortcut reference</sub>
 </p>
 
+### Progress
+
+- **Released**: 75 version tags (latest **v1.8.6**), 135 commits, 147 automated tests green
+- **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, the Windows installer and portable zip, and the CI gate (review battery + UI gate + 147 tests)
+- **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
+
+**Next development task (only this one)**: declarative protocol decoding (B4-P1) - script-free field parsing: frame headers / field lengths / data types (incl. float and endianness) / checksum rules, with built-in Modbus RTU, AT and NMEA templates; the pure parsing core first, with unit tests, then the field panel.
+
 ### Roadmap
 
 | Version | Content | Status |
@@ -379,7 +395,7 @@ Why the warnings: the exe is unsigned (certificates are a yearly paid service), 
 | **v1.8.4** | Send area is two bands again: settings row on top, then one row split left / right (input box | compact Send / History / repeat column, flush with the box) | ✅ Done |
 | **v1.8.5** | Send pane squeezed to about two button rows with smaller side-by-side buttons, the input wraps + scrolls by default, and the data area gets more height by default | ✅ Done |
 | **v1.8.6** | Fix: the send-history list follows the app theme (it rendered light off-Windows); README gallery rebuilt (content-dense shots, full-width overviews, 10 shots per language) | ✅ This release |
-| v1.1+ | Waveform view (pyqtgraph), TCP / UDP, protocol analyser panel | Planned (prioritised by user feedback) |
+| **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start
 
