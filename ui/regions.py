@@ -493,9 +493,9 @@ def _build_repeat_controls(win: MainWindow) -> QHBoxLayout:
     """
     repeat_row = QHBoxLayout()
     repeat_row.setSpacing(8)
-    win._repeat_grp_lbl = QLabel(tr("tx.repeat.group"))
-    win._repeat_grp_lbl.setObjectName("payloadHint")
-    repeat_row.addWidget(win._repeat_grp_lbl)
+    # 2026-10-02: no separate caption here - the toggle button already reads
+    # "Repeat send", and a caption repeating it made the row read "Repeat send
+    # Repeat send interval count".
     # U98: "Repeat send" starts and stops a process, so it is a toggle button that
     # reads "Stop repeat" while running - a checkbox stood in for an action before.
     win.repeat_btn = QPushButton(tr("tx.repeat"))

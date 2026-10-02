@@ -386,7 +386,6 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     # ---- repeat send (T2) / send history (T5) ----
     "tx.content.label": {"zh": "发送内容区（文本输入区）", "en": "Send content (text input)"},
-    "tx.repeat.group": {"zh": "循环发送", "en": "Repeat send"},
     "tx.interval.label": {"zh": "间隔(ms)", "en": "Interval (ms)"},
     "split.auto.hint": {
         "zh": "按波特率自动",
