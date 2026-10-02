@@ -36,11 +36,24 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 它不追求功能堆叠，只想成为你调试时最不需要思考的那一个窗口。
 
-## 下载 Windows EXE（无需 Python）
+## 下载与安装（Windows 64 位，无需 Python）
 
-到 [Releases 页面](https://github.com/QuAndy2016/SerialDesk/releases/latest) 下载 `SerialDesk_vX.Y.Z-win64.zip`，解压后双击里面的 exe 即可运行，不需要安装 Python。
+到 [Releases 页面](https://github.com/QuAndy2016/SerialDesk/releases/latest) 下载。每个版本带 4 个文件：
 
-请解压整个目录再运行，不要把 exe 单独拷出来 —— 同目录的文件夹是运行库。每个 release 都附带 `.sha256` 校验文件，可用 `certutil -hashfile <zip> SHA256` 核对。
+| 文件 | 说明 |
+|------|------|
+| `SerialDesk_vX.Y.Z-win64-setup.exe` | **安装版**（约 24 MB）：双击安装，自动创建开始菜单项与卸载入口，可选创建桌面快捷方式；装完可直接勾选运行 |
+| `SerialDesk_vX.Y.Z-win64.zip` | **免安装版**（约 34 MB）：解压即用，整个目录一起拷贝即可带走，适合 U 盘 / 绿色部署 |
+| `SerialDesk_vX.Y.Z-win64-setup.exe.sha256` | 安装版的 SHA256 校验文件 |
+| `SerialDesk_vX.Y.Z-win64.zip.sha256` | 免安装版的 SHA256 校验文件 |
+
+**怎么选**：想装进系统、要开始菜单和卸载项 → 安装版（setup.exe）；想绿色便携、不想动系统 → 免安装版（zip）。
+
+两种方式共同点与注意：
+- 都是 64 位 Windows 程序，已内置 Python 运行时，**不需要另装 Python**
+- zip 版请**解压整个目录再运行**，不要把 exe 单独拷出来（同目录的文件夹是运行库）
+- **便携模式**：在 exe 同目录放一个空的 `portable.txt`，配置与日志就写在程序目录；否则写在 `%APPDATA%\SerialDesk`
+- **校验下载**：`certutil -hashfile SerialDesk_vX.Y.Z-win64.zip SHA256`，与对应 `.sha256` 文件里的值比对
 
 ## 功能
 
@@ -238,11 +251,24 @@ Serial is the oldest and most reliable interface in embedded work. Every new boa
 
 This project aims for something simple — a modern interface, ready out of the box, open for you to change, with the daily essentials done right. It is not trying to pile on features; it just wants to be the window you never have to think about.
 
-### Download for Windows
+### Download and install (Windows 64-bit, no Python needed)
 
-Grab `SerialDesk_vX.Y.Z-win64.zip` from the [Releases page](https://github.com/QuAndy2016/SerialDesk/releases/latest), extract it, and double-click the exe inside — no Python required.
+Grab them from the [Releases page](https://github.com/QuAndy2016/SerialDesk/releases/latest). Every version ships four files:
 
-Please extract the whole folder and run it from there; the sibling folder holds the runtime. Every release ships with a `.sha256` checksum file.
+| File | What it is |
+|------|------------|
+| `SerialDesk_vX.Y.Z-win64-setup.exe` | **Installer** (~24 MB): double-click to install, creates a Start-menu entry and an uninstaller, optional desktop shortcut, and can launch the app when it finishes |
+| `SerialDesk_vX.Y.Z-win64.zip` | **Portable zip** (~34 MB): extract and run, copy the whole folder anywhere - handy on a USB stick or for a green deployment |
+| `SerialDesk_vX.Y.Z-win64-setup.exe.sha256` | SHA256 checksum for the installer |
+| `SerialDesk_vX.Y.Z-win64.zip.sha256` | SHA256 checksum for the portable zip |
+
+**Which one**: want it in the system with a Start-menu entry and an uninstaller → the installer (setup.exe); want it self-contained and touching nothing else → the portable zip.
+
+Both share the same notes:
+- They are 64-bit Windows builds with the Python runtime bundled - **no Python installation needed**
+- For the zip, **extract the whole folder and run it from there**; do not copy the exe out on its own (the sibling folder holds the runtime)
+- **Portable mode**: drop an empty `portable.txt` next to the exe and the settings and logs stay in the program folder (otherwise they live in `%APPDATA%\SerialDesk`)
+- **Verify the download**: `certutil -hashfile SerialDesk_vX.Y.Z-win64.zip SHA256` and compare it with the matching `.sha256` file
 
 ### Features
 
