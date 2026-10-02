@@ -510,7 +510,6 @@ def _build_input_and_actions(win: MainWindow) -> QWidget:
 def _build_action_column(win: MainWindow) -> QWidget:
     """The right-hand action column: send, history, then the repeat controls."""
     actions = QWidget()
-    actions.setMaximumWidth(168)      # a compact column, flush with the box's top
     act_col = QVBoxLayout(actions)
     act_col.setContentsMargins(0, 0, 0, 0)
     act_col.setSpacing(6)

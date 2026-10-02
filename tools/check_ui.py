@@ -110,9 +110,11 @@ def check_overflow() -> int:
                     if (rect.left() < -2 or rect.top() < -2
                             or rect.right() > parent.width() + 2
                             or rect.bottom() > parent.height() + 2):
-                        problems.append("%s/%s/%sx%s: %s %r sticks out of %s %s" % (
+                        problems.append("%s/%s/%sx%s: %s %r rect=%s vs parent %s %s" % (
                             lang, label, width, height, type(widget).__name__,
-                            widget.objectName(), type(parent).__name__,
+                            widget.objectName(),
+                            (rect.left(), rect.top(), rect.right(), rect.bottom()),
+                            type(parent).__name__,
                             (parent.width(), parent.height())))
                 win.close()
                 _dispose(win)
