@@ -72,8 +72,14 @@ def test_quick_send_rows_show_name_and_command_lines(app, win):
     row = win.quick_panel._rows[0]
     assert row["name"] is not None and row["edit"] is not None
     assert row["name"] is not row["edit"]
+    # The chip mirrors the row's format + delay. Do not hard-code HEX here: on a
+    # fresh machine the panel seeds ASCII examples first (AT / AT+VERSION?), so
+    # which format row 0 carries depends on the run's config, not on the wiring.
+    row["fmt"].setCurrentIndex(0)                       # HEX
     assert "HEX" in row["chip"].text() and "500" in row["chip"].text()
-    assert row["widget"].height() < 80        # two lines, not a tall block
+    row["fmt"].setCurrentIndex(1)                       # ASCII
+    assert "ASCII" in row["chip"].text()
+    row["widget"].height() < 80        # two lines, not a tall block
 
 
 def test_selection_survives_a_row_click_and_clears_outside(app, win):
