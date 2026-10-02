@@ -232,9 +232,14 @@ def fit_tx_edit_height(win: MainWindow) -> None:
         avail = win._tx_group.height() - above - caption - 8
         cap = 26 * line + chrome
         # 2026-10-02 (Andy): the pane is meant to be compact (about two button rows)
-        # so the data area above gets the space; two lines is the floor, the pane can
-        # still grow if the user drags the divider.
-        win.tx_edit.setFixedHeight(int(max(2 * line + chrome, min(avail, cap))))
+        # so the data area above gets the space; two lines is the floor, and the pane
+        # can still grow if the user drags the divider.
+        #
+        # This is a MINIMUM, not a fixed height: a fixed height computed from the pane
+        # can overshoot the row it lives in (the Windows runner caught it: 66 px inside
+        # a 61 px container). With a floor + expanding policy the box owns the spare
+        # height (the old U111 goal) without ever sticking out.
+        win.tx_edit.setMinimumHeight(int(max(2 * line + chrome, min(avail, cap))))
     finally:
         win._fitting_tx = False
 
