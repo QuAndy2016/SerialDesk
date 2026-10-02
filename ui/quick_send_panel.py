@@ -136,8 +136,20 @@ class QuickSendPanel(QWidget):
         self._build_ui()
         self._load()
         self.set_rows_selectable(self.seq_check.isChecked())
-        # U115: watch clicks anywhere in the app so a selection cannot go stale
-        QApplication.instance().installEventFilter(self)
+        # U115: watch clicks anywhere in the app so a selection cannot go stale.
+        # Kept as an attribute so detach_app_filter() can undo it: an app-wide filter
+        # makes the application hold this panel alive, which kept every closed window
+        # (and its widgets, and its timers) alive too - the repeat audit grew quadratic
+        # because of it (0.3s for the first window, 40s for the eighth).
+        self._app = QApplication.instance()
+        self._app.installEventFilter(self)
+
+    def detach_app_filter(self) -> None:
+        """Drop the application event filter (called when the window closes)."""
+        app = getattr(self, "_app", None) or QApplication.instance()
+        if app is not None:
+            app.removeEventFilter(self)
+            self._app = None
 
     # -- UI -----------------------------------------------------------------
 

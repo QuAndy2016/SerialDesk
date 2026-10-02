@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -29,6 +30,25 @@ MIN_WIDTH_GROWTH = 1.10   # a row that grows 10% is a regression (the one we fix
 
 def run(cmd, **kw):
     return subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, **kw)
+
+
+def _dispose(win) -> None:
+    """Close and delete a window so its app-wide filters and timers go away.
+
+    QuickSendPanel installs an application-wide event filter. Without deleting the
+    window, the application kept every previous window alive and the audit grew
+    quadratic: 0.3s for the first window, 40s for the eighth (~140s per check).
+    deleteLater() alone is not enough - DeferredDelete only runs when the event
+    loop drains it, so post it explicitly.
+    """
+    from PySide6.QtCore import QEvent
+    from PySide6.QtWidgets import QApplication
+    win.close()
+    win.deleteLater()
+    app = QApplication.instance()
+    if app is not None:
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        app.processEvents()
 
 
 def check_contrast() -> int:
@@ -95,6 +115,7 @@ def check_overflow() -> int:
                             widget.objectName(), type(parent).__name__,
                             (parent.width(), parent.height())))
                 win.close()
+                _dispose(win)
     if problems:
         print("[overflow] %d violations" % len(problems))
         for line in problems[:12]:
@@ -150,7 +171,7 @@ def check_min_width() -> int:
         for _ in range(2):
             app.processEvents()
         measured.append((lang, win.minimumWidth()))
-        win.close()
+        _dispose(win)
 
     worst = max(width for _lang, width in measured)
     shown = ", ".join("%s=%d" % pair for pair in measured)
@@ -174,9 +195,18 @@ def check_tests() -> int:
     This is the only pytest invocation in a normal gate run (dev_gate.sh calls
     review_check.py with --no-coverage --no-dynamic first), so the coverage number
     and the test result come from the same run.
+
+    The suite runs against a throwaway config directory so it sees the same fresh
+    state a CI runner does. Without this, a test that implicitly depends on the
+    developer's saved config passes locally and fails on CI (v1.8.1 shipped that
+    way once: the quick-send chip assertion assumed a HEX first row).
     """
+    env = dict(os.environ)
+    env["XDG_CONFIG_HOME"] = tempfile.mkdtemp(prefix="serialdesk-gate-")
+    if os.name == "nt":
+        env["APPDATA"] = env["XDG_CONFIG_HOME"]
     proc = run([sys.executable, "-m", "pytest", "-q", "--cov=app", "--cov=ui",
-                "--cov-report=term"])
+                "--cov-report=term"], env=env)
     text = (proc.stdout or "") + (proc.stderr or "")
     total = None
     for line in text.splitlines():

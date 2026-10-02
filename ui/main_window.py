@@ -748,5 +748,6 @@ class MainWindow(QMainWindow):
         self._log_close()
         self.refresh_timer.stop()
         self.quick_panel.save()
+        self.quick_panel.detach_app_filter()   # do not outlive the window we close
         self.worker.close_port()
         super().closeEvent(event)
