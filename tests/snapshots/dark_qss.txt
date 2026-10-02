@@ -92,20 +92,20 @@ QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #83839f; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #2f2f3d; border-color: #8be9fd; }
 QFrame#connDivider { background: #4a4a5a; max-width: 1px; border: none; }
 /* U106: quick-send panel fold/unfold - a themed icon button, both directions */
-QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 8px 12px; }
+QToolButton#qsCollapse { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 3px 4px; qproperty-icon: url(__ASSETS__/arrow_left_dark.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsCollapse:hover { background: #3a3a4a; border-color: #83839f; }
 /* U118/U121: the property chip (row properties, send options) */
 QToolButton#qsChip { color: #a9a9bd; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
 QToolButton#qsChip:hover { color: #d4d4d4; border-color: #83839f; background: #3a3a4a; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
 /* U120: the quick-send panel toggle beside Settings */
-QToolButton#panelToggle { background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 8px 12px; }
+QToolButton#panelToggle { background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: #3a3a4a; border-color: #83839f; }
 QToolButton#panelToggle:checked { background: #2f2f3d; border-color: #8be9fd; }
-QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #4a4a5a; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 8px 12px; }
+QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #4a4a5a; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsRail:hover { background: #3a3a4a; border-color: #83839f; border-left-color: #83839f; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
-QCheckBox::indicator { width: 15px; height: 15px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
+QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
 QCheckBox::indicator:hover { border-color: #8be9fd; }
 QCheckBox::indicator:checked { background: #1f3a44; border-color: #4b8fa3; image: url(__ASSETS__/check_accent.png); }
 QCheckBox::indicator:checked:hover { background: #27495a; border-color: #63aec4; }

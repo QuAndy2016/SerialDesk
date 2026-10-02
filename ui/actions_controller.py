@@ -97,7 +97,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         SPLIT_MANUAL, _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, kind_is_meta, kind_is_tx)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -118,8 +118,8 @@ def undo_delete(win: MainWindow) -> None:
         fragments, win._cleared_fragments = win._cleared_fragments, None
         win._line_is_tx, win.rx_bytes, win.tx_bytes, win._sent_count = state
         for text, frag_kind in fragments:
-            win._emit_rx_text(text, tx=(frag_kind == 1),
-                               meta=(frag_kind == 2), log=False)
+            win._emit_rx_text(text, tx=kind_is_tx(frag_kind),
+                               meta=kind_is_meta(frag_kind), log=False)
         win.update_counts()
         win._cleared_state = None
         win._notify(tr("rx.undo.done"), "info", ms=3000)
@@ -305,7 +305,10 @@ def on_wrap_toggled(win: MainWindow, checked: bool) -> None:
 
 
 def _frag_kind(frag) -> int:
-    """Kind stamped on a fragment: 0 = RX payload, 1 = TX, 2 = timestamp/marker."""
+    """Kind stamped on a fragment: side bit + meta bit (app.display.frag_kind).
+
+    Payloads are 0 (RX) / 1 (TX); timestamp/direction markers are 2 (RX) / 3 (TX).
+    """
     prop = frag.charFormat().property(QTextFormat.Property.UserProperty)
     return 0 if prop is None else int(prop)
 

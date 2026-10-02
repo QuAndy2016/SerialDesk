@@ -90,7 +90,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, long_line_tooltip)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, frag_kind, fragment_visible, kind_is_meta, kind_is_tx, long_line_tooltip)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -181,9 +181,9 @@ def _insert_rx_fragment(win: MainWindow, text: str, kind: int) -> None:
     cursor = win.rx_view.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
     fmt = QTextCharFormat()
-    if kind == 2:
+    if kind_is_meta(kind):
         fmt.setForeground(QColor(theme.meta_color()))
-    elif kind == 1:
+    elif kind_is_tx(kind):
         fmt.setForeground(QColor(theme.tx_color()))
     else:
         fmt.setForeground(QColor(theme.text_color()))
@@ -195,25 +195,21 @@ def _insert_rx_fragment(win: MainWindow, text: str, kind: int) -> None:
 
 
 def _frag_visible(win: MainWindow, kind: int) -> bool:
-    """Whether a fragment survives the active view filter (U163b)."""
-    mode = getattr(win, "_rx_filter", 0)
-    if mode == 0:
-        return True
-    tx_line = bool(getattr(win, "_cur_line_tx", False))
-    return (not tx_line) if mode == 1 else tx_line
+    """Whether a fragment survives the active view filter (U163b/U176)."""
+    return fragment_visible(kind, getattr(win, "_rx_filter", 0))
 
 
 def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:
     "emit rx text"
     """Insert text into the receive pane and mirror it to the log.
 
-    kind: 0 = RX payload, 1 = TX payload, 2 = timestamp/marker (dimmed, U62).
+    kind: RX/TX payload or RX/TX timestamp marker (see app.display.frag_kind).
     The kind is stored on the format so a theme switch can recolour it correctly.
 
     While the display is paused (U160) the text is buffered instead of inserted,
     so it can be replayed when the user resumes; the log keeps receiving it.
     """
-    kind = 2 if meta else (1 if tx else 0)
+    kind = frag_kind(tx, meta)
     if getattr(win, "_rx_paused", False):
         buf = getattr(win, "_rx_pause_buf", None)
         if buf is None:
@@ -229,7 +225,7 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
     if len(store) > RX_STORE_MAX:
         del store[:len(store) - RX_STORE_MAX]
     if text == "\n" or kind:
-        win._cur_line_tx = (kind == 1)
+        win._cur_line_tx = kind_is_tx(kind)
     else:
         win._cur_line_tx = False
     if _frag_visible(win, kind):
@@ -253,7 +249,7 @@ def rebuild_rx_view(win: MainWindow) -> None:
     mode = getattr(win, "_rx_filter", 0)
     win.rx_view.clear()
     for line in lines:
-        tx_line = any(k == 1 for _, k in line)
+        tx_line = any(kind_is_tx(k) for _, k in line)
         if (mode == 1 and tx_line) or (mode == 2 and not tx_line):
             continue
         for text, kind in line:
@@ -338,9 +334,9 @@ def recolor_rx_view(win: MainWindow) -> None:
                     kind = fmt.property(QTextFormat.Property.UserProperty)
                 except (AttributeError, TypeError):
                     kind = None
-                if kind == 2:
+                if kind is not None and kind_is_meta(kind):
                     colour = theme.meta_color()
-                elif kind == 1 or (kind is None and fallback_tx):
+                elif (kind is not None and kind_is_tx(kind)) or (kind is None and fallback_tx):
                     colour = theme.tx_color()
                 else:
                     colour = theme.text_color()
@@ -446,6 +442,6 @@ def resume_rx_display(win: MainWindow) -> None:
     buf = getattr(win, "_rx_pause_buf", None) or []
     win._rx_pause_buf = []
     for text, kind in buf:
-        win._emit_rx_text(text, tx=(kind == 1), meta=(kind == 2), log=False)
+        win._emit_rx_text(text, tx=kind_is_tx(kind), meta=kind_is_meta(kind), log=False)
     win._scroll_rx_bottom()
     win._notify(tr("rx.pause.resumed"), "info", ms=3000)

@@ -243,10 +243,12 @@ def test_rx_view_filter_hides_tx_or_rx(app, win):
     app.processEvents()
     text = win.rx_view.toPlainText()
     assert "RXLINE" in text and "TXLINE" not in text
+    assert "<- " in text and "-> " not in text     # U176: no TX marker in RX only
     win._on_rx_filter_changed(2)          # TX only
     app.processEvents()
     text = win.rx_view.toPlainText()
     assert "TXLINE" in text and "RXLINE" not in text
+    assert "-> " in text and "<- " not in text     # U177: TX marker (timestamp) visible
     win._on_rx_filter_changed(0)          # back to all
     app.processEvents()
     assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()

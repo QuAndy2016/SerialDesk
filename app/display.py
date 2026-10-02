@@ -13,6 +13,42 @@ from app.protocol import bytes_to_hex_str, decode_text
 MARK_RX = "<- "      # ASCII markers keep the monospace columns aligned (U26)
 MARK_TX = "-> "
 
+# Fragment kinds stamped on the receive document (and kept in the U163b store).
+# Side (RX/TX) and meta (timestamp/direction marker) are separate bits, so the
+# view filter can tell a TX marker from an RX one (U176/U177). The old 3-kind
+# encoding conflated "meta" with "RX side", which let TX markers leak into
+# "RX only" and hid TX timestamps in "TX only".
+RX_PAYLOAD = 0
+TX_PAYLOAD = 1
+RX_MARK = 2
+TX_MARK = 3
+
+
+def frag_kind(tx: bool, meta: bool) -> int:
+    """The fragment kind: side bit (TX=1) plus meta bit (timestamp/marker=2)."""
+    return (1 if tx else 0) + (2 if meta else 0)
+
+
+def kind_is_tx(kind: int) -> bool:
+    """True when the fragment belongs to a sent (TX) line."""
+    return bool(int(kind) & 1)
+
+
+def kind_is_meta(kind: int) -> bool:
+    """True for the dimmed timestamp/direction fragments."""
+    return int(kind) >= 2
+
+
+def fragment_visible(kind: int, mode: int) -> bool:
+    """Whether a fragment survives the view filter (U163b: 0=all, 1=RX, 2=TX).
+
+    The pane is filtered by line side, so a filter must keep the marker of the
+    side it shows and drop the other side's marker - markers are not side-neutral.
+    """
+    if mode == 0:
+        return True
+    return kind_is_tx(kind) == (mode == 2)
+
 RX_ASCII = 0
 RX_HEX = 1
 RX_HEX_ASCII = 2
