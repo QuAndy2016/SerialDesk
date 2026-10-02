@@ -57,34 +57,80 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 ## 功能
 
-- **串口枚举自动刷新** —— 3 秒轮询，插拔自动感知
-- **波特率 26 档预设（110 ~ 3000000）** —— 支持自定义输入（非法值即时红框提示）
-- **接收格式** —— ASCII / HEX / HEX+ASCII 双显示
-- **发送格式** —— ASCII / HEX
-- **分包模式** —— 不分包 / 自动按波特率（3.5 字符法则）/ 手动 ms / 按帧头（字节级）
-- **时间戳前缀** —— 不显示 / HH:MM:SS / HH:MM:SS.mmm / 完整日期毫秒
-- **校验追加套件** —— CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8
-- **快速发送面板** —— 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢
-- **主题切换** —— 跟随系统 / 深色 / 浅色，选择持久化
-- **收发字节计数 + 状态指示灯**（显示端口与波特率）
-- **正式图标** —— 窗口 / 任务栏 / EXE 文件图标
-- **完整串口参数** —— 数据位 5~8 / 停止位 1·1.5·2 / 校验 无·奇·偶·Mark·Space / 流控 无·软件·硬件（打开端口时生效）
-- **定时循环发送** —— 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔自动重复，已发送计数在状态栏，关串口自动停
-- **追加 \r\n** —— ASCII 模式下发送自动追加回车换行（AT 指令常用）
-- **收发同屏** —— 接收区回显发送数据：TX 行 `->` 标记并染色、RX 行 `<-` 标记，等宽标记不打乱 HEX 对齐，可一键关闭
-- **接收日志保存** —— 接收区同一行里一键保存到日志目录（状态栏给出路径）、另存为…；自动保存的开关、单文件上限、时长和日志目录统一在「设置 → 日志保存设置…」，接收区不再放重复开关
-- **发送历史** —— 最近 50 条自动记录、去重、持久化；弹窗列表可筛选、等宽显示，每条带格式/字节数/时间，双击或回车回填，删除需二次确认
-- **发送文件** —— 文本 / HEX / 二进制文件按 4 KB 分块发送，带进度条与预计耗时，可中途取消
-- **多编码** —— 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码
-- **转义解析开关** —— \r \n \t \xNN 可解析为控制字符，也可按字面原样发送
-- **DTR/RTS 控制 + 信号线监视** —— 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新）
-- **自动应答规则** —— 收到指定匹配串自动回复指定内容，规则可增删改并持久化；开关与规则入口都在「设置」菜单，不再占用发送区空间
-- **配置导入导出** —— 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复
-- **指令序列** —— 快速发送面板可切序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化流程）；运行中头部显示「已发 N 次」计数，正在发送的那一行高亮指示
-- **发送内容自动递增 {i}** —— 占位符在发送前替换为递增计数：`{i}` / `{i:N}` / `{i:N:le}`，可设起始值、步长、位宽、字节序、进制与回绕，历史只记模板
-- **命名快捷指令** —— 每条快速发送行可填名称 + 备注（行内两行显示，右键编辑备注），旧配置无损迁移
-- **接收区关键词高亮条** —— 常驻高亮条：输入即高亮、不抢占滚动位置，大小写可选；新到的数据同样即时高亮
-- **背景 QThread 读取** —— UI 永不卡顿
+### 连接与串口参数
+
+| 功能 | 说明 |
+|------|------|
+| 串口枚举自动刷新 | 3 秒轮询，插拔自动感知；下拉显示完整设备名（COM5 — USB-SERIAL CH340） |
+| 波特率 | 26 档预设（110 ~ 3000000），支持自定义输入（非法值即时红框提示） |
+| 完整串口参数 | 数据位 5~8 / 停止位 1·1.5·2 / 校验 无·奇·偶·Mark·Space / 流控 无·软件·硬件（打开端口时生效） |
+| DTR/RTS 控制 + 信号线监视 | 控制 DTR/RTS 输出，实时显示 CTS/DSR/DCD/RI（50 ms 刷新） |
+| 断线自动重连 | 端口异常断开后自动尝试恢复 |
+| 界面语言 / 主题 | 中文·English·跟随系统；深色·浅色·跟随系统，均持久化 |
+
+### 收发与显示
+
+| 功能 | 说明 |
+|------|------|
+| 接收格式 | ASCII / HEX / HEX+ASCII 双显示 / 列式 HEX（16 字节一行 + 偏移 + ASCII 对照） |
+| 分包模式 | 不分包 / 自动按波特率（3.5 字符法则）/ 手动 ms / 按帧头 / 定长 / 起止定界 / 长度前缀 |
+| 时间戳前缀 | 不显示 / HH:MM:SS / HH:MM:SS.mmm / 完整日期毫秒 |
+| 收发同屏 | 发送内容回显到接收区：TX 行 `->`、RX 行 `<-`，等宽标记不打乱 HEX 对齐，可一键关闭 |
+| 视图过滤 | 全部 / 只看接收 / 只看发送（过滤在片断层生效，标记不串行） |
+| 关键词高亮 | 常驻高亮条：输入即高亮、不抢滚动位置，大小写可选；新到的数据同样即时高亮 |
+| 多编码 | 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码 |
+| 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送 |
+| 状态栏 | 收发字节计数（等宽）+ 端口与波特率 + 连接状态灯 |
+
+### 发送与快捷发送
+
+| 功能 | 说明 |
+|------|------|
+| 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
+| 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用） |
+| 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔 |
+| 重复发送次数 | 循环可设次数；0 �  不限次数（显示 ∞，手动停止） |
+| 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢 |
+| 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
+| 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
+| 指令序列 | 序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化）；头部显示「已发 N 次」，正在发送的那一行高亮 |
+| 发送历史 | 最近 50 条自动记录、去重、持久化；弹窗可筛选，每条带格式/字节数/时间，双击或回车回填，删除需二次确认 |
+| 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消 |
+
+#### 示例：发送内容自动递增 `{i}`
+
+占位符写在发送内容里，发送前会根据「递增」面板的设置（起始值 / 步长 / 位宽 / 字节序 / 进制 / 回绕）替换成具体数值；发送历史只记录模板。
+
+| 占位符 | 含义 |
+|--------|------|
+| `{i}` | 按设置位宽输出十进制计数 |
+| `{i:N}` | 指定位宽 N（不足前补 0），如 `{i:4}` → 0001 |
+| `{i:N:le}` | 位宽 N + 小端字节序（HEX 模式常用） |
+| `\{i}` | 转义，输出字面量 `{i}`，不递增 |
+
+| 模板（HEX） | 设置 | 第 1 次发出 | 第 2 次发出 |
+|-------------|------|-----------|-----------|
+| `AA 55 {i:2} 0D` | 起始 1 / 步长 1 / 位宽 2 / 大端 | `AA 55 00 01 0D` | `AA 55 00 02 0D` |
+| `01 10 {i:2:le} 00 02` | 起始 1 / 位宽 2 / 小端 | `01 10 01 00 00 02` | `01 10 02 00 00 02` |
+
+到上限时：勾选「回绕」则回到起始值继续，不勾则自动停止循环/序列并提示。
+
+### 日志、自动化与配置
+
+| 功能 | 说明 |
+|------|------|
+| 接收日志保存 | 一键保存到日志目录（状态栏给出路径）、另存为…；自动保存开关、单文件上限、时长、日志目录统一在「设置 → 日志保存设置…」 |
+| 自动应答规则 | 收到指定匹配串自动回复指定内容，规则可增删改并持久化（HEX 模式可选） |
+| 配置导入导出 | 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复 |
+
+### 工程与打包
+
+| 功能 | 说明 |
+|------|------|
+| 背景 QThread 读取 | 串口 I/O 在后台线程，UI 永不卡顿 |
+| 正式图标 | 窗口 / 任务栏 / EXE 文件图标 |
+| 打包 | 安装版（setup.exe）与免安装 zip，均内置 Python 运行时 |
+| 自动化门禁 | 147 条单元/UI 测试 + 静态评审 + UI 门禁（对比度/溢出/最小宽度），发布前自动跑 |
 
 ### 界面一览
 
@@ -272,34 +318,80 @@ Both share the same notes:
 
 ### Features
 
-- **Auto-refreshing port list** — 3s polling, hot-plug aware
-- **26 baud presets (110 ~ 3000000)** — plus editable custom input (invalid values get a red border)
-- **Receive format** — ASCII / HEX / HEX+ASCII dual display
-- **Send format** — ASCII / HEX
-- **Frame splitting** — off / auto by baud rate (3.5-char rule) / manual ms / by header (byte level)
-- **Timestamp prefix** — none / HH:MM:SS / HH:MM:SS.mmm / full date with milliseconds
-- **Checksum append suite** — CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8
-- **Quick-send panel** — 10 rows by default, up to 99 commands, persisted to config.json
-- **Themes** — follow system / dark / light, remembered across restarts
-- **RX/TX byte counters + status light** showing port and baud rate
-- **Proper icons** for window, taskbar and the EXE
-- **Full serial parameters** — data bits 5-8 / stop bits 1, 1.5, 2 / parity none-odd-even-mark-space / flow none, XON/XOFF, RTS/CTS (applied when the port opens)
-- **Repeat send** — click once to start and again to stop (the button reads Stop repeat while running); auto-repeats at 10-60000 ms, the sent counter sits in the status bar, and closing the port stops it
-- **Append \r\n** — optional CRLF on send in ASCII mode (handy for AT commands)
-- **TX echo** — sent data mirrored into the receive pane: TX lines marked `->` and coloured, RX lines `<-`, equal-width markers keep HEX columns aligned, one click to turn off
-- **Receive log to file** — one-click save into the log folder (path shown in the status bar) and Save as… sit on the receive row itself; the auto-save switch, its size/duration limits and the log folder all live in Settings → Log saving settings…
-- **Send history** — the last 50 commands, deduplicated and persisted; the popup list is filterable, monospaced and shows format/size/age per entry, double-click or Enter recalls it, and clearing asks twice
-- **File send** — text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel
-- **Encodings** — ASCII / UTF-8 / GBK / GB2312 for received and sent text, so GBK frames stop garbling
-- **Escape parsing toggle** — \r \n \t \xNN are interpreted by default, or sent literally
-- **DTR/RTS control + status lines** — drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms)
-- **Auto-reply rules** — send a configured reply when a match string arrives; rules are editable and persisted, and both the switch and the editor now live in Settings instead of taking up send-area space
-- **Config import / export** — quick-send list, theme, language, send history and auto-reply rules in one JSON file; import it on another machine to restore everything
-- **Command sequence** — sequence mode in the quick-send panel: each row has its own delay, press Run to fire them in order (power-on timing, AT init flows); the header shows a "sent N times" counter and the row being sent is highlighted
-- **Auto-increment placeholder {i}** — a placeholder replaced by a running counter before sending: `{i}` / `{i:N}` / `{i:N:le}` with configurable start, step, width, endianness, radix and wrap; history keeps the template only
-- **Named quick commands** — every quick-send row can carry a name and a free-text note (two-line row, right-click to edit the note), and old configs migrate losslessly
-- **Receive keyword highlight bar** — an always-on highlight bar: it highlights as you type without stealing the scroll position, with a case switch; rows that arrive later are highlighted too
-- **Background QThread reading** — the UI never blocks
+#### Connection and serial parameters
+
+| Feature | Notes |
+|---------|-------|
+| Auto-refreshing port list | 3s polling, hot-plug aware; the dropdown shows the full device name (COM5 — USB-SERIAL CH340) |
+| Baud rates | 26 presets (110 ~ 3000000) plus editable custom input (invalid values get a red border) |
+| Full serial parameters | data bits 5-8 / stop bits 1, 1.5, 2 / parity none-odd-even-mark-space / flow none, XON/XOFF, RTS/CTS (applied when the port opens) |
+| DTR/RTS control + status lines | drive DTR/RTS and watch CTS/DSR/DCD/RI (refreshed every 50 ms) |
+| Auto-reconnect | re-opens the port after an unexpected disconnect |
+| Language / theme | Chinese·English·system; dark·light·system - both remembered |
+
+#### Receive and display
+
+| Feature | Notes |
+|---------|-------|
+| Receive format | ASCII / HEX / HEX+ASCII / column HEX (16 bytes a row with offset and ASCII gutter) |
+| Frame splitting | off / auto by baud rate (3.5-char rule) / manual ms / by header / fixed length / start-stop delimiters / length prefix |
+| Timestamp prefix | none / HH:MM:SS / HH:MM:SS.mmm / full date with milliseconds |
+| TX echo | sent data mirrored into the pane: TX lines `->`, RX lines `<-`, equal-width markers keep HEX columns aligned, one click to turn off |
+| View filter | all / RX only / TX only (filtering happens on the fragment level, markers never bleed into the wrong line) |
+| Keyword highlight | an always-on bar: highlights as you type without stealing the scroll position, case switch, and rows that arrive later are highlighted too |
+| Encodings | ASCII / UTF-8 / GBK / GB2312 for received and sent text |
+| Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally |
+| Status bar | RX/TX byte counters (monospaced) + port and baud + a connection light |
+
+#### Sending and quick send
+
+| Feature | Notes |
+|---------|-------|
+| Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
+| Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands) |
+| Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval |
+| Repeat count | optional limit; 0 = endless (shown as ∞, stop by hand) |
+| Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
+| Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
+| Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
+| Command sequence | sequence mode: each row has its own delay, press Run to fire them in order; the header shows a "sent N times" counter and the row being sent is highlighted |
+| Send history | the last 50 commands, deduplicated and persisted; filterable popup with format / size / age per entry, double-click or Enter recalls it, clearing asks twice |
+| File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel |
+
+#### Example: the auto-increment placeholder `{i}`
+
+The placeholder goes in the payload and is replaced just before sending according to the Increment panel (start / step / width / endianness / radix / wrap). History keeps the template only.
+
+| Placeholder | Meaning |
+|-------------|---------|
+| `{i}` | decimal counter at the configured width |
+| `{i:N}` | fixed width N, zero-padded (e.g. `{i:4}` → 0001) |
+| `{i:N:le}` | width N, little-endian (common in HEX mode) |
+| `\{i}` | escaped: sends a literal `{i}` and does not increment |
+
+| Template (HEX) | Settings | 1st send | 2nd send |
+|----------------|----------|----------|----------|
+| `AA 55 {i:2} 0D` | start 1 / step 1 / width 2 / big-endian | `AA 55 00 01 0D` | `AA 55 00 02 0D` |
+| `01 10 {i:2:le} 00 02` | start 1 / width 2 / little-endian | `01 10 01 00 00 02` | `01 10 02 00 00 02` |
+
+At the limit: with Wrap on it restarts from the start value, with Wrap off it stops the repeat/sequence and says so.
+
+#### Logging, automation and configuration
+
+| Feature | Notes |
+|---------|-------|
+| Receive log to file | one-click save into the log folder (path in the status bar) and Save as…; the auto-save switch, size/duration limits and the folder live in Settings → Log saving settings… |
+| Auto-reply rules | send a configured reply when a match string arrives; rules are editable, persisted and support HEX |
+| Config import / export | quick-send list, theme, language, send history and auto-reply rules in one JSON file |
+
+#### Engineering and packaging
+
+| Feature | Notes |
+|---------|-------|
+| Background QThread reading | all port I/O happens off the GUI thread - the UI never blocks |
+| Proper icons | window, taskbar and EXE |
+| Packaging | an installer (setup.exe) and a portable zip, both with the Python runtime bundled |
+| Automated gate | 147 unit/UI tests + the static review battery + the UI gate (contrast / overflow / min-width), run before every release |
 
 ### Screenshots
 
