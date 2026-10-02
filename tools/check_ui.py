@@ -84,6 +84,7 @@ def check_overflow() -> int:
         i18n.set_language(lang)
         for label, width, height in (("minimum", 1070, 600), ("wide", 1920, 1080)):
             for hv in ([200, 500], [500, 200]):
+              for squeeze in (False, True):
                 i18n.set_language(lang)
                 win = MainWindow()
                 win.resize(width, height)
@@ -92,6 +93,13 @@ def check_overflow() -> int:
                     app.processEvents()
                 win._fit_minimum_width()
                 win._splitter.setSizes(hv)
+                if squeeze:
+                    # 2026-10-02: give the send pane only its minimum height. The
+                    # Windows runner caught an input box sticking out here (66 px in a
+                    # 61 px row); this state reproduces that class locally.
+                    vh = win._v_splitter.height()
+                    txmin = max(1, win._tx_group.minimumHeight())
+                    win._v_splitter.setSizes([max(1, vh - txmin), txmin])
                 for _ in range(3):
                     app.processEvents()
                 for widget in win.findChildren(QWidget):

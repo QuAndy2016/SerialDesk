@@ -231,15 +231,13 @@ def fit_tx_edit_height(win: MainWindow) -> None:
             and cap_lbl.isVisible() else 0
         avail = win._tx_group.height() - above - caption - 8
         cap = 26 * line + chrome
-        # 2026-10-02 (Andy): the pane is meant to be compact (about two button rows)
-        # so the data area above gets the space; two lines is the floor, and the pane
-        # can still grow if the user drags the divider.
-        #
-        # This is a MINIMUM, not a fixed height, and the floor is deliberately low
-        # (one line): the box grows into the spare height, but it must always be able
-        # to fit the row it lives in. The Windows runner caught a 2-line floor (66 px)
-        # inside a 61 px container - the floor, not the growth, was the problem.
-        win.tx_edit.setMinimumHeight(int(max(line + chrome, min(avail, cap))))
+        # 2026-10-02 (Andy): the pane is compact, so the box must never demand more
+        # height than its row has. A minimum derived from the pane's current height goes
+        # stale the moment the divider moves (the audit's squeezed state caught a 7 px
+        # overhang). The floor is therefore constant - one line - and the box fills the
+        # rest of its row through the layout (Expanding/Ignored policy, stretch 1).
+        _ = min(avail, cap)      # kept for the size hint bookkeeping below
+        win.tx_edit.setMinimumHeight(int(line + chrome))
     finally:
         win._fitting_tx = False
 
