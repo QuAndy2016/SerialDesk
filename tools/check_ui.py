@@ -186,6 +186,15 @@ def check_tests() -> int:
         print("[coverage]", total, "(single pytest run for the whole gate)")
     tail = (proc.stdout or proc.stderr).strip().splitlines()[-1:] or [""]
     print("[tests]", tail[0])
+    if proc.returncode != 0:
+        # CI (and the pre-commit hook) only ever see this file's stdout, so a bare
+        # "1 failed" says nothing about which test broke. Print the failure section.
+        lines = text.splitlines()
+        cut = next((i for i, line in enumerate(lines) if "FAILURES" in line),
+                   max(0, len(lines) - 40))
+        print("[tests] failure detail:")
+        for line in lines[cut:cut + 40]:
+            print("   ", line)
     return proc.returncode
 
 
