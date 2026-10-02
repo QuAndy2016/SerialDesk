@@ -84,6 +84,12 @@ QSpinBox:hover { border-color: $accent; }
 QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
 QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 14px; height: 14px; }
 QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
+/* 2026-10-02: the history dialog's list had no rule, so it inherited the OS palette
+   (light on Linux even with the dark theme). Windows only looked right because the app
+   switches the native colour scheme there. */
+QListWidget { background: $surface_1; color: $text_primary; border: 1px solid $border_muted; border-radius: 4px; }
+QListWidget::item { color: $text_primary; padding: 3px 6px; }
+QListWidget::item:selected { background: $selection_bg; color: $selection_text; }
 QPlainTextEdit {
     background: $surface_input;
     border: 1px solid $border_muted;
@@ -222,6 +228,10 @@ QSpinBox:hover { border-color: $accent; }
 QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
 QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_light.png); width: 14px; height: 14px; }
 QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 14px; height: 14px; }
+/* 2026-10-02: same as the dark sheet - the list keeps the app palette, not the OS one. */
+QListWidget { background: $surface_1; color: $text_primary; border: 1px solid $border_muted; border-radius: 4px; }
+QListWidget::item { color: $text_primary; padding: 3px 6px; }
+QListWidget::item:selected { background: $selection_bg; color: $text_strong; }
 QPlainTextEdit {
     background: $surface_1;
     border: 1px solid $border_muted;

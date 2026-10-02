@@ -63,6 +63,12 @@ QSpinBox:hover { border-color: #8be9fd; }
 QSpinBox::up-button, QSpinBox::down-button { width: 22px; border: none; background: transparent; }
 QSpinBox::up-arrow { image: url(__ASSETS__/arrow_up_dark.png); width: 14px; height: 14px; }
 QSpinBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
+/* 2026-10-02: the history dialog's list had no rule, so it inherited the OS palette
+   (light on Linux even with the dark theme). Windows only looked right because the app
+   switches the native colour scheme there. */
+QListWidget { background: #2d2d3d; color: #d4d4d4; border: 1px solid #3a3a4a; border-radius: 4px; }
+QListWidget::item { color: #d4d4d4; padding: 3px 6px; }
+QListWidget::item:selected { background: #4a6a9a; color: #ffffff; }
 QPlainTextEdit {
     background: #16161f;
     border: 1px solid #3a3a4a;
