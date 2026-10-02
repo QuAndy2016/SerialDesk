@@ -86,7 +86,7 @@ from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from ui.retranslate import retranslate_ui
 from ui.menus import build_menu
 from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
-from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_received, recolor_rx_view, resume_rx_display, snapshot_rx_fragments, on_reset_counters, on_filter_changed
+from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_received, recolor_rx_view, resume_rx_display, rx_tooltip, snapshot_rx_fragments, on_reset_counters, on_filter_changed
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
@@ -403,7 +403,16 @@ class MainWindow(QMainWindow):
     def _persist_newline(self, _index: int = 0) -> None: return persist_newline(self, _index)
 
     def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
-        """U120: while the panel is folded, hovering the right edge brings the rail back."""
+        """Window-wide event filter.
+
+        - U129-A4: hovering a very long receive line shows its whole text;
+        - U120: while the panel is folded, hovering the right edge brings the rail
+          back. This logic used to live in a *second* ``eventFilter`` earlier in the
+          class, which Python silently overwrote - the rail never came back (found
+          while adding the tooltip above).
+        """
+        if rx_tooltip(self, obj, event):
+            return True
         if (event.type() == QEvent.Type.MouseMove and hasattr(self, "quick_panel")
                 and self.quick_panel.is_folded()):
             try:
@@ -550,10 +559,6 @@ class MainWindow(QMainWindow):
     def _emit_rx_text(self, text: str, tx: bool = False, meta: bool = False, log: bool = True) -> None:  # moved to ui/receive_controller.py
         """See ui/receive_controller.py."""
         return emit_rx_text(self, text, tx, meta, log)
-
-    def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
-        """Delete the highlighted history entry with the keyboard (U77)."""
-        return super().eventFilter(obj, event)
 
     def _snapshot_rx_fragments(self) -> list: return snapshot_rx_fragments(self)
 

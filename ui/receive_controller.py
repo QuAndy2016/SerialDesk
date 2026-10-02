@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QToolButton,
+    QToolTip,
     QStackedWidget,
     QWidgetAction,
     QVBoxLayout,
@@ -89,7 +90,7 @@ from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
-from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX)  # refactor step 1
+from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, long_line_tooltip)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
 from app.stats import SessionStats
 
@@ -378,6 +379,25 @@ def snapshot_rx_fragments(win: MainWindow) -> list:
             out.append(("\n", 0))   # block separators are not fragments
         block = block.next()
     return out
+
+def rx_tooltip(win: MainWindow, obj: QObject, event) -> bool:
+    "rx tooltip"
+    """Show the whole line when hovering a very long receive line (U129-A4).
+
+    Returns True when the tooltip was ours, so the window's event filter stops
+    there; the displayed text is never altered, so copy keeps the full data.
+    """
+    if event.type() != QEvent.Type.ToolTip or obj is not win.rx_view.viewport():
+        return False
+    try:
+        cursor = win.rx_view.cursorForPosition(event.pos())
+        tip = long_line_tooltip(cursor.block().text())
+        if tip is None:
+            return False
+        QToolTip.showText(event.globalPos(), tip, win.rx_view)
+    except (AttributeError, TypeError):
+        return False
+    return True
 
 def on_clear(win: MainWindow):
     "on clear"

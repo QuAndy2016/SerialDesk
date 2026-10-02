@@ -19,6 +19,19 @@ RX_HEX_ASCII = 2
 RX_COLUMN_HEX = 3     # U163c: classic hexdump columns (offset + 16 bytes + ASCII)
 
 COL_WIDTH = 16
+LONG_LINE_CHARS = 240     # U129-A4: above this, hovering shows the whole line
+
+
+def long_line_tooltip(text: str, limit: int = LONG_LINE_CHARS) -> str | None:
+    """Full line for a hover tooltip when it is very long (U129-A4).
+
+    Long frames are read by scrolling horizontally (wrap off); the tooltip gives
+    the whole line at once without touching the text that is displayed, so the
+    copy semantics (U162) stay exactly as they are.
+    """
+    if len(text) <= limit:
+        return None
+    return text
 
 
 def column_hex(data: bytes, offset: int = 0, width: int = COL_WIDTH):

@@ -309,3 +309,40 @@ def test_byte_split_modes_cut_frames_in_the_receive_path(app, win):
 
     win.split_combo.setCurrentIndex(regions.SPLIT_AUTO)
     win.on_clear()
+
+
+def test_long_receive_line_shows_a_hover_tooltip(app, win):
+    """U129-A4: a long line can be read in full from a tooltip, text untouched."""
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QHelpEvent
+
+    win.on_clear()
+    win.rx_fmt_combo.setCurrentIndex(0)      # ASCII
+    win.ts_check.setChecked(False)
+    win.split_combo.setCurrentIndex(1)       # auto (timer path is not used here)
+    win._append_rx_group(win._format_rx(b"A" * 400), 0.0, True)
+
+    viewport = win.rx_view.viewport()
+    event = QHelpEvent(QEvent.Type.ToolTip, viewport.rect().center(),
+                       QPoint(50, 50))
+    assert win.eventFilter(viewport, event) is True
+
+    win.on_clear()
+    win._append_rx_group(win._format_rx(b"short"), 0.0, True)
+    assert win.eventFilter(viewport, QHelpEvent(
+        QEvent.Type.ToolTip, viewport.rect().center(), QPoint(50, 50))) is False
+    win.on_clear()
+
+
+def test_quick_send_seeds_examples_on_first_run(app, tmp_path, monkeypatch):
+    """U128: a fresh install opens with three real commands, not ten blank rows."""
+    from ui import quick_send_panel as qsp
+
+    monkeypatch.setattr(qsp, "CONFIG_PATH", str(tmp_path / "config.json"))
+    panel = qsp.QuickSendPanel()
+    texts = [e["edit"].text() for e in panel._rows]
+    assert texts[:3] == ["AT", "AT+VERSION?", "01 03 00 00 00 02"]
+    assert texts[3:] == [""] * (len(texts) - 3)
+    assert len(panel._rows) == qsp.DEFAULT_ROWS
+    assert panel._rows[0]["edit"].toolTip()          # the seeded rows say why
+    panel.deleteLater()

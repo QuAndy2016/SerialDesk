@@ -713,6 +713,7 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why
     win.rx_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     win.rx_view.customContextMenuRequested.connect(win._open_rx_context_menu)
+    win.rx_view.viewport().installEventFilter(win)   # U129-A4: long-line hover tooltip
     rx_layout.addWidget(win.rx_view, 1)   # U70: the view absorbs all spare height
 
 

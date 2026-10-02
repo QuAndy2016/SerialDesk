@@ -37,3 +37,11 @@ def test_hex_separator_only_for_hex_modes():
 
 def test_line_composes_timestamp_marker_and_payload():
     assert line("01 02", "[00:00:00.000] ", tx=False) == "[00:00:00.000] <- 01 02"
+
+
+def test_long_line_tooltip_only_for_very_long_lines():
+    from app.display import LONG_LINE_CHARS, long_line_tooltip
+    assert long_line_tooltip("short") is None
+    assert long_line_tooltip("x" * LONG_LINE_CHARS) is None   # at the limit: no tip
+    full = "x" * (LONG_LINE_CHARS + 1)
+    assert long_line_tooltip(full) == full

@@ -35,6 +35,11 @@ from app.protocol import HexFormatError, ascii_str_to_bytes, hex_str_to_bytes
 
 MAX_ENTRIES = 99
 DEFAULT_ROWS = 10   # blank rows seeded on first run (U15)
+EXAMPLES = (        # U128: seeded once so the panel is never a blank wall
+    ("AT", False),
+    ("AT+VERSION?", False),
+    ("01 03 00 00 00 02", True),
+)
 RAIL_W = 28         # U106: width of the rail that stays visible while the panel is folded
 
 
@@ -749,8 +754,11 @@ class QuickSendPanel(QWidget):
             pass
         items = data.get("quick_send", []) if isinstance(data, dict) else []
         if not items:
-            # first run / empty config: seed the default number of blank rows
-            for _ in range(DEFAULT_ROWS):
+            # first run / empty config: a few real examples (U128), then blank rows
+            for text, is_hex in EXAMPLES:
+                self.add_row(text, is_hex)
+                self._rows[-1]["edit"].setToolTip(tr("qs.example.tip"))
+            for _ in range(max(0, DEFAULT_ROWS - len(EXAMPLES))):
                 self.add_row()
             return
         for item in items:
