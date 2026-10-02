@@ -25,7 +25,8 @@ def retranslate_ui(win: MainWindow) -> None:
 
 
 def _retranslate_menus(win: MainWindow) -> None:
-    win._settings_btn.setText(tr("menu.settings"))
+    win._settings_btn.setAccessibleName(tr("menu.settings"))   # U188: icon-only control
+    win._settings_btn.setToolTip(tr("menu.settings.tip"))
     win._theme_menu.setTitle(tr("theme.menu"))
     win._lang_menu.setTitle(tr("menu.language"))
     win._cfg_menu.setTitle(tr("cfg.menu"))

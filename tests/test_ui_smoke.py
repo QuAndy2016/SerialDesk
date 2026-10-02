@@ -525,29 +525,47 @@ def test_quick_send_row_payload_carries_its_format(app, win):
     assert seen == [(b"AT", False), (b"AT", True)]
 
 
-def test_row_ticks_select_in_any_mode(app, win):
-    """2026-10-02 (Andy): ticking a row must work outside sequence mode too.
+def test_row_ticks_belong_to_sequence_mode_only(app, win):
+    """U186 (Andy 2026-10-03): the tick is the sequence's member flag, not a delete selection.
 
-    The ticks used to be greyed out unless sequence mode was on, so "select a row,
-    then delete" was impossible in normal use even though the code behind it worked.
+    Andy: "the box in front is for sequence sending, not for ticking-then-deleting".
+    So a tick must neither be available outside sequence mode nor arm Delete.
     """
     panel = win.quick_panel
     was_seq = panel.seq_check.isChecked()
+    panel.seq_check.setChecked(True)        # force the signal, then turn it off again
     panel.seq_check.setChecked(False)
     app.processEvents()
     try:
-        assert all(entry["sel"].isEnabled() for entry in panel._rows)
-        entry = panel._rows[0]
-        entry["sel"].setChecked(True)
-        app.processEvents()
-        assert panel.del_btn.isEnabled()
-        before = len(panel._rows)
-        panel.del_btn.click()
-        app.processEvents()
-        assert len(panel._rows) == before - 1
+        assert not any(entry["sel"].isEnabled() for entry in panel._rows)
+        assert not panel.del_btn.isEnabled()
     finally:
         panel.seq_check.setChecked(was_seq)
         app.processEvents()
+
+
+def test_click_selection_is_what_delete_removes(app, win):
+    """U186: the click highlight arms Delete and Delete removes that row.
+
+    The grey Andy saw was the hover background (theme: QFrame#qsRow:hover), which is
+    not a selection at all; the selected row now paints with the accent border so the
+    two are distinguishable.
+    """
+    panel = win.quick_panel
+    for entry in panel._rows:
+        panel._paint_row(entry, False)
+    app.processEvents()
+    assert not panel.del_btn.isEnabled()
+    entry = panel._rows[0]
+    panel._select_row(entry, "replace")
+    app.processEvents()
+    assert bool(entry["widget"].property("selected"))
+    assert panel.del_btn.isEnabled()
+    before = len(panel._rows)
+    panel.del_btn.click()
+    app.processEvents()
+    assert len(panel._rows) == before - 1
+    assert not panel.del_btn.isEnabled()          # nothing selected any more
 
 
 def test_delete_button_reads_delete(app, win):

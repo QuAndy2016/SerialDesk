@@ -34,6 +34,7 @@ DARK_TOKENS: dict[str, str] = {
     "chip_text": "#a9a9bd",
     "accent": "#8be9fd",
     "selection_bg": "#4a6a9a",
+    "selection_bg_text": "#33415c",     # U187: text panes want a much quieter selection
     "selection_text": "#ffffff",
     "invalid": "#ff4136",
     "danger_disabled": "#8a8a8a",
@@ -75,6 +76,7 @@ LIGHT_TOKENS: dict[str, str] = {
     "chip_text": "#55556a",
     "accent": "#1e5aa8",
     "selection_bg": "#cfe0f5",
+    "selection_bg_text": "#cfe0f5",     # U187: same quiet blue on white
     "invalid": "#ff4136",
     "danger_disabled": "#707070",
     "danger_hover": "#c62828",

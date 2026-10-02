@@ -529,10 +529,10 @@ STRINGS: dict[str, dict[str, str]] = {
 "tx.settings.tip": {"zh": "发送格式与校验（点击修改）", "en": "Send format and checksum (click to change)"},
     "qs.chip.tip": {"zh": "本行的格式与延迟（点击修改）", "en": "This row's format and delay (click to change)"},
     "qs.del.tip": {
-        "zh": "删除选中的命令行（勾选左侧方框或单击行选中，也可以按 Delete 键）；删除后 3 秒内可撤销",
-        "en": "Delete the selected commands (tick the box on the left or click the row, or press Delete); undo is available for 3 seconds",
+        "zh": "删除单击选中的命令行（也可以按 Delete 键）；左侧方框是序列模式用的，不参与删除；删除后 3 秒内可撤销",
+        "en": "Delete the clicked row(s) (or press Delete); the box on the left belongs to sequence mode and is not a delete selection; undo is available for 3 seconds",
     },
-    "qs.row.tip": {"zh": "单击选中这一行（或勾选左侧方框），再用「删除」删除", "en": "Click to select this row (or tick the box), then press Delete"},
+    "qs.row.tip": {"zh": "单击选中这一行（选中后有蓝色边框），再用「删除」删除；左侧方框用于序列模式", "en": "Click to select this row (it gets the accent border), then press Delete; the box on the left is for sequence mode"},
     "qs.sel.tip": {
         "zh": "勾选后点「运行」只按顺序发送勾选的指令；一个都不勾则发送全部",
         "en": "Tick to include this row when running the sequence; with nothing ticked every row runs",

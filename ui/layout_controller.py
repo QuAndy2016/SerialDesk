@@ -314,7 +314,6 @@ def saved_sizes(win: MainWindow, key: str, default: list) -> list:
 
 def fit_settings_btn(win: MainWindow) -> None:
     "fit settings btn"
-    """Size the Settings button to its label plus padding (U60: "Settings" must fit)."""
-    text = win._settings_btn.text()
-    width = win._settings_btn.fontMetrics().horizontalAdvance(text) + 70
-    win._settings_btn.setMinimumWidth(max(96, width))   # U110: room for the gear
+    """Size the Settings control (U188: icon-only, so it is the gear plus padding)."""
+    win._settings_btn.setMinimumWidth(max(30, win._settings_btn.iconSize().width() + 16))
+    win._settings_btn.setMinimumHeight(28)

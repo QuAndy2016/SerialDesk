@@ -205,12 +205,15 @@ class MainWindow(QMainWindow):
         """Create the Settings button/menu before the row that hosts it (U72)."""
         self._settings_btn = QToolButton()
         self._settings_btn.setObjectName("settingsBtn")
-        self._settings_btn.setText(tr("menu.settings"))
+        # U188 (Andy 2026-10-03): icon only - the gear says it, the tooltip names it,
+        # and the label used to make the control ~50 px wider than its glyph.
+        self._settings_btn.setText("")
         self._settings_btn.setToolTip(tr("menu.settings.tip"))
+        self._settings_btn.setAccessibleName(tr("menu.settings"))
         self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self._settings_btn.setMinimumHeight(32)       # U110: same height as the row
-        self._settings_btn.setMinimumWidth(96)
+        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._settings_btn.setMinimumHeight(28)        # U188: same height as the row
+        self._settings_btn.setMinimumWidth(30)
         self._settings_menu = QMenu(self._settings_btn)
         self._settings_btn.setMenu(self._settings_menu)
         self._fit_settings_btn()

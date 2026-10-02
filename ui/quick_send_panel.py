@@ -137,10 +137,9 @@ class QuickSendPanel(QWidget):
         self._folded = False
         self._build_ui()
         self._load()
-        # 2026-10-02 (Andy): the row ticks are the selection in every mode now - they
-        # used to be greyed out unless sequence mode was on, which made "select a row,
-        # then delete" impossible in normal use.
-        self.set_rows_selectable(True)
+        # U186 (Andy 2026-10-03): the row ticks belong to sequence mode, so start them
+        # in whatever state that switch is in.
+        self.set_rows_selectable(self.seq_check.isChecked())
         # U115: watch clicks anywhere in the app so a selection cannot go stale.
         # Kept as an attribute so detach_app_filter() can undo it: an app-wide filter
         # makes the application hold this panel alive, which kept every closed window
@@ -188,31 +187,15 @@ class QuickSendPanel(QWidget):
         head.addStretch(1)
         self.count_label = QLabel("0/99")
         head.addWidget(self.count_label)
-        # S2 (2026-10-02): how many sequence rounds have already been sent.
-        self.seq_sent_lbl = QLabel("")
-        self.seq_sent_lbl.setObjectName("qsSeqSent")
-        self.seq_sent_lbl.setToolTip(tr("qs.seq.sent.tip"))
-        head.addWidget(self.seq_sent_lbl)
-        # U170: the round count lives in the head row (which has slack next to the
-        # title), so the sequence row below does not grow and widen the whole panel.
-        head.addSpacing(10)
-        self._seq_loops_lbl = QLabel(tr("qs.loops"))
-        head.addWidget(self._seq_loops_lbl)
-        self.seq_loops = QSpinBox()
-        self.seq_loops.setRange(0, 9999)
-        self.seq_loops.setValue(1)
-        self.seq_loops.setSpecialValueText("\u221e")
-        self.seq_loops.setToolTip(tr("qs.loops.tip"))
-        self.seq_loops.setFixedWidth(
-            self.seq_loops.fontMetrics().horizontalAdvance("9999") + 26)
-        head.addWidget(self.seq_loops)
+        # U185 (Andy 2026-10-03): the loop count and the sent counter moved down to the
+        # sequence row, next to Run, so the head row keeps just the title and the count.
         # B3 (2026-10-02): the fold control that used to sit here (right of the loop
         # spin box) duplicated the always-visible panel toggle next to Settings, so it
         # was removed. The panel is folded from that one control (and the hover rail).
         layout.addLayout(head)
 
     def _build_sequence_row(self, layout: QVBoxLayout) -> None:
-        """Sequence-mode toggle, Run and the delete-selected action"""
+        """Sequence toggle, Run, loop count, sent counter and Delete (U185/U186)"""
         seq_row = QHBoxLayout()
         self.seq_check = QCheckBox(tr("qs.seq"))
         self.seq_check.setToolTip(tr("qs.seq.tip"))
@@ -223,6 +206,22 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setEnabled(False)
         self.seq_btn.clicked.connect(self.toggle_sequence)
         seq_row.addWidget(self.seq_btn)
+        # U185: loop count right after Run (0 = endless), then the sent counter, which
+        # is one font step smaller than the body text (see QLabel#qsSeqSent).
+        self._seq_loops_lbl = QLabel(tr("qs.loops"))
+        seq_row.addWidget(self._seq_loops_lbl)
+        self.seq_loops = QSpinBox()
+        self.seq_loops.setRange(0, 999)          # 0 = endless (special value text)
+        self.seq_loops.setValue(1)
+        self.seq_loops.setSpecialValueText("\u221e")
+        self.seq_loops.setToolTip(tr("qs.loops.tip"))
+        self.seq_loops.setFixedWidth(
+            self.seq_loops.fontMetrics().horizontalAdvance("999") + 26)
+        seq_row.addWidget(self.seq_loops)
+        self.seq_sent_lbl = QLabel("")
+        self.seq_sent_lbl.setObjectName("qsSeqSent")
+        self.seq_sent_lbl.setToolTip(tr("qs.seq.sent.tip"))
+        seq_row.addWidget(self.seq_sent_lbl)
         seq_row.addStretch(1)
         seq_row.addSpacing(16)      # U114-D10: keep a destructive action away from Run
         self.del_btn = QPushButton(tr("qs.del"))   # U68 plan A
@@ -298,7 +297,7 @@ class QuickSendPanel(QWidget):
         self._refresh_chip(entry)
         self._refresh_entry_tip(entry)
         sel.setChecked(bool(selected))
-        sel.setEnabled(True)             # 2026-10-02: ticking selects in any mode
+        sel.setEnabled(self.seq_check.isChecked())   # U186: ticks serve the sequence
         sel.toggled.connect(self._on_row_tick)       # B2: a tick arms the delete button
         self._renumber_selection()
         self._update_count()
@@ -538,17 +537,16 @@ class QuickSendPanel(QWidget):
         self.del_btn.setToolTip(tr("qs.del.tip"))
 
     def _armed_entries(self) -> list:
-        """B2 (2026-10-02): rows the delete action removes - click-selected or ticked.
+        """U186 (Andy 2026-10-03): the rows the delete action removes.
 
-        The row tick (the sequence checkbox) and the click highlight looked like the
-        same thing to the user, but only the highlight armed the delete button, so
-        ticking rows and pressing "Delete selected" did nothing. Both now arm it.
+        Only the click highlight counts. The row tick is the sequence's member/order
+        flag, so a tick must not silently arm a destructive action (and a hover - which
+        looks like a highlight - must not either).
         """
-        return [e for e in self._rows
-                if bool(e["widget"].property("selected")) or e["sel"].isChecked()]
+        return [e for e in self._rows if bool(e["widget"].property("selected"))]
 
     def _on_row_tick(self, _checked: bool = False) -> None:
-        """B2: arming follows the tick, not only the click highlight."""
+        """U186: a tick no longer arms delete; only keep the toolbar in step."""
         self._update_del_btn()
 
     def selected_entries(self) -> list:
@@ -699,14 +697,17 @@ class QuickSendPanel(QWidget):
 
     def _on_seq_toggled(self, checked: bool) -> None:
         self.seq_btn.setEnabled(checked)
-        self.set_rows_selectable(True)       # 2026-10-02: ticks select in any mode
+        self.set_rows_selectable(self.seq_check.isChecked())   # U186: sequence-only
         if not checked:
             self.stop_sequence()
             self.clear_selection()
 
     def set_rows_selectable(self, enabled: bool = True) -> None:
-        """Keep the row ticks usable (2026-10-02: they select in every mode, not only
-        during a sequence, so "select a row then delete" always works)."""
+        """U186 (Andy 2026-10-03): the row ticks belong to sequence mode.
+
+        They say which rows the sequence sends and in what order - they are not a
+        delete selection. Deleting follows the click highlight (see _armed_entries).
+        """
         for entry in self._rows:
             entry["sel"].setEnabled(bool(enabled))
 
@@ -793,9 +794,9 @@ class QuickSendPanel(QWidget):
             self._seq_send_current()
 
     def _seq_loops_value(self) -> int:
-        """U170: how many rounds to run (0 = endless)."""
+        """U170/U185: how many rounds to run (0 = endless, 1 = one pass, max 999)."""
         try:
-            return max(0, min(9999, int(self.seq_loops.value())))
+            return max(0, min(999, int(self.seq_loops.value())))
         except (AttributeError, ValueError):
             return 1
 

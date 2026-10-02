@@ -72,6 +72,8 @@ QPlainTextEdit {
     color: #e0e0e0;
     font-family: Consolas, "Courier New", monospace;
     font-size: 13px;
+    selection-background-color: #33415c;   /* U187: quiet selection in dark */
+    selection-color: #e0e0e0;
 }
 QCheckBox { spacing: 6px; }
 QCheckBox::indicator { width: 14px; height: 14px; }
@@ -93,7 +95,7 @@ QToolButton#paramsBtn { color: #d4d4d4; background: transparent; border: 1px sol
 QToolButton#paramsBtn:hover { border-color: #8be9fd; }
 /* U110: the settings entry is an app-level control - icon + text, a real border,
    a 32 px hit target and three states, separated from the connection parameters */
-QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 10px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }
+QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }   /* U188: icon only */
 QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #83839f; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #2f2f3d; border-color: #8be9fd; }
 QFrame#connDivider { background: #4a4a5a; max-width: 1px; border: none; }
@@ -129,6 +131,7 @@ QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: t
 QLabel#qsTitle { color: #d4d4d4; font-weight: bold; background: transparent; }   /* U167: panel header level */
 QFrame#qsTitleBar { background: #8be9fd; border-radius: 1px; }   /* U167: accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(210, 210, 225, 0.10); border: 1px solid rgba(210, 210, 225, 0.28); }   /* U114-D7: neutral, not the TX blue */
+QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* U186: the click highlight must differ from a grey hover */
+QLabel#qsSeqSent { color: #cfcfcf; font-size: 12px; }   /* U185: one step below body */
 QFrame#qsRow[sending="true"] { background: rgba(210, 210, 225, 0.18); border: 1px solid #8be9fd; }   /* S3: the row being sent right now */
 QFrame#qsRow:hover { background: #3a3a4a; }   /* U163-I3: row hover feedback */
