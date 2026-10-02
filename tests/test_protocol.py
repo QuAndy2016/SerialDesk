@@ -46,6 +46,16 @@ class TestHexAscii:
     def test_bytes_to_ascii_str_replaces_nonprintable(self):
         assert bytes_to_ascii_str(b"OK\x01") == "OK."
 
+    def test_bytes_to_ascii_str_keeps_the_line_structure(self):
+        """2026-10-03: a real newline from the device must stay a line break.
+
+        Replacing \\r \\n \\t with '.' glued every text protocol into one line and
+        turned a 100 KB log into a single line for the pane to lay out.
+        """
+        assert bytes_to_ascii_str(b"T=24.6C\nVIN=12.12V\n") == "T=24.6C\nVIN=12.12V\n"
+        assert bytes_to_ascii_str(b"A\r\n\tB") == "A\r\n\tB"
+        assert bytes_to_ascii_str(b"\x00\x07\x1b") == "..."      # other controls still dot
+
     def test_ascii_str_to_bytes_escapes(self):
         assert ascii_str_to_bytes(r"AT\r\n") == b"AT\r\n"
 

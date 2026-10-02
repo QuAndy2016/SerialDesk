@@ -88,8 +88,16 @@ def bytes_to_hex_str(data: bytes, sep: str = " ") -> str:
 
 
 def bytes_to_ascii_str(data: bytes) -> str:
-    """Decode bytes as ASCII, replacing non-printable chars with '.'."""
-    return "".join(chr(b) if 32 <= b < 127 else "." for b in data)
+    """Decode bytes as ASCII for display; the line structure survives, the rest is '.'.
+
+    2026-10-03 (data-path pass): tab / newline / carriage return used to be replaced by
+    '.' along with every other control byte, which erased the line structure of every
+    text protocol - a device sending "T=24.6C\\nVIN=12.12V\\n" showed as one glued
+    line ("T=24.6C.VIN=12.12V."), and a 100 KB log became a single line for the pane to
+    lay out. Those three are kept now (a 0x0A from the device *is* a line break); only
+    the remaining non-printables become '.', which is what serial tools conventionally do.
+    """
+    return "".join(chr(b) if 32 <= b < 127 or b in (9, 10, 13) else "." for b in data)
 
 
 def ascii_str_to_bytes(s: str) -> bytes:
