@@ -223,19 +223,16 @@ def fit_tx_edit_height(win: MainWindow) -> None:
         bottoms = [w.mapTo(win._tx_group, w.rect().bottomLeft()).y()
                    for w in above_probes if w.isVisible()]
         above = (max(bottoms) if bottoms else 0) + 6
-        below = max((w.height() for w in (win.send_btn, win.repeat_ms)
-                     if w.isVisible()), default=0) + 8
-        avail = win._tx_group.height() - above - below - 6
-        cap = 26 * line + chrome
-        # 2026-10-02: the "send content" caption above the box is part of the send
-        # pane's fixed budget. Take its height out of the input, or the pane's
-        # minimum grows by one text row and overflows the splitter at 1070x600.
+        # 2026-10-02 (Andy): the actions sit BESIDE the input now (a column on the
+        # right), so nothing sits below it - only the caption above the box and the
+        # group margins come off the height.
         cap_lbl = getattr(win, "_tx_content_lbl", None)
-        caption = (cap_lbl.sizeHint().height() + 4) if cap_lbl is not None \
+        caption = (cap_lbl.sizeHint().height() + 2) if cap_lbl is not None \
             and cap_lbl.isVisible() else 0
+        avail = win._tx_group.height() - above - caption - 8
+        cap = 26 * line + chrome
         # at least three lines - one line was what made the box feel cramped
-        win.tx_edit.setFixedHeight(
-            int(max(3 * line + chrome, min(avail, cap)) - caption))
+        win.tx_edit.setFixedHeight(int(max(3 * line + chrome, min(avail, cap))))
     finally:
         win._fitting_tx = False
 

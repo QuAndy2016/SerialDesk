@@ -60,11 +60,20 @@ def test_send_input_is_at_least_three_lines_and_does_not_wrap(app, win):
     assert win.tx_edit.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
 
 
-def test_actions_sit_below_the_input(app, win):
-    group_y = win._tx_group.mapTo(win, win._tx_group.rect().topLeft()).y()
-    input_y = win.tx_edit.mapTo(win, win.tx_edit.rect().topLeft()).y()
-    send_y = win.send_btn.mapTo(win, win.send_btn.rect().topLeft()).y()
-    assert group_y < input_y < send_y
+def test_actions_sit_beside_the_input(app, win):
+    """2026-10-02 (Andy): input left, send/history/repeat in a column on the right.
+
+    The old assertion was "input above the buttons"; the buttons intentionally moved
+    to the right edge, so this now checks the column is beside the box, not under it.
+    """
+    group = win._tx_group
+    input_right = win.tx_edit.mapTo(group, win.tx_edit.rect().topRight()).x()
+    for name, widget in (("send", win.send_btn), ("history", win.history_btn),
+                         ("repeat", win.repeat_btn), ("interval", win.repeat_ms)):
+        left = widget.mapTo(group, widget.rect().topLeft()).x()
+        assert left >= input_right, "%s is not to the right of the input" % name
+    # the box is still inside the send group, below the options row
+    assert win.tx_edit.mapTo(group, win.tx_edit.rect().topLeft()).y() > 0
 
 
 def test_quick_send_rows_show_name_and_command_lines(app, win):

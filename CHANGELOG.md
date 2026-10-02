@@ -1,5 +1,22 @@
 # Changelog
 
+## [v1.8.3] - 2026-10-02
+
+### Changed
+
+- **Send area re-planned** (Andy): the payload box now owns the left side and the
+  actions form a column on the right edge - Send, History, then the repeat controls
+  (repeat / interval / count) - so the primary button sits right under the hand.
+  The "send content (text input)" caption stays above the box, and the payload hint
+  moved under the buttons.
+
+### Internal quality (no user-visible change)
+
+- The send pane's minimum height dropped from 335 px to 235 px, because the action
+  rows no longer stack underneath the input; the window's minimum width is unchanged
+  (1175 px on Linux), and the UI gate (overflow / min-width / contrast) stays clear.
+
+
 ## [v1.8.2] - 2026-10-02
 
 ### Added
