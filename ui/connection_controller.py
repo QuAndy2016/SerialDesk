@@ -78,6 +78,7 @@ from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
 from ui.autosave_dialog import AutoSaveDialog
 from ui.history_dialog import HistoryDialog
+from ui.port_delegate import PORT_FULL_ROLE
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from ui.retranslate import retranslate_ui
@@ -183,18 +184,32 @@ def signals_html(win: MainWindow, sig: dict) -> str:
             f"{name.upper()} {word}</span>")
     return "&nbsp;&nbsp;".join(parts)
 
+def _fit_port_popup(win: MainWindow) -> None:
+    """U172: the closed box shows "COM5"; widen the popup so the full name fits."""
+    combo = win.port_combo
+    fm = combo.fontMetrics()
+    widest = 0
+    for i in range(combo.count()):
+        full = combo.itemData(i, PORT_FULL_ROLE) or combo.itemText(i)
+        widest = max(widest, fm.horizontalAdvance(str(full)))
+    combo.view().setMinimumWidth(max(widest + 40, combo.width()))
+
+
 def refresh_ports(win: MainWindow):
     "refresh ports"
     current = win.port_combo.currentText() or str(load_config().get("last_port") or "")   # N12
     win.port_combo.blockSignals(True)
     win.port_combo.clear()
     for dev, desc in list_serial_ports():
-        # U83: the name alone keeps the row narrow and is never truncated; the full
-        # description stays reachable from the tooltips and the dropdown entries.
+        # U83/U172: the closed box keeps the short name (never truncated); the full
+        # description goes to the tooltip and to the widened dropdown popup.
         win.port_combo.addItem(dev, dev)
         if desc:
-            win.port_combo.setItemData(win.port_combo.count() - 1,
-                                        f"{dev} — {desc}", Qt.ItemDataRole.ToolTipRole)
+            full = f"{dev} — {desc}"
+            last = win.port_combo.count() - 1
+            win.port_combo.setItemData(last, full, Qt.ItemDataRole.ToolTipRole)
+            win.port_combo.setItemData(last, full, PORT_FULL_ROLE)
+    _fit_port_popup(win)
     if current:
         idx = win.port_combo.findData(current)
         if idx < 0:

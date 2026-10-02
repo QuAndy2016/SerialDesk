@@ -74,6 +74,7 @@ from app.config import (
 )
 from app.log_sink import LogSink
 from app.serial_worker import SerialWorker, list_serial_ports
+from ui.port_delegate import PORT_FULL_ROLE, PortItemDelegate
 from ui import theme
 from ui.auto_reply_dialog import AutoReplyDialog
 from ui.autosave_dialog import AutoSaveDialog
@@ -133,7 +134,8 @@ def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._port_lbl = QLabel(tr("port.label"))     # U100: these two were English-only
     bar.addWidget(win._port_lbl)
     win.port_combo = QComboBox()
-    win.port_combo.setMinimumWidth(170)   # U78: keep the whole row under 1040 px
+    win.port_combo.setMinimumWidth(100)   # U172: the closed box only shows "COMx"
+    win.port_combo.view().setItemDelegate(PortItemDelegate(win.port_combo.view()))
     bar.addWidget(win.port_combo)
 
     win.refresh_btn = QPushButton(tr("port.refresh"))
@@ -358,6 +360,13 @@ def _build_text_decorations(win: MainWindow) -> QWidget:
     win.escape_check.setChecked(True)
     win.escape_check.setToolTip(tr("tx.escape.tip"))
     mod_row.addWidget(win.escape_check)
+    # U165: the send box can soft-wrap too (its own switch, default off so a long
+    # HEX string still shows as a single line, which is what U130 asked for).
+    win.tx_wrap_check = QCheckBox(tr("tx.wrap"))
+    win.tx_wrap_check.setChecked(bool(load_config().get("tx_wrap_on", False)))
+    win.tx_wrap_check.setToolTip(tr("tx.wrap.tip"))
+    win.tx_wrap_check.toggled.connect(win._on_tx_wrap_toggled)
+    mod_row.addWidget(win.tx_wrap_check)
     return group
 
 
@@ -686,9 +695,20 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addWidget(win.save_log_btn)
 
     rx_opts.addStretch(1)
-    win.clear_btn = QPushButton(tr("btn.clear"))
-    win.clear_btn.clicked.connect(win.on_clear)
+    # U169: 清空 is a split button - one click clears the display (unchanged), and
+    # the menu exposes the counter actions, which used to be buried in Settings.
+    win.clear_btn = QToolButton()
+    win.clear_btn.setObjectName("clearBtn")
+    win.clear_btn.setText(tr("btn.clear"))
     win.clear_btn.setToolTip(tr("sc.clear.tip"))
+    win.clear_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+    win.clear_btn.clicked.connect(win.on_clear)
+    win._clear_menu = QMenu(win.clear_btn)
+    win._act_clear_all = win._clear_menu.addAction(tr("btn.clear.all"))
+    win._act_clear_all.triggered.connect(win._on_clear_and_counters)
+    win._act_reset_counters = win._clear_menu.addAction(tr("menu.reset_counters"))
+    win._act_reset_counters.triggered.connect(win._reset_counters)
+    win.clear_btn.setMenu(win._clear_menu)
     rx_opts.addWidget(win.clear_btn)
 
 def _build_status_counters(win: MainWindow) -> None:

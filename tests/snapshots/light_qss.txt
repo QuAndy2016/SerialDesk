@@ -28,6 +28,10 @@ QPushButton:pressed { background: #dcdce4; }
 QPushButton:disabled { color: #636363; background: #e8e8ee; }
 QPushButton[secondary="true"] { background: #f4f4f6; border: 1px solid #c9c9d1; color: #44444c; }
 QPushButton[secondary="true"]:hover { background: #e9e9ee; border-color: #7f7f87; }
+QToolButton#clearBtn { background: #d0d0d8; border: 1px solid #c8c8d0; border-radius: 4px; padding: 4px 8px; }
+QToolButton#clearBtn:hover { background: #ececf2; }
+QToolButton#clearBtn::menu-button { width: 16px; border: none; border-left: 1px solid #c8c8d0; }
+QToolButton#clearBtn::menu-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 8px; height: 5px; }
 QComboBox, QLineEdit {
     background: #ffffff;
     border: 1px solid #c8c8d0;
@@ -120,6 +124,8 @@ QScrollBar::handle:horizontal:hover { background: #9090a0; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QLabel#seqOrd { color: #1e5aa8; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
+QLabel#qsTitle { color: #1f1f1f; font-weight: bold; background: transparent; }   /* U167: panel header level */
+QFrame#qsTitleBar { background: #1e5aa8; border-radius: 1px; }   /* U167: accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(70, 70, 100, 0.08); border: 1px solid rgba(70, 70, 100, 0.20); }   /* U114-D7: neutral, not the TX blue */
 QFrame#qsRow:hover { background: #e0e0e8; }   /* U163-I3: row hover feedback */

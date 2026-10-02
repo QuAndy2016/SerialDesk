@@ -86,7 +86,7 @@ from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from ui.retranslate import retranslate_ui
 from ui.menus import build_menu
 from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
-from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_received, recolor_rx_view, resume_rx_display, rx_tooltip, snapshot_rx_fragments, on_reset_counters, on_filter_changed
+from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_clear_and_counters, on_received, recolor_rx_view, resume_rx_display, rx_tooltip, snapshot_rx_fragments, on_reset_counters, on_filter_changed
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
@@ -94,7 +94,7 @@ from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minim
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
-from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, on_wrap_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
+from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, on_tx_wrap_toggled, on_wrap_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
 from ui.startup_controller import build_everything, init_language_and_log, init_state, init_timers, init_worker, restore_settings
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
@@ -292,7 +292,15 @@ class MainWindow(QMainWindow):
 
     def _on_wrap_toggled(self, checked: bool) -> None: return on_wrap_toggled(self, checked)
 
+    def _on_tx_wrap_toggled(self, checked: bool) -> None:
+        """Qt slot: soft-wrap the send box (U165)."""
+        return on_tx_wrap_toggled(self, checked)
+
     def _reset_counters(self) -> None: return on_reset_counters(self)
+
+    def _on_clear_and_counters(self) -> None:
+        """Qt slot: clear the pane and zero the counters (U169 split-button menu)."""
+        return on_clear_and_counters(self)
 
     def _on_rx_filter_changed(self, index: int) -> None: return on_filter_changed(self, index)
 

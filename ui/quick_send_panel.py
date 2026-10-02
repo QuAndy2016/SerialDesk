@@ -149,7 +149,15 @@ class QuickSendPanel(QWidget):
     def _build_head(self, layout: QVBoxLayout) -> None:
         """Title row with the entry count and the fold button"""
         head = QHBoxLayout()
+        head.setSpacing(6)
+        # U167: an accent bar + title weight gives the panel a clear header level;
+        # the title used to be plain body text, which read as "too plain".
+        accent_bar = QFrame()
+        accent_bar.setObjectName("qsTitleBar")
+        accent_bar.setFixedSize(3, 14)
+        head.addWidget(accent_bar)
         self._title_lbl = QLabel(tr("qs.title"))
+        self._title_lbl.setObjectName("qsTitle")
         head.addWidget(self._title_lbl)
         head.addStretch(1)
         self.count_label = QLabel("0/99")

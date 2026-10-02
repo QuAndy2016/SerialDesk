@@ -397,7 +397,11 @@ def rx_tooltip(win: MainWindow, obj: QObject, event) -> bool:
 
 def on_clear(win: MainWindow):
     "on clear"
-    """Clear the display and the counters together, with an undo window (U56/U42)."""
+    """Clear the display only (U169); the session counters keep counting.
+
+    (The old docstring said "and the counters"; the code never zeroed them, so the
+    label was wrong - the counter actions now live in the split button's menu.)
+    """
     has_text = win.rx_view.document().characterCount() > 1
     offer_undo = has_text and win.rx_view.blockCount() <= CLEAR_UNDO_MAX_LINES
     if offer_undo:
@@ -434,6 +438,20 @@ def on_reset_counters(win: MainWindow) -> None:
     win._sent_count = 0
     win.update_counts()
     win._notify(tr("rx.counters_reset"), "info", ms=3000)
+
+
+def on_clear_and_counters(win: MainWindow) -> None:
+    "on clear and counters"
+    """U169: clear the pane and zero the counters in one step (menu item).
+
+    on_clear runs first, so the undo snapshot still holds the pre-clear counters
+    and undoing brings both the text and the numbers back.
+    """
+    on_clear(win)
+    win.rx_bytes = 0
+    win.tx_bytes = 0
+    win._sent_count = 0
+    win.update_counts()
 
 
 def resume_rx_display(win: MainWindow) -> None:
