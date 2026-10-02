@@ -1,5 +1,44 @@
 # Changelog
 
+## [v1.6.3] - 2026-10-02
+
+### Added
+
+- **Receive-row More menu** (U164): right-click a receive row for copy / re-send / clear helpers
+  without leaving the row; the split slot next to it was made narrower to match.
+- **Split clear / reset counters** (U163a): clear one pane or zero the RX/TX counters independently.
+- **RX/TX view filter** (U163b): show all rows, RX only, or TX only.
+- **Column HEX view** (U163c): switch the receive area between line and column-aligned HEX layout.
+- **Log folder quota** (U163d): the log directory is capped, oldest files pruned first.
+- **Uninstall prompt** (U163e): the app can hand off to the Windows uninstaller.
+- **Soft-wrap toggle** (U162) plus clean / line / raw copy semantics, so what you copy matches
+  what you see.
+- **First-run examples** (U128): a couple of ready-made lines are pre-filled so a new window is
+  not empty.
+- **Byte-stream split modes** (B3): the incoming stream can be split on a delimiter or fixed
+  length, wired through a pure framing layer with its own tests.
+
+### Fixed
+
+- **Fold button paints its arrow on first open** (U161).
+- **Shadowed eventFilter** removed (A5).
+- Long-line tooltip added for truncated rows.
+- **CI min-width gate** now takes a per-platform baseline, so the Linux runner no longer
+  reports false overflow against the real 1366 px screen bound.
+
+### Changed
+
+- **UI batch 4**: colour convergence (U125) and a unified 16x16 icon grid (U126).
+- Empty-row placeholder, RX context menu, find count + highlight, pause display and
+  long-line no-wrap (U160 batch); row hover and keyboard reach on rows.
+- Title weight unified across panels.
+
+### Internal quality (no user-visible change)
+
+- Broad `except` blocks narrowed (A3); dialog smoke tests added (A4).
+- Review battery / UI gate threaded through a single `tools/dev_gate.sh` entry point.
+
+
 ## [v1.6.2] - 2026-10-01
 
 ### Added
