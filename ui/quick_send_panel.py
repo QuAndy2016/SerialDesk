@@ -137,7 +137,10 @@ class QuickSendPanel(QWidget):
         self._folded = False
         self._build_ui()
         self._load()
-        self.set_rows_selectable(self.seq_check.isChecked())
+        # 2026-10-02 (Andy): the row ticks are the selection in every mode now - they
+        # used to be greyed out unless sequence mode was on, which made "select a row,
+        # then delete" impossible in normal use.
+        self.set_rows_selectable(True)
         # U115: watch clicks anywhere in the app so a selection cannot go stale.
         # Kept as an attribute so detach_app_filter() can undo it: an app-wide filter
         # makes the application hold this panel alive, which kept every closed window
@@ -222,8 +225,8 @@ class QuickSendPanel(QWidget):
         seq_row.addWidget(self.seq_btn)
         seq_row.addStretch(1)
         seq_row.addSpacing(16)      # U114-D10: keep a destructive action away from Run
-        self.del_btn = QPushButton(tr("qs.del_selected"))   # U68 plan A
-        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+        self.del_btn = QPushButton(tr("qs.del"))   # U68 plan A
+        self.del_btn.setToolTip(tr("qs.del.tip"))
         self.del_btn.setEnabled(False)
         self.del_btn.clicked.connect(self.delete_selected)
         seq_row.addWidget(self.del_btn)
@@ -295,7 +298,7 @@ class QuickSendPanel(QWidget):
         self._refresh_chip(entry)
         self._refresh_entry_tip(entry)
         sel.setChecked(bool(selected))
-        sel.setEnabled(self.seq_check.isChecked())   # U114-D9
+        sel.setEnabled(True)             # 2026-10-02: ticking selects in any mode
         sel.toggled.connect(self._on_row_tick)       # B2: a tick arms the delete button
         self._renumber_selection()
         self._update_count()
@@ -531,9 +534,8 @@ class QuickSendPanel(QWidget):
     def _update_del_btn(self) -> None:
         count = len(self._armed_entries())
         self.del_btn.setEnabled(count > 0)
-        self.del_btn.setText(tr("qs.del_selected.n", n=count) if count
-                             else tr("qs.del_selected"))
-        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+        self.del_btn.setText(tr("qs.del"))
+        self.del_btn.setToolTip(tr("qs.del.tip"))
 
     def _armed_entries(self) -> list:
         """B2 (2026-10-02): rows the delete action removes - click-selected or ticked.
@@ -697,13 +699,14 @@ class QuickSendPanel(QWidget):
 
     def _on_seq_toggled(self, checked: bool) -> None:
         self.seq_btn.setEnabled(checked)
-        self.set_rows_selectable(checked)       # U114-D9: the ticks only mean something here
+        self.set_rows_selectable(True)       # 2026-10-02: ticks select in any mode
         if not checked:
             self.stop_sequence()
             self.clear_selection()
 
-    def set_rows_selectable(self, enabled: bool) -> None:
-        """U114-D9: outside sequence mode a row tick does nothing, so grey it out."""
+    def set_rows_selectable(self, enabled: bool = True) -> None:
+        """Keep the row ticks usable (2026-10-02: they select in every mode, not only
+        during a sequence, so "select a row then delete" always works)."""
         for entry in self._rows:
             entry["sel"].setEnabled(bool(enabled))
 
@@ -875,8 +878,8 @@ class QuickSendPanel(QWidget):
     def retranslate(self):
         """Re-apply translated strings after a language change."""
         self._title_lbl.setText(tr("qs.title"))
-        self.del_btn.setText(tr("qs.del_selected"))
-        self.del_btn.setToolTip(tr("qs.del_selected.tip"))
+        self.del_btn.setText(tr("qs.del"))
+        self.del_btn.setToolTip(tr("qs.del.tip"))
         self.add_btn.setText(tr("qs.add"))
         self.add_btn.setToolTip(tr("qs.add.tip", n=MAX_ENTRIES))
         self.seq_check.setText(tr("qs.seq"))

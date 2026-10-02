@@ -523,3 +523,40 @@ def test_quick_send_row_payload_carries_its_format(app, win):
     panel._send_row(panel._rows[-1]["widget"])
     app.processEvents()
     assert seen == [(b"AT", False), (b"AT", True)]
+
+
+def test_row_ticks_select_in_any_mode(app, win):
+    """2026-10-02 (Andy): ticking a row must work outside sequence mode too.
+
+    The ticks used to be greyed out unless sequence mode was on, so "select a row,
+    then delete" was impossible in normal use even though the code behind it worked.
+    """
+    panel = win.quick_panel
+    was_seq = panel.seq_check.isChecked()
+    panel.seq_check.setChecked(False)
+    app.processEvents()
+    try:
+        assert all(entry["sel"].isEnabled() for entry in panel._rows)
+        entry = panel._rows[0]
+        entry["sel"].setChecked(True)
+        app.processEvents()
+        assert panel.del_btn.isEnabled()
+        before = len(panel._rows)
+        panel.del_btn.click()
+        app.processEvents()
+        assert len(panel._rows) == before - 1
+    finally:
+        panel.seq_check.setChecked(was_seq)
+        app.processEvents()
+
+
+def test_delete_button_reads_delete(app, win):
+    """2026-10-02 (Andy): the button is just "Delete" - no "selected", no count."""
+    from app.i18n import tr
+    assert win.quick_panel.del_btn.text() == tr("qs.del")
+    for entry in win.quick_panel._rows:
+        if entry["sel"].isChecked():
+            entry["sel"].setChecked(False)
+    app.processEvents()
+    assert win.quick_panel.del_btn.text() == tr("qs.del")
+    assert not win.quick_panel.del_btn.isEnabled()

@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Selecting a quick-send row works in every mode** (Andy 2026-10-02): the row ticks
+  used to be greyed out unless sequence mode was on, so "select a row, then delete" was
+  impossible in normal use. Ticking and clicking both select now, and the button reads
+  just "Delete" (the old "Delete selected (N)" wording is gone).
 - **The line-ending picker now covers quick send** (Andy 2026-10-02): picking CRLF
   (or CR / LF) in the send area also ends every quick-send ASCII row - single sends and
   sequence steps alike. HEX rows stay byte-exact, the same rule the send box follows in
