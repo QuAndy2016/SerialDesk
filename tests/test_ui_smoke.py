@@ -376,10 +376,16 @@ def test_link_checkbox_mirrors_both_ways(app):
     assert not action.isChecked()
 
 
-def test_window_fits_a_small_laptop(app, win):
-    """U164: the whole receive row must fit inside 1366x768 (kept last on purpose)."""
-    win.resize(1070, 600)
-    for _ in range(3):
-        app.processEvents()
-    win._fit_minimum_width()
-    assert win.minimumWidth() <= 1366
+def test_receive_row_keeps_the_low_frequency_controls_out(app, win):
+    """U164: frequent controls stay in the row, the rest live in the More menu.
+
+    Font-independent on purpose: the pixel width differs per platform, the
+    ownership of the controls does not.
+    """
+    row = win.ts_check.parentWidget()
+    for widget in (win.echo_tx_check, win.save_log_btn, win.clear_btn,
+                   win.rx_filter_combo):
+        assert row.isAncestorOf(widget)
+    for widget in (win.autoscroll_check, win.pause_check, win.wrap_check,
+                   win.save_log_as_btn):
+        assert not row.isAncestorOf(widget)

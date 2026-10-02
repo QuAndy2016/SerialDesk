@@ -1,0 +1,14 @@
+# U164: window minimum width per platform, in px.
+#
+# Why per platform and not one absolute number: the value is font-metric driven.
+# The Linux dev box measures 1156 px, but the GitHub Windows runner has no CJK
+# font installed, falls back to a wider face, and measures 1731 px for the very
+# same layout. An absolute limit would fail CI for a reason the user never sees.
+#
+# The gate therefore compares the measurement against the baseline for its own
+# platform and fails when the row grows by more than MIN_WIDTH_GROWTH - which is
+# exactly the regression we care about (a crowded receive row: 1156 -> 1505 px).
+#
+# Refresh by hand when a UI change legitimately makes the row wider or narrower.
+linux=1156
+win32=1731

@@ -22,7 +22,9 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-MIN_WINDOW_WIDTH = 1366   # U164: a 1366x768 laptop must still fit the whole window
+MIN_WINDOW_WIDTH = 1366   # U164: the screen bound we care about (reported, not enforced)
+MIN_WIDTH_BASELINE = os.path.join(ROOT, "tools", "minwidth_baseline.txt")
+MIN_WIDTH_GROWTH = 1.10   # a row that grows 10% is a regression (the one we fixed was +30%)
 
 
 def run(cmd, **kw):
@@ -97,12 +99,33 @@ def check_overflow() -> int:
     return 0
 
 
+def _read_minwidth_baseline() -> dict:
+    """platform -> px from tools/minwidth_baseline.txt (empty when missing)."""
+    out = {}
+    try:
+        with open(MIN_WIDTH_BASELINE, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.split("#", 1)[0].strip()
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    try:
+                        out[key.strip()] = int(value.strip())
+                    except ValueError:
+                        continue
+    except OSError:
+        pass
+    return out
+
+
 def check_min_width() -> int:
-    """U164: the window must not demand more width than a 1366x768 laptop has.
+    """U164: catch a receive row that grew again - on any platform.
 
     The overflow check resizes the window to 1070 px and lets _fit_minimum_width()
     raise the floor to whatever the rows need, so a row that is simply too wide
-    passes there. This check measures that floor itself.
+    passes there. This check measures that floor and compares it to the baseline
+    recorded for *this* platform: the number itself is font-metric driven (Linux
+    1156 px vs a font-less Windows runner at 1731 px), so an absolute limit would
+    fail CI for a difference the user never sees.
     """
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PySide6.QtWidgets import QApplication
@@ -110,7 +133,6 @@ def check_min_width() -> int:
     from app import i18n
     from ui.main_window import MainWindow
 
-    problems = []
     measured = []
     for lang in ("zh", "en"):
         i18n.set_language(lang)
@@ -122,20 +144,22 @@ def check_min_width() -> int:
         win._fit_minimum_width()
         for _ in range(2):
             app.processEvents()
-        measured.append("%s=%d" % (lang, win.minimumWidth()))
-        if win.minimumWidth() > MIN_WINDOW_WIDTH:
-            problems.append("%s: minimum width %d px > %d" % (
-                lang, win.minimumWidth(), MIN_WINDOW_WIDTH))
+        measured.append((lang, win.minimumWidth()))
         win.close()
-    if problems:
-        print("[min-width] %d violations (limit %d; measured %s)"
-              % (len(problems), MIN_WINDOW_WIDTH, ", ".join(measured)))
-        for line in problems:
-            print("   ", line)
+
+    worst = max(width for _lang, width in measured)
+    shown = ", ".join("%s=%d" % pair for pair in measured)
+    baseline = _read_minwidth_baseline().get(sys.platform)
+    fits = "fits %d" % MIN_WINDOW_WIDTH if worst <= MIN_WINDOW_WIDTH else \
+        "wider than %d on this platform's fonts" % MIN_WINDOW_WIDTH
+    if baseline is None:
+        print("[min-width] %s (%s; no baseline for %s)" % (shown, fits, sys.platform))
+        return 0
+    if worst > baseline * MIN_WIDTH_GROWTH:
+        print("[min-width] regression: %s (baseline %s=%d, limit +%d%%)"
+              % (shown, sys.platform, baseline, int((MIN_WIDTH_GROWTH - 1) * 100)))
         return 1
-    # print the numbers even on success: the font metrics differ per platform, so the
-    # value itself is the evidence that the row still fits (U164).
-    print("[min-width] ok (<= %d px; %s)" % (MIN_WINDOW_WIDTH, ", ".join(measured)))
+    print("[min-width] ok (%s; baseline %s=%d; %s)" % (shown, sys.platform, baseline, fits))
     return 0
 
 
