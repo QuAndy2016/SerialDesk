@@ -86,10 +86,10 @@ from ui.quick_send_panel import RAIL_W, QuickSendPanel
 from ui.retranslate import retranslate_ui
 from ui.menus import build_menu
 from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
-from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_rx_frames, on_clear, on_received, recolor_rx_view, resume_rx_display, snapshot_rx_fragments, on_reset_counters, on_filter_changed
+from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_received, recolor_rx_view, resume_rx_display, snapshot_rx_fragments, on_reset_counters, on_filter_changed
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
-from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_threshold_ms, ts_prefix, update_input_placeholder
+from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
 from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minimums, fit_settings_btn, fit_tx_edit_height, give_data_area_the_room, lock_control_widths, row_need, saved_sizes, widest_row
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
@@ -607,6 +607,8 @@ class MainWindow(QMainWindow):
 
     def _split_threshold_ms(self) -> float | None: return split_threshold_ms(self)
 
+    def _split_byte_params(self) -> dict: return split_byte_params(self)
+
     def _encoding(self) -> str: return encoding(self)
 
     def _format_rx(self, data: bytes) -> str: return format_rx(self, data)
@@ -644,6 +646,7 @@ class MainWindow(QMainWindow):
                                                    return on_received(self, ts, data)
 
     def _flush_rx_frames(self) -> None: return flush_rx_frames(self)
+    def _flush_byte_frames(self) -> None: return flush_byte_frames(self)
     def _append_header_split(self, data: bytes, ts: float): return append_header_split(self, data, ts)
 
     def on_log_line(self, line: str):

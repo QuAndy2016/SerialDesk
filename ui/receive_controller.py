@@ -48,7 +48,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from app.framing import DEFAULT_SETTLE_MS, FrameAssembler
+from app.framing import DEFAULT_SETTLE_MS, ByteFrameSplitter, FrameAssembler
 from app.protocol import (
     TEXT_ENCODINGS,
     append_checksum,
@@ -84,8 +84,9 @@ from ui.retranslate import retranslate_ui
 from ui.menus import build_menu
 from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
-                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
-                        SPLIT_MANUAL, _fixed_row, build_connection_row,
+                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_DELIMITED,
+                        SPLIT_FIXED, SPLIT_HEADER, SPLIT_MANUAL, SPLIT_TLV,
+                        _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX)  # refactor step 1
@@ -97,14 +98,47 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
 CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
+def _byte_splitter(win: MainWindow) -> ByteFrameSplitter:
+    "byte splitter"
+    """The lazy per-window byte-stream splitter for the B3 modes (U50 slot)."""
+    splitter = getattr(win, "_byte_splitter", None)
+    if splitter is None:
+        splitter = ByteFrameSplitter()
+        win._byte_splitter = splitter
+    return splitter
+
+def flush_byte_frames(win: MainWindow) -> None:
+    "flush byte frames"
+    """Emit the unfinished tail when the split rule changes or the port closes."""
+    splitter = getattr(win, "_byte_splitter", None)
+    if splitter is None:
+        return
+    tail = splitter.take_pending()
+    if not tail:
+        return
+    win._append_rx_group(win._format_rx(tail), time.monotonic(), True)
+    win._scroll_rx_bottom()
+
 def on_received(win: MainWindow, ts: float, data: bytes):
     "on received"
     win._check_auto_reply(data)
     win.rx_bytes += len(data)
     win.update_counts()
 
-    if win.split_combo.currentIndex() == SPLIT_HEADER:
+    mode = win.split_combo.currentIndex()
+    if mode == SPLIT_HEADER:
         win._append_header_split(data, ts)
+        win._last_ts = ts
+        return
+
+    if mode >= SPLIT_FIXED:
+        # B3: byte-stream modes cut frames from the bytes themselves, not timers
+        splitter = _byte_splitter(win)
+        splitter.configure(**win._split_byte_params())
+        for frame in splitter.feed(data):
+            if frame:
+                win._append_rx_group(win._format_rx(frame), ts, True)
+        win._scroll_rx_bottom()
         win._last_ts = ts
         return
 
@@ -360,6 +394,9 @@ def on_clear(win: MainWindow):
         win._undo_timer.start(5000)
     win._frame_timer.stop()
     win._frames.reset()
+    _bsplit = getattr(win, "_byte_splitter", None)   # B3: the byte tail goes too
+    if _bsplit is not None:
+        _bsplit.reset()
     win._last_ts = None
     win._rx_pause_buf = []      # U160: a pause buffer must not survive a clear
     win._rx_store = []          # U163b: the filter store goes with the display

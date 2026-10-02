@@ -104,3 +104,50 @@ def test_split_length_prefixed_drops_bad_crc():
     buf = bytes([3]) + b"ABC" + b"\x00\x00"      # wrong CRC
     frames, rest = split_length_prefixed(buf, 1, crc_bytes=2)
     assert frames == [] and rest == b""
+
+
+class TestByteFrameSplitter:
+    """B3: the stateful wrapper must keep the tail between serial chunks."""
+
+    def test_fixed_keeps_partial_tail_across_chunks(self):
+        from app.framing import ByteFrameSplitter, SPLIT_FIXED
+        bs = ByteFrameSplitter(mode=SPLIT_FIXED, size=4)
+        assert bs.feed(b"AAAA") == [b"AAAA"]
+        assert bs.feed(b"BB") == []            # half a frame, held back
+        assert bs.pending() == b"BB"
+        assert bs.feed(b"BB") == [b"BBBB"]
+        assert bs.pending() == b""
+
+    def test_delimited_across_chunks(self):
+        from app.framing import ByteFrameSplitter, SPLIT_DELIMITED
+        bs = ByteFrameSplitter(mode=SPLIT_DELIMITED, start=b"\xaa", end=b"\x55")
+        assert bs.feed(b"\xaa\x01\x02") == []
+        assert bs.pending() == b"\xaa\x01\x02"
+        assert bs.feed(b"\x55\xaa\x03\x55") == [b"\xaa\x01\x02\x55", b"\xaa\x03\x55"]
+
+    def test_delimited_without_delimiters_is_a_noop(self):
+        from app.framing import ByteFrameSplitter, SPLIT_DELIMITED
+        bs = ByteFrameSplitter(mode=SPLIT_DELIMITED, start=b"", end=b"")
+        assert bs.feed(b"anything") == []      # would otherwise loop forever
+        assert bs.pending() == b"anything"
+
+    def test_length_prefixed_across_chunks(self):
+        from app.framing import ByteFrameSplitter, SPLIT_TLV
+        bs = ByteFrameSplitter(mode=SPLIT_TLV, prefix_bytes=1)
+        assert bs.feed(b"\x03AB") == []
+        assert bs.feed(b"C\x02DE") == [b"ABC", b"DE"]
+
+    def test_take_pending_flushes_the_tail(self):
+        from app.framing import ByteFrameSplitter, SPLIT_FIXED
+        bs = ByteFrameSplitter(mode=SPLIT_FIXED, size=8)
+        bs.feed(b"XYZ")
+        assert bs.take_pending() == b"XYZ"
+        assert bs.pending() == b""
+
+    def test_reconfigure_keeps_the_tail(self):
+        from app.framing import ByteFrameSplitter, SPLIT_FIXED
+        bs = ByteFrameSplitter(mode=SPLIT_FIXED, size=8)
+        bs.feed(b"AB")
+        bs.configure(mode=SPLIT_FIXED, size=2)
+        assert bs.pending() == b"AB"           # mode switch is the caller's flush
+        assert bs.feed(b"CD") == [b"AB", b"CD"]

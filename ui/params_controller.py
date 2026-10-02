@@ -87,8 +87,9 @@ from ui.receive_controller import append_header_split, append_rx_group, emit_rx_
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
-                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
-                        SPLIT_MANUAL, _fixed_row, build_connection_row,
+                        RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_DELIMITED,
+                        SPLIT_FIXED, SPLIT_HEADER, SPLIT_MANUAL, SPLIT_TLV,
+                        _fixed_row, build_connection_row,
                         build_data_panes, build_send_group, build_status_bar)
 from app.i18n import hex_error_message, tr
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII, RX_COLUMN_HEX, column_hex)  # refactor step 1
@@ -197,14 +198,48 @@ def split_threshold_ms(win: MainWindow) -> float | None:
     # 10 ms floor: below that, USB chunk delivery (not the wire) decides (U57)
     return max(3.5 * char_ms, 10.0)
 
+def _hex_bytes(text: str) -> bytes:
+    "hex bytes"
+    """Parse a HEX delimiter field; an empty or half-typed value means none."""
+    try:
+        return hex_str_to_bytes(text)
+    except HexFormatError:
+        return b""
+
+def split_byte_params(win: MainWindow) -> dict:
+    "split byte params"
+    """Rule parameters for the active B3 byte-stream split mode."""
+    index = win.split_combo.currentIndex()
+    if index == SPLIT_FIXED:
+        return {"mode": "fixed", "size": win.split_size_spin.value()}
+    if index == SPLIT_DELIMITED:
+        return {"mode": "delimited",
+                "start": _hex_bytes(win.split_start_edit.text()),
+                "end": _hex_bytes(win.split_end_edit.text()),
+                "include": True}
+    return {"mode": "tlv",
+            "prefix_bytes": win.split_prefix_spin.value(),
+            "little": win.split_little_check.isChecked(),
+            "crc_bytes": 2 if win.split_crc_check.isChecked() else 0}
+
 def on_split_mode_changed(win: MainWindow, index: int):
     "on split mode changed"
     win._flush_rx_frames()   # don't lose a half-collected frame (U57)
+    win._flush_byte_frames()   # B3: nor a half frame from the previous rule
     if index == SPLIT_MANUAL:
         win.split_slot.setCurrentIndex(1)
         win.split_slot.setVisible(True)
     elif index == SPLIT_HEADER:
         win.split_slot.setCurrentIndex(2)
+        win.split_slot.setVisible(True)
+    elif index == SPLIT_FIXED:
+        win.split_slot.setCurrentIndex(3)
+        win.split_slot.setVisible(True)
+    elif index == SPLIT_DELIMITED:
+        win.split_slot.setCurrentIndex(4)
+        win.split_slot.setVisible(True)
+    elif index == SPLIT_TLV:
+        win.split_slot.setCurrentIndex(5)
         win.split_slot.setVisible(True)
     else:
         # U95: in auto/off mode the slot held a hint that repeated the combo's own

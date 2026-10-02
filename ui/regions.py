@@ -103,6 +103,9 @@ RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
 SPLIT_AUTO = 1
 SPLIT_HEADER = 3
 SPLIT_MANUAL = 2
+SPLIT_FIXED = 4        # B3: byte-stream split modes (params in the U50 slot)
+SPLIT_DELIMITED = 5
+SPLIT_TLV = 6
 def _fixed_row(layout: QLayout) -> QWidget:
     """Wrap a control row so it keeps its natural height (U70).
 
@@ -506,7 +509,49 @@ def _build_options_row(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     rx_layout.addWidget(_fixed_row(rx_opts))
     # U95: the slot only exists for manual/header mode; set that before the log view
     # is created, so the initial state must not run the full change handler.
-    win.split_slot.setVisible(win.split_combo.currentIndex() in (SPLIT_MANUAL, SPLIT_HEADER))
+    win.split_slot.setVisible(win.split_combo.currentIndex() >= SPLIT_MANUAL)
+
+
+def _build_byte_split_pages(win: MainWindow) -> tuple[QWidget, QWidget, QWidget]:
+    """The three B3 byte-stream parameter pages that live in the split slot."""
+    win.split_size_spin = QSpinBox()
+    win.split_size_spin.setRange(1, 65535)
+    win.split_size_spin.setValue(8)
+    win.split_size_spin.setMaximumWidth(88)
+    win.split_size_spin.setToolTip(tr("split.fixed.tip"))
+
+    win.split_start_edit = QLineEdit()
+    win.split_start_edit.setPlaceholderText(tr("split.delim.start"))
+    win.split_start_edit.setMaximumWidth(78)
+    win.split_start_edit.setToolTip(tr("split.delim.tip"))
+    win.split_end_edit = QLineEdit()
+    win.split_end_edit.setPlaceholderText(tr("split.delim.end"))
+    win.split_end_edit.setMaximumWidth(78)
+    win.split_end_edit.setToolTip(tr("split.delim.tip"))
+    delim_page = QWidget()
+    delim_row = QHBoxLayout(delim_page)
+    delim_row.setContentsMargins(0, 0, 0, 0)
+    delim_row.setSpacing(4)
+    delim_row.addWidget(win.split_start_edit)
+    delim_row.addWidget(win.split_end_edit)
+
+    win.split_prefix_spin = QSpinBox()
+    win.split_prefix_spin.setRange(1, 4)
+    win.split_prefix_spin.setValue(1)
+    win.split_prefix_spin.setMaximumWidth(64)
+    win.split_prefix_spin.setToolTip(tr("split.tlv.tip"))
+    win.split_little_check = QCheckBox(tr("split.tlv.le"))
+    win.split_little_check.setToolTip(tr("split.tlv.le.tip"))
+    win.split_crc_check = QCheckBox(tr("split.tlv.crc"))
+    win.split_crc_check.setToolTip(tr("split.tlv.crc.tip"))
+    tlv_page = QWidget()
+    tlv_row = QHBoxLayout(tlv_page)
+    tlv_row.setContentsMargins(0, 0, 0, 0)
+    tlv_row.setSpacing(6)
+    tlv_row.addWidget(win.split_prefix_spin)
+    tlv_row.addWidget(win.split_little_check)
+    tlv_row.addWidget(win.split_crc_check)
+    return win.split_size_spin, delim_page, tlv_page
 
 
 def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
@@ -514,7 +559,9 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win._split_lbl = QLabel(tr("split.label"))
     rx_opts.addWidget(win._split_lbl)
     win.split_combo = QComboBox()
-    win.split_combo.addItems([tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header")])
+    win.split_combo.addItems([
+        tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header"),
+        tr("split.fixed"), tr("split.delimited"), tr("split.tlv")])
     win.split_combo.setCurrentIndex(SPLIT_AUTO)
     win.split_combo.setToolTip(tr("split.tip"))
     win.split_combo.currentIndexChanged.connect(win._on_split_mode_changed)
@@ -535,11 +582,17 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.split_hint_lbl = QLabel(tr("split.auto.hint"))
     win.split_hint_lbl.setEnabled(False)
 
+    # B3: each byte-stream mode carries its own compact parameter page
+    fixed_page, delim_page, tlv_page = _build_byte_split_pages(win)
+
     win.split_slot = QStackedWidget()
-    win.split_slot.setMinimumWidth(132)   # the mode hint must not clip
+    win.split_slot.setMinimumWidth(156)   # the mode hint must not clip
     win.split_slot.addWidget(win.split_hint_lbl)   # 0 auto / off
     win.split_slot.addWidget(win.split_ms_edit)    # 1 manual
     win.split_slot.addWidget(win.header_edit)      # 2 by header
+    win.split_slot.addWidget(fixed_page)           # 3 fixed length (B3)
+    win.split_slot.addWidget(delim_page)           # 4 start/end delimiters (B3)
+    win.split_slot.addWidget(tlv_page)             # 5 length-prefixed / TLV (B3)
     rx_opts.addWidget(win.split_slot)
 
 

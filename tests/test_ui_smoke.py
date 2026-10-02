@@ -274,3 +274,38 @@ def test_column_hex_mode_renders_rows(app, win):
     text = win.rx_view.toPlainText()
     assert "00000000" in text and "41 42 43 44" in text and "|ABCD|" in text
     win.rx_fmt_combo.setCurrentIndex(1)          # restore HEX default
+
+
+def test_byte_split_modes_cut_frames_in_the_receive_path(app, win):
+    """B3: fixed / delimited / length-prefixed modes route bytes into real frames."""
+    from ui import regions
+
+    win.on_clear()
+    win.rx_fmt_combo.setCurrentIndex(1)      # HEX, so the assertions are literal
+
+    win.split_combo.setCurrentIndex(regions.SPLIT_FIXED)
+    assert win.split_slot.isVisible() and win.split_slot.currentIndex() == 3
+    win.split_size_spin.setValue(4)
+    win.on_received(0.0, b"AAAA")
+    win.on_received(0.0, b"BB")              # half a frame: held back
+    win.on_received(0.0, b"BB")
+    text = win.rx_view.toPlainText()
+    assert "41 41 41 41" in text and "42 42 42 42" in text
+
+    win.on_clear()
+    win.split_combo.setCurrentIndex(regions.SPLIT_DELIMITED)
+    assert win.split_slot.currentIndex() == 4
+    win.split_start_edit.setText("AA")
+    win.split_end_edit.setText("55")
+    win.on_received(0.0, b"\xaa\x01\x55")
+    assert "AA 01 55" in win.rx_view.toPlainText()
+
+    win.on_clear()
+    win.split_combo.setCurrentIndex(regions.SPLIT_TLV)
+    assert win.split_slot.currentIndex() == 5
+    win.split_prefix_spin.setValue(1)
+    win.on_received(0.0, b"\x02AB")          # prefix stripped from the shown frame
+    assert "41 42" in win.rx_view.toPlainText()
+
+    win.split_combo.setCurrentIndex(regions.SPLIT_AUTO)
+    win.on_clear()

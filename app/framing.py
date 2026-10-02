@@ -169,3 +169,83 @@ def crc16_modbus(data: bytes) -> int:
         for _ in range(8):
             crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
     return crc & 0xFFFF
+
+
+# -- B3: stateful wrappers ---------------------------------------------------
+#
+# The split_* helpers above cut a complete buffer; a serial port hands over a
+# stream, so the partial tail has to survive between chunks. These small
+# classes keep that tail and re-run the rule whenever new bytes arrive.
+
+SPLIT_FIXED = "fixed"
+SPLIT_DELIMITED = "delimited"
+SPLIT_TLV = "tlv"
+
+
+class ByteFrameSplitter:
+    """Hold a byte tail and cut frames with one of the pure B3 rules.
+
+    One instance per receive path: ``feed()`` returns the frames that became
+    complete with the new chunk, and the unfinished tail stays buffered until
+    the next chunk (or until ``take_pending()`` flushes it).
+    """
+
+    def __init__(self, mode: str = SPLIT_FIXED, size: int = 8,
+                 start: bytes = b"", end: bytes = b"", include: bool = True,
+                 prefix_bytes: int = 1, little: bool = False,
+                 crc_bytes: int = 0) -> None:
+        self._buf = bytearray()
+        self.mode = mode
+        self.size = max(1, int(size))
+        self.start = bytes(start)
+        self.end = bytes(end)
+        self.include = bool(include)
+        self.prefix_bytes = max(1, int(prefix_bytes))
+        self.little = bool(little)
+        self.crc_bytes = 2 if int(crc_bytes) else 0
+
+    def configure(self, mode: str = SPLIT_FIXED, size: int = 8,
+                  start: bytes = b"", end: bytes = b"", include: bool = True,
+                  prefix_bytes: int = 1, little: bool = False,
+                  crc_bytes: int = 0) -> None:
+        """Replace the rule without dropping the buffered tail."""
+        self.mode = mode
+        self.size = max(1, int(size))
+        self.start = bytes(start)
+        self.end = bytes(end)
+        self.include = bool(include)
+        self.prefix_bytes = max(1, int(prefix_bytes))
+        self.little = bool(little)
+        self.crc_bytes = 2 if int(crc_bytes) else 0
+
+    def feed(self, data: bytes) -> list[bytes]:
+        """Add a chunk and return the frames it completed (never a partial)."""
+        if data:
+            self._buf.extend(data)
+        frames, rest = self._cut(bytes(self._buf))
+        self._buf[:] = rest
+        return frames
+
+    def pending(self) -> bytes:
+        """The unfinished tail held for the next chunk."""
+        return bytes(self._buf)
+
+    def take_pending(self) -> bytes:
+        """Flush and clear the tail (mode change, port close, clear)."""
+        out = bytes(self._buf)
+        self._buf.clear()
+        return out
+
+    def reset(self) -> None:
+        """Drop the tail (display cleared)."""
+        self._buf.clear()
+
+    def _cut(self, buf: bytes) -> tuple[list[bytes], bytes]:
+        if self.mode == SPLIT_DELIMITED:
+            if not self.start and not self.end:
+                return [], buf          # no delimiter set yet: nothing to cut
+            return split_delimited(buf, self.start, self.end, self.include)
+        if self.mode == SPLIT_TLV:
+            return split_length_prefixed(buf, self.prefix_bytes, self.little,
+                                         self.crc_bytes)
+        return split_fixed(buf, self.size)
