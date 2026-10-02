@@ -293,6 +293,7 @@ def _build_payload_options(win: MainWindow, tx_layout: QVBoxLayout) -> None:
     mod_group = _build_text_decorations(win)
     tx_fmt_row = QHBoxLayout()
     _build_format_chip(win, tx_fmt_row)
+    _build_increment_chip(win, tx_fmt_row)     # U180
     _build_file_send(win, tx_fmt_row)
     tx_fmt_row.addStretch(1)
     tx_fmt_row.addWidget(mod_group)
@@ -334,6 +335,85 @@ def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     win.tx_fmt_combo.currentIndexChanged.connect(win._refresh_tx_settings_chip)
     win.checksum_combo.currentIndexChanged.connect(win._refresh_tx_settings_chip)
     win._refresh_tx_settings_chip()
+
+
+def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
+    """U180: send auto-increment - the {i} chip and its settings popover.
+
+    The chip only carries settings; the substitution and counter live in
+    app/increment.py + ui/send_controller.py, so the send path stays the single
+    place that knows how a frame is built.
+    """
+    saved = load_config().get("increment", {})
+    if not isinstance(saved, dict):
+        saved = {}
+
+    win.inc_check = QCheckBox(tr("inc.enable"))
+    win.inc_check.setChecked(bool(saved.get("enabled", False)))
+    win.inc_check.toggled.connect(win._on_increment_changed)
+    win.inc_start = QSpinBox()
+    win.inc_start.setRange(0, 2147483647)
+    win.inc_start.setValue(int(saved.get("start", 0) or 0))
+    win.inc_start.setToolTip(tr("inc.start.tip"))
+    win.inc_start.valueChanged.connect(win._on_increment_changed)
+    win.inc_step = QSpinBox()
+    win.inc_step.setRange(-65535, 65535)
+    win.inc_step.setValue(int(saved.get("step", 1) or 1))
+    win.inc_step.setToolTip(tr("inc.step.tip"))
+    win.inc_step.valueChanged.connect(win._on_increment_changed)
+    win.inc_width = QComboBox()
+    win.inc_width.addItems(["1", "2", "4"])
+    win.inc_width.setCurrentText(str(int(saved.get("width", 1) or 1)))
+    win.inc_width.setToolTip(tr("inc.width.tip"))
+    win.inc_width.currentIndexChanged.connect(win._on_increment_changed)
+    win.inc_endian = QComboBox()
+    win.inc_endian.addItems([tr("inc.big"), tr("inc.little")])
+    win.inc_endian.setCurrentIndex(1 if str(saved.get("endian", "big")) == "le" else 0)
+    win.inc_endian.setToolTip(tr("inc.endian.tip"))
+    win.inc_endian.currentIndexChanged.connect(win._on_increment_changed)
+    win.inc_base = QComboBox()
+    win.inc_base.addItems([tr("inc.dec"), tr("inc.hex")])
+    win.inc_base.setCurrentIndex(1 if int(saved.get("base", 10) or 10) == 16 else 0)
+    win.inc_base.setToolTip(tr("inc.base.tip"))
+    win.inc_base.currentIndexChanged.connect(win._on_increment_changed)
+    win.inc_wrap = QCheckBox(tr("inc.wrap"))
+    win.inc_wrap.setChecked(bool(saved.get("wrap", True)))
+    win.inc_wrap.setToolTip(tr("inc.wrap.tip"))
+    win.inc_wrap.toggled.connect(win._on_increment_changed)
+    win.inc_reset_btn = QPushButton(tr("inc.reset"))
+    win.inc_reset_btn.setToolTip(tr("inc.reset.tip"))
+    win.inc_reset_btn.clicked.connect(win._reset_increment)
+
+    form = QWidget()
+    col = QVBoxLayout(form)
+    col.setContentsMargins(10, 8, 10, 8)
+    col.setSpacing(6)
+    top = QHBoxLayout()
+    top.addWidget(win.inc_check)
+    top.addStretch(1)
+    top.addWidget(win.inc_reset_btn)
+    col.addLayout(top)
+    for label_key, widget in (("inc.start", win.inc_start), ("inc.step", win.inc_step),
+                              ("inc.width", win.inc_width), ("inc.endian", win.inc_endian),
+                              ("inc.base", win.inc_base)):
+        row = QHBoxLayout()
+        row.addWidget(QLabel(tr(label_key)))
+        row.addStretch(1)
+        row.addWidget(widget)
+        col.addLayout(row)
+    col.addWidget(win.inc_wrap)
+
+    win.inc_chip = QToolButton()
+    win.inc_chip.setObjectName("qsChip")
+    win.inc_chip.setText(tr("inc.chip"))
+    win.inc_chip.setToolTip(tr("inc.chip.tip"))
+    win.inc_chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+    menu = QMenu(win.inc_chip)
+    holder = QWidgetAction(menu)
+    holder.setDefaultWidget(form)
+    menu.addAction(holder)
+    win.inc_chip.setMenu(menu)
+    tx_fmt_row.addWidget(win.inc_chip)
 
 
 def _build_text_decorations(win: MainWindow) -> QWidget:

@@ -130,6 +130,8 @@ def init_state(win: MainWindow) -> None:
     win._cap_warned = False   # U45: warn once when the display cap is reached
     win._last_ts: float | None = None
     win._clock_offset = time.time() - time.monotonic()
+    _inc_saved = load_config().get("increment", {})
+    win._inc_value = int(_inc_saved.get("start", 0) or 0) if isinstance(_inc_saved, dict) else 0
 
 def init_language_and_log(win: MainWindow) -> None:
     "init language and log"

@@ -60,6 +60,7 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
+from app.increment import DEFAULT_CFG, apply_increment, has_placeholder   # U180
 from app import (
     __version__,
     update as update_check,
@@ -320,11 +321,71 @@ def apply_checksum(win: MainWindow, payload: bytes) -> bytes:
     mode = CHECKSUM_KEYS[win.checksum_combo.currentIndex()]
     return append_checksum(payload, mode)
 
+def increment_cfg(win: MainWindow) -> dict:
+    "increment cfg"
+    """U180: the increment settings as a plain dict (safe if the chip is missing)."""
+    def _int(widget, default: int) -> int:
+        try:
+            return int(widget.value())
+        except (AttributeError, TypeError, ValueError):
+            return default
+    try:
+        return {"start": _int(win.inc_start, 0), "step": _int(win.inc_step, 1),
+                "width": int(win.inc_width.currentText()),
+                "endian": "le" if win.inc_endian.currentIndex() == 1 else "big",
+                "base": 16 if win.inc_base.currentIndex() == 1 else 10,
+                "wrap": bool(win.inc_wrap.isChecked())}
+    except AttributeError:
+        return dict(DEFAULT_CFG)
+
+
+def increment_enabled(win: MainWindow) -> bool:
+    "increment enabled"
+    """U180: is the send auto-increment switched on?"""
+    box = getattr(win, "inc_check", None)
+    return bool(box is not None and box.isChecked())
+
+
+def on_increment_changed(win: MainWindow, *_args) -> None:
+    "on increment changed"
+    """U180: persist the settings and reset the counter to `start` on any change."""
+    cfg = increment_cfg(win)
+    cfg["enabled"] = increment_enabled(win)
+    config = load_config()
+    config["increment"] = cfg
+    save_config(config)
+    win._inc_value = cfg["start"]
+    chip = getattr(win, "inc_chip", None)
+    if chip is not None:
+        chip.setText(tr("inc.chip.on") if cfg["enabled"] else tr("inc.chip"))
+
+
+def reset_increment(win: MainWindow) -> None:
+    "reset increment"
+    """U180: put the counter back to its start value."""
+    win._inc_value = increment_cfg(win)["start"]
+    win._notify(tr("inc.reset.done"), "info", ms=2500)
+
+
 def on_send(win: MainWindow):
     "on send"
-    text = win.tx_edit.toPlainText().strip()
-    if not text:
+    template = win.tx_edit.toPlainText().strip()
+    if not template:
         return
+    text = template
+    exhausted = False
+    if increment_enabled(win):
+        cfg = increment_cfg(win)
+        if not has_placeholder(template):
+            win._notify(tr("inc.no_token"), "warn", ms=3500)
+        else:
+            text, nxt = apply_increment(
+                template, is_hex=(win.tx_fmt_combo.currentIndex() == 0),
+                value=int(getattr(win, "_inc_value", cfg["start"])), cfg=cfg)
+            if nxt is None:
+                exhausted = True          # this frame is the last one
+            else:
+                win._inc_value = nxt
     try:
         if win.tx_fmt_combo.currentIndex() == 0:
             payload = hex_str_to_bytes(text)
@@ -347,10 +408,14 @@ def on_send(win: MainWindow):
     win.tx_bytes += len(payload)
     win._sent_count += 1
     win._remember_send(
-        text,
+        template,          # U180: the history keeps the {i} template, not the value
         "hex" if win.tx_fmt_combo.currentIndex() == 0 else "ascii",
         len(payload))
     win.update_counts()
+    if exhausted:
+        win._stop_repeat()
+        win.quick_panel.stop_sequence()
+        win._notify(tr("inc.done"), "warn", ms=4000)
 
 def on_quick_send(win: MainWindow, payload: bytes):
     "on quick send"
