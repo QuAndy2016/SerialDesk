@@ -19,6 +19,10 @@ echo "--- UI gate (contrast / overflow / min-width + the single pytest run) ---"
 QT_QPA_PLATFORM=offscreen python3 tools/check_ui.py
 
 echo
+echo "--- process policy (change-plan sections carry the process fields) ---"
+python3 tools/check_plan_doc.py
+
+echo
 echo "--- data-path bench (zero loss + batch p95 budget) ---"
 QT_QPA_PLATFORM=offscreen python3 tools/rx_bench.py --baud 115200 --seconds 2
 
