@@ -18,6 +18,10 @@ echo
 echo "--- UI gate (contrast / overflow / min-width + the single pytest run) ---"
 QT_QPA_PLATFORM=offscreen python3 tools/check_ui.py
 
+echo
+echo "--- data-path bench (zero loss + batch p95 budget) ---"
+QT_QPA_PLATFORM=offscreen python3 tools/rx_bench.py --baud 115200 --seconds 2
+
 # Stamp this exact tree as passing so the pre-commit hook does not re-run the gate
 # for a tree we just checked (one gate run per change, not two). The key is based on
 # HEAD + the full diff vs HEAD, so it does not change when the same content is staged.
