@@ -121,7 +121,9 @@ jobs:
           Write-Host "Packaged dist\$name-win64.zip"
 
       - name: Build the Windows installer (Inno Setup, U34)
-        if: startsWith(github.ref, 'refs/tags/v')
+        # 2026-10-03 (U194): build it on every push so a broken .iss is caught before a
+        # release - the installer compile only ran on tags, so edits went unverified.
+        # Only "Publish GitHub Release" below stays tag-only.
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y | Out-Null
