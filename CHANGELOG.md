@@ -1,5 +1,22 @@
 # Changelog
 
+## [v1.9.8] - 2026-10-03
+
+### Changed
+
+- **The "will send N bytes" hint moved next to Increment** (Andy 2026-10-03): it describes the
+  payload the input box holds, so it sits with it now, in the info colour instead of body text.
+  The action column (Send / History / repeat) is narrower as a result and hands the width to the
+  input box.
+
+### Fixed
+
+- The ∞ switch shows its glyph in full: it was pinned to 24 px while the glyph needs 34, so the
+  character was clipped. It is sized naturally now; the redundant "loops" caption paid for the
+  width (the panel's minimum window width dropped to 1235 px as a side benefit).
+- README screenshots regenerated for the new send area (20 shots).
+
+
 ## [v1.9.7] - 2026-10-03
 
 ### Changed

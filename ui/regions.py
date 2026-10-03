@@ -428,6 +428,13 @@ def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     menu.addAction(holder)
     win.inc_chip.setMenu(menu)
     tx_fmt_row.addWidget(win.inc_chip)
+    # U201 (Andy): the byte hint sits right of Increment - it describes the payload the
+    # input box holds. The app stylesheet drives the font, so the smaller size is asked
+    # for by object name (QLabel#payloadHint) instead of a QFont QSS would override.
+    win.tx_size_lbl = QLabel("")
+    win.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
+    win.tx_size_lbl.setObjectName("payloadHint")
+    tx_fmt_row.addWidget(win.tx_size_lbl)
 
 
 def _build_text_decorations(win: MainWindow) -> QWidget:
@@ -561,13 +568,8 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.history_btn.clicked.connect(win._show_history)
     top_row.addWidget(win.history_btn)
     top_row.addStretch(1)
-    # U121: the payload hint sits with the actions it describes
-    win.tx_size_lbl = QLabel("")
-    win.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
-    # the app stylesheet drives the widget font, so the smaller size is asked for
-    # by object name (QLabel#payloadHint) instead of a QFont that QSS would override
-    win.tx_size_lbl.setObjectName("payloadHint")
-    top_row.addWidget(win.tx_size_lbl)
+    # U201 (Andy): the payload hint moved next to Increment (see _build_increment_chip),
+    # so this column is no longer stretched by it and its width goes to the input box.
     act_col.addLayout(top_row)
 
     bottom_row = QHBoxLayout()

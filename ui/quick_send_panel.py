@@ -206,16 +206,15 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setEnabled(False)
         self.seq_btn.clicked.connect(self.toggle_sequence)
         seq_row.addWidget(self.seq_btn)
-        # U185: loop count right after Run (0 = endless), then the sent counter, which
-        # is one font step smaller than the body text (see QLabel#qsSeqSent).
-        self._seq_loops_lbl = QLabel(tr("qs.loops"))
-        seq_row.addWidget(self._seq_loops_lbl)
+        # U185: loop count right after Run, then the sent counter, which is one font step
+        # smaller than the body text (see QLabel#qsSeqSent).
         # 2026-10-03 (Andy): "0 = endless" was a magic value and he rightly called it out.
         # The count is a plain 1..999 now; unlimited is this explicit switch (default on).
+        # The old "loops" caption was dropped: it was the width that paid for the switch, and
+        # the tooltips carry the meaning (the glyph needs ~34 px; a fixed 24 px clipped it).
         self.seq_endless = QCheckBox("\u221e")
         self.seq_endless.setToolTip(tr("qs.loops.endless.tip"))
         self.seq_endless.setChecked(True)
-        self.seq_endless.setFixedWidth(24)          # exactly the 24 px target floor
         seq_row.addWidget(self.seq_endless)
         self.seq_loops = QSpinBox()
         self.seq_loops.setRange(1, 999)

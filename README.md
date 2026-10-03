@@ -260,7 +260,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 已完成 |
 | **v1.9.5** | 删除加二次确认：点删除弹出“确认删除 N 行”对话框（默认按钮为取消，防误按回车），确认后才删除；待删行在弹窗打开前锁定；仍保留 3 秒撤销 | ✅ 已完成 |
 | **v1.9.6** | 快速发送循环次数默认改为 ∞；修复循环次数上下箭头点不动、数字被裁的问题（宽度算错）；spinbox/combo 保留 28px 下限；README 术语与乱码修正 | ✅ 已完成 |
-| **v1.9.7** | “不限次数”改为显式 ∞ 开关（序列轮数与发送区循环次数均为 1..N + ∞ 勾选），不再用 0 当无限；发送区芯片在不限时显示 ∞ | ✅ 本次发布 |
+| **v1.9.7** | “不限次数”改为显式 ∞ 开关（序列轮数与发送区循环次数均为 1..N + ∞ 勾选），不再用 0 当无限；发送区芯片在不限时显示 ∞ | ✅ 已完成 |
+| **v1.9.8** | “将发送 N 字节”提示移到「递增」右侧并改为信息色；动作列收窄、宽度让给输入框；修复 ∞ 字被裁（固定 24px 小于字形 34px）；20 张 README 截图按新布局重生 | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -441,7 +442,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 86 version tags (latest **v1.9.7**), 181 commits, 187 automated tests green
+- **Released**: 87 version tags (latest **v1.9.8**), 181 commits, 187 automated tests green
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, and the Windows installer and portable zip
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
@@ -484,7 +485,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ Done |
 | **v1.9.5** | Deleting quick-send rows asks first: a confirmation dialog ("delete the N selected rows?") with Cancel as the default button; the rows are captured before the dialog opens; the 3-second undo stays | ✅ Done |
 | **v1.9.6** | The quick-send loop count defaults to ∞; its steppers work again (the width was computed too tightly, clipping the number and the arrows); spin boxes and combos keep a 28 px floor; README wording and a corrupted character fixed | ✅ Done |
-| **v1.9.7** | "Unlimited" became an explicit ∞ switch for both the sequence rounds and the send-area repeat count (plain 1..N fields), instead of treating a count of 0 as endless; the send-area chip shows ∞ while the switch is on | ✅ This release |
+| **v1.9.7** | "Unlimited" became an explicit ∞ switch for both the sequence rounds and the send-area repeat count (plain 1..N fields), instead of treating a count of 0 as endless; the send-area chip shows ∞ while the switch is on | ✅ Done |
+| **v1.9.8** | The "will send N bytes" hint moved next to Increment in the info colour; the action column narrowed and handed the width to the input box; the ∞ glyph is no longer clipped (24 px pinned vs a 34 px glyph); the 20 README shots were regenerated | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start

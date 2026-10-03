@@ -608,7 +608,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
     "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},
     "qs.loops": {"zh": "循环", "en": "Loops"},
-    "qs.loops.tip": {"zh": "序列整体重复几轮；0 = 不限轮数（显示 ∞，手动停止）",
+    "qs.loops.tip": {"zh": "序列整体重复几轮；勾选左侧 ∞ 表示不限轮数（一直循环，手动停止）",
                      "en": "How many rounds to repeat the whole sequence; 0 = unlimited (shows ∞)"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
 }

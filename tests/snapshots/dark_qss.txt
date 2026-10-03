@@ -1,7 +1,7 @@
 
 QMainWindow { background: #1e1e2e; }
 QDialog { background: #1e1e2e; }
-QLabel#payloadHint { font-size: 12px; }
+QLabel#payloadHint { font-size: 12px; color: #8be9fd; }   /* U201: the live byte count reads as info, not as body text */
 QFrame#vSep { background: #3a3a4a; }
 QWidget { color: #d4d4d4; font-size: 13px; }
 QGroupBox {

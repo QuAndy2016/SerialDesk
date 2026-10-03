@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 _DARK_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: $fs_small; }
+QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* U201: the live byte count reads as info, not as body text */
 QFrame#vSep { background: $border_muted; }
 QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
@@ -176,7 +176,7 @@ def _render(template: str, tokens: dict[str, str]) -> str:
 _LIGHT_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: $fs_small; }
+QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* U201: the live byte count reads as info, not as body text */
 QFrame#vSep { background: $border_sep; }
 QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
