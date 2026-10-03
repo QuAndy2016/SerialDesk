@@ -26,6 +26,48 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 **Full English README** → [click here](#english-version) (or scroll to the bottom of this page).
 
+### Interface tour
+
+**Main window** — send and receive in one view, with timestamps and TX/RX counters.
+
+![Main window overview](assets/screenshots/en_01_main.png)
+
+**Quick-send panel** — saved commands as a sequence, with an endless (∞) loop.
+
+![Quick-send panel](assets/screenshots/en_02_quicksend.png)
+
+**Send settings** — escape parsing and file sending live in one compact popup.
+
+![Send settings](assets/screenshots/en_03_send_settings.png)
+
+**HEX mode** — hex send and receive, here with a CRC16-Modbus checksum.
+
+![HEX mode](assets/screenshots/en_04_hex.png)
+
+**Encoding** — GBK / UTF-8 (and more) for the receive pane, set in the port dialog.
+
+![Encoding](assets/screenshots/en_05_encoding.png)
+
+**Timestamps and display options** — per-line time, auto-scroll and the view filter.
+
+![Timestamps and display options](assets/screenshots/en_06_timestamp.png)
+
+**Find** — a search bar that highlights every match live.
+
+![Find](assets/screenshots/en_07_find.png)
+
+**Statistics** — session TX/RX counters plus a rolling throughput read-out.
+
+![Data statistics](assets/screenshots/en_08_stats.png)
+
+**Send history** — recall a past command in one click, with format and size metadata.
+
+![Send history](assets/screenshots/en_09_history.png)
+
+**Dark theme** — the same workspace, easy on the eyes at night.
+
+![Dark theme](assets/screenshots/en_10_dark.png)
+
 ---
 
 ## 这是什么
@@ -35,6 +77,48 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 但真正顺手的串口工具并不多：功能强的往往界面停留在上个十年，清爽的又缺了工程师每天都要用的那几个开关。这个项目想做的事很朴素 —— 界面现代、开箱即用、开源可改，把日常调试里最高频的能力一次做对。
 
 它不追求功能堆叠，只想成为你调试时最不需要思考的那一个窗口。
+
+### 界面截图
+
+**主界面** —— 收发同屏，时间戳与 TX/RX 计数一目了然。
+
+![主界面](assets/screenshots/zh_01_main.png)
+
+**快速发送面板** —— 常用指令编成序列，支持 ∞ 不限次数循环。
+
+![快速发送面板](assets/screenshots/zh_02_quicksend.png)
+
+**发送设置** —— 转义解析与发送文件收在一个紧凑的下拉里。
+
+![发送设置](assets/screenshots/zh_03_send_settings.png)
+
+**HEX 模式** —— 十六进制收发，这里带 CRC16-Modbus 校验。
+
+![HEX 模式](assets/screenshots/zh_04_hex.png)
+
+**多编码** —— 接收区支持 GBK / UTF-8 等编码，在串口参数对话框中设置。
+
+![多编码](assets/screenshots/zh_05_encoding.png)
+
+**时间戳与显示选项** —— 逐行时间、自动滚动与视图过滤。
+
+![时间戳与显示选项](assets/screenshots/zh_06_timestamp.png)
+
+**查找** —— 搜索栏实时高亮每一处匹配。
+
+![查找](assets/screenshots/zh_07_find.png)
+
+**数据统计** —— 会话收发计数与实时吞吐读数。
+
+![数据统计](assets/screenshots/zh_08_stats.png)
+
+**发送历史** —— 一键回填历史指令，附格式与字节数。
+
+![发送历史](assets/screenshots/zh_09_history.png)
+
+**深色主题** —— 同样的工作区，夜间更护眼。
+
+![深色主题](assets/screenshots/zh_10_dark.png)
 
 ## 下载与安装（Windows 64 位，无需 Python）
 
@@ -131,56 +215,9 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 正式图标 | 窗口 / 任务栏 / EXE 文件图标 |
 | 打包 | 安装版（setup.exe）与免安装 zip，均内置 Python 运行时 |
 
-### 界面一览
-
-<p align="center">
-  <img src="assets/shot_overview_dark.jpg" width="100%" alt="主界面 · 深色主题">
-  <br>
-  <sub>主界面 · 深色主题（收发/时间戳/校验/快捷发送，中英双语）</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_overview_light.jpg" width="100%" alt="主界面 · 浅色主题">
-  <br>
-  <sub>主界面 · 浅色主题（主题可跟随系统）</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_receive.jpg" width="49%" alt="接收区">
-  <img src="assets/shot_send.jpg" width="49%" alt="发送区">
-  <br>
-  <sub>接收区（关键词高亮 · 视图过滤 · 时间戳）· 发送区（左侧输入，右侧发送与循环按钮）</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_quicksend.jpg" width="34%" alt="快速发送面板">
-  <br>
-  <sub>快速发送面板：序列模式 · 已发次数 · 发送中高亮</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_dlg_rules.jpg" width="49%" alt="自动应答规则">
-  <img src="assets/shot_dlg_history.jpg" width="49%" alt="发送历史">
-  <br>
-  <sub>自动应答规则 · 发送历史（含格式 / 字节数）</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_dlg_port_settings.jpg" width="49%" alt="串口参数设置">
-  <img src="assets/shot_dlg_autosave.jpg" width="49%" alt="日志保存设置">
-  <br>
-  <sub>串口参数设置（数据位 / 停止位 / 校验 / 流控）· 日志保存设置</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_dlg_shortcuts.jpg" width="34%" alt="快捷键一览">
-  <br>
-  <sub>快捷键一览</sub>
-</p>
-
 ## 开发进度
 
-- **已发布**：78 个版本标签（最新 **v1.8.9**），151 次提交，155 条自动化测试全绿
+- **已发布**：86 个版本标签（最新 **v1.9.7**），178 次提交，187 条自动化测试全绿
 - **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快速发送（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包
 - **待开发**：33 项（协议解析层、波形显示、小工具箱、多串口、终端模式等；完整清单在开发任务文档里）
 
@@ -401,53 +438,6 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | Background QThread reading | all port I/O happens off the GUI thread - the UI never blocks |
 | Proper icons | window, taskbar and EXE |
 | Packaging | an installer (setup.exe) and a portable zip, both with the Python runtime bundled |
-
-### Screenshots
-
-<p align="center">
-  <img src="assets/shot_en_overview_dark.jpg" width="100%" alt="Main window, dark theme">
-  <br>
-  <sub>Main window · dark theme (I/O, timestamps, checksums, quick send; English UI shown)</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_overview_light.jpg" width="100%" alt="Main window, light theme">
-  <br>
-  <sub>Main window · light theme (the theme can follow the system)</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_receive.jpg" width="49%" alt="Receive area">
-  <img src="assets/shot_en_send.jpg" width="49%" alt="Send area">
-  <br>
-  <sub>Receive area (keyword highlight · view filter · timestamps) · Send area (input left, send + repeat right)</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_quicksend.jpg" width="34%" alt="Quick-send panel">
-  <br>
-  <sub>Quick-send panel: sequence mode · sent counter · the row being sent</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_dlg_rules.jpg" width="49%" alt="Auto-reply rules">
-  <img src="assets/shot_en_dlg_history.jpg" width="49%" alt="Send history">
-  <br>
-  <sub>Auto-reply rules · Send history (format / size per entry)</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_dlg_port_settings.jpg" width="49%" alt="Port settings">
-  <img src="assets/shot_en_dlg_autosave.jpg" width="49%" alt="Log saving settings">
-  <br>
-  <sub>Port settings (data bits / stop bits / parity / flow control) · Log saving settings</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot_en_dlg_shortcuts.jpg" width="34%" alt="Shortcut reference">
-  <br>
-  <sub>Shortcut reference</sub>
-</p>
 
 ### Progress
 
