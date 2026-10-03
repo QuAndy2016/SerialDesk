@@ -217,7 +217,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.7** | 发送历史支持多选（Ctrl/Shift）与 Ctrl+A 全选批量删除；README 文档大幅重整（下载章节按资产逐个说明、功能分类表格 + `{i}` 示例、开发进度块） | ✅ 已完成 |
 | **v1.8.8** | 换行不再需要设置：发送框与接收区一律自动换行（两处开关移除）；接收区「清空」由分裂按钮收敛为单一按钮——一次清空显示 + 计数，删掉下拉菜单与设置里的重复入口 | ✅ 已完成 |
 | **v1.8.9** | 发送区三处收敛：快速发送的 ASCII 行跟随发送区行尾；快速发送行任意模式下都能选中并删除（按钮改为「删除」）；HEX 模式下换行/转义控件改为可见但禁用并给出说明 | ✅ 已完成 |
-| **v1.9.0** | 数据通路修复与提速（ASCII 视角保留 \t \n \r、行模型单一来源、接收循环不再空转、计数合批、日志批量写盘，1 Mbps 单批 p95 67.65→2.27 ms）+ 快速发送四项（序列轮数、点击即选中删除、深色选中底色收敛、设置按钮图标化）+ 发送区四项（动作列 411→200px、文本框 364→575px、次级按钮改描边、转义与发送文件收进「发送设置」芯片、接收区「更多」样式统一） | ✅ 本次发布 |
+| **v1.9.0** | 数据通路修复与提速（ASCII 视角保留 \t \n \r、行模型单一来源、接收循环不再空转、计数合批、日志批量写盘，1 Mbps 单批 p95 67.65→2.27 ms）+ 快速发送四项（序列轮数、点击即选中删除、深色选中底色收敛、设置按钮图标化）+ 发送区四项（动作列 411→200px、文本框 364→575px、次级按钮改描边、转义与发送文件收进「发送设置」芯片、接收区「更多」样式统一） | ✅ 已完成 |
+| **v1.9.1** | 流程门禁落地（提交需带工作项号 + §31 清单标记；改动计划小节必须含 用户任务/状态/异常/验收数字；数据通路基准进正式门禁）+ UI 审查 L1 修复（点击目标统一 ≥24px 并由门禁断言、连接中/打开失败状态可见、动态行可达名补齐、控件高度收敛到 24/28/32 三档） | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -446,8 +447,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 79 version tags (latest **v1.9.0**), 158 commits, 170 automated tests green
-- **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, the Windows installer and portable zip, and the CI gate (review battery + UI gate + 170 tests)
+- **Released**: 80 version tags (latest **v1.9.1**), 166 commits, 177 automated tests green
+- **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, the Windows installer and portable zip, and the CI gate (review battery + UI gate + 177 tests)
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
 **Next development task (only this one)**: declarative protocol decoding (B4-P1) - script-free field parsing: frame headers / field lengths / data types (incl. float and endianness) / checksum rules, with built-in Modbus RTU, AT and NMEA templates; the pure parsing core first, with unit tests, then the field panel.
@@ -482,7 +483,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.8.7** | Send history takes multi-select (Ctrl/Shift) and Ctrl+A with batch delete; README reworked (download section per release asset, categorised feature tables with a `{i}` example, progress block) | ✅ Done |
 | **v1.8.8** | Wrapping needs no setting any more (send box and receive pane always wrap; both switches removed); the receive Clear split button became one plain button that clears the display and the counters together (its dropdown and the duplicate Settings entry are gone) | ✅ Done |
 | **v1.8.9** | Three send-area refinements: quick-send ASCII rows follow the line ending; quick-send rows select and delete in any mode (the button reads "Delete"); in HEX mode the line-ending / escape controls stay visible but off, with the reason in the tooltip | ✅ Done |
-| **v1.9.0** | Data-path correctness and speed (the ASCII view keeps \t \n \r, one row model for pane and store, no busy-sleep in the read loop, coalesced counters, batched log writes - 1 Mbps batch p95 67.65 -> 2.27 ms) + four quick-send refinements (sequence rounds, click-to-select delete, quieter dark selection, icon-only Settings) + four send-area refinements (action column 411 -> 200 px, payload box 364 -> 575 px, outlined secondary buttons, escapes and send-file folded into the send-settings chip, receive More button matched to the row) | ✅ This release |
+| **v1.9.0** | Data-path correctness and speed (the ASCII view keeps \t \n \r, one row model for pane and store, no busy-sleep in the read loop, coalesced counters, batched log writes - 1 Mbps batch p95 67.65 -> 2.27 ms) + four quick-send refinements (sequence rounds, click-to-select delete, quieter dark selection, icon-only Settings) + four send-area refinements (action column 411 -> 200 px, payload box 364 -> 575 px, outlined secondary buttons, escapes and send-file folded into the send-settings chip, receive More button matched to the row) | ✅ Done |
+| **v1.9.1** | Process clauses become machine-checked (a source commit must name its work item and carry the review checklist; every change-plan section must carry user task / state / failure paths / acceptance with numbers; the data-path bench joins the gate) + the UI review L1 batch (24 px pointer-target floor asserted by the gate, CONNECTING and open-failure states, accessible names on the dynamic rows, control heights down to 24/28/32) | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start
