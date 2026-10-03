@@ -443,6 +443,10 @@ class QuickSendPanel(QWidget):
             # clicking the toolbar controls that act on the selection keeps it.
             if self.selected_entries() and not self._click_keeps_selection(obj, event):
                 self.clear_selection()
+            # 2026-10-03: remember what was armed when the Delete button went down, so a
+            # press that clears the highlight cannot turn the click into a silent no-op.
+            if obj is self.del_btn and self._armed_entries():
+                self._delete_snapshot = list(self._armed_entries())
             # U118: the row is the selection unit - a press anywhere inside its rect
             # selects it (Ctrl toggles, Shift extends), the widgets keep working.
             hit = self._row_at(event)
@@ -618,10 +622,18 @@ class QuickSendPanel(QWidget):
         return False
 
     def delete_selected(self) -> None:
-        """U118/B2: delete every armed row; the main window offers a 3 s batch undo."""
-        entries = self._armed_entries()
+        """U118/B2: delete every armed row; the main window offers a 3 s batch undo.
+
+        2026-10-03: when nothing is armed the action now says so (a button that looks
+        enabled and then does nothing is the worst possible feedback), and a snapshot taken
+        when the button went down is honoured in case the press dropped the highlight.
+        """
+        entries = self._armed_entries() or list(getattr(self, "_delete_snapshot", []) or [])
+        self._delete_snapshot = []
         if entries:
             self.delete_entries(entries)
+        else:
+            self.log.emit(tr("qs.del.none"))
 
     def _row_payload(self, entry: dict) -> dict:
         name_w = entry.get("name")

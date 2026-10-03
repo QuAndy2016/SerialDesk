@@ -79,3 +79,17 @@ def test_the_disabled_button_explains_itself(app, win):
     panel.clear_selection()
     app.processEvents()
     assert panel.del_btn.toolTip()          # never an unexplained dead button
+
+
+def test_delete_without_a_selection_says_so(app, win):
+    """A click that cannot delete must report why instead of doing nothing."""
+    panel = win.quick_panel
+    panel.clear_selection()
+    app.processEvents()
+    seen = []
+    panel.log.connect(seen.append)
+    before = len(panel._rows)
+    panel.delete_selected()
+    app.processEvents()
+    assert len(panel._rows) == before
+    assert seen, "the delete must explain that nothing was selected"

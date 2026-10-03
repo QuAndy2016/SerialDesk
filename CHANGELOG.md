@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.9.4] - 2026-10-03
+
+### Fixed
+
+- **A Delete click that cannot delete now says why** (Andy 2026-10-03, after a Windows report):
+  clicking Delete with nothing armed used to do nothing at all - the worst possible feedback.
+  The action now reports "nothing selected - click the row first", and it also honours what was
+  armed when the button went down, so a press that drops the highlight can no longer turn the
+  click into a silent no-op.
+
+
 ## [v1.9.3] - 2026-10-03
 
 ### Fixed
