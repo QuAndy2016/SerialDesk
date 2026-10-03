@@ -161,6 +161,9 @@ def on_worker_error(win: MainWindow, text: str) -> None:
     else:
         key = "err.open.other"
     win._notify(tr(key, e=text), "error")
+    if not win.worker.is_open():        # L1-2: an async open failure is a state, not just a toast
+        win._opening = False
+        _show_status(win, "conn.error", "idle")
 
 def poll_signals(win: MainWindow) -> None:
     "poll signals"

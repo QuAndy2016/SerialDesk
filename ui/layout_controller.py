@@ -212,6 +212,10 @@ def lock_control_widths(win: MainWindow) -> None:
                 continue
             if wdg.isVisible():
                 wdg.setMinimumHeight(max(24, wdg.minimumHeight()))
+                # snap the odd in-between heights (25/26) onto the 24/28/32 scale so the
+                # design system has three control heights instead of nine
+                if 24 < wdg.height() < 28:
+                    wdg.setFixedHeight(24)
 
 def fit_tx_edit_height(win: MainWindow) -> None:
     "fit tx edit height"
