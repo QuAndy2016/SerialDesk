@@ -79,7 +79,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 视图过滤 | 全部 / 只看接收 / 只看发送（过滤在片断层生效，标记不串行） |
 | 关键词高亮 | 常驻高亮条：输入即高亮、不抢滚动位置，大小写可选；新到的数据同样即时高亮 |
 | 多编码 | 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码 |
-| 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送（入口在发送行的「发送设置」芯片内） |
+| 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送（入口在发送行的「发送设置」下拉按钮里） |
 | 状态栏 | 收发字节计数（等宽）+ 端口与波特率 + 连接状态灯；接收吞吐仪表：1 秒滚动窗口显示速率 / 批每秒 / 每批合并片段数 / 单批最坏耗时 / 丢帧计数 |
 
 ### 发送与快捷发送
@@ -88,14 +88,14 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 |------|------|
 | 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快速发送的 ASCII 行同样追加**；HEX 模式下选择器可见但禁用（按字节原样发送，需要行尾自己写 `0D 0A`） |
-| 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔；间隔与次数收在旁边的芯片里 |
-| 重复发送次数 | 循环可设次数；0 �  不限次数（显示 ∞，手动停止） |
+| 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔；间隔与次数收在旁边的下拉按钮里 |
+| 重复发送次数 | 循环可设次数；0 = 不限次数（显示 ∞，手动停止） |
 | 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢；勾选行或单击行即选中，点「删除」即可删除（3 秒内可撤销） |
 | 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
 | 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
 | 指令序列 | 序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化）；头部显示「已发 N 次」，正在发送的那一行高亮 |
 | 发送历史 | 最近 50 条自动记录、去重、持久化；弹窗可筛选，每条带格式/字节数/时间；**支持多选（Ctrl/Shift）与 Ctrl+A 全选后批量删除**；双击或回车回填；清空需二次确认 |
-| 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消（入口在「发送设置」芯片内，发送中行内显示「取消发送」） |
+| 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消（入口在「发送设置」下拉按钮里，发送中行内显示「取消发送」） |
 
 #### 示例：发送内容自动递增 `{i}`
 
@@ -201,7 +201,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.0.0** | **首个稳定版**：功能面收敛 —— 收发 / HEX / 分包 / 时间戳 / 校验 / 快速发送 / 指令序列 / 文件发送 / 自动应答 / 断线重连 / 日志 / 中英双语 / 安装器，进入长期维护 | ✅ 本次发布 |
 | **v1.1.0** | 快速发送面板改造（行内两段式 + 折叠双向、折叠态窄轨）、发送计数口径统一、延迟单位、修复折叠导致配置被清空的缺陷 | ✅ 本次发布 |
 | **v1.2.0** | 发送区与快速发送面板的设计改进：数据区优先的高度分配、换行符选择、设置入口、选中态生命周期、行内两段式细节 | ✅ 本次发布 |
-| **v1.3.0** | 快速发送面板与发送区空间优化：单行条目 + 属性芯片、多选删除、发送选项芯片、输入框吸收富余高度、面板折叠零占位 | ✅ 本次发布 |
+| **v1.3.0** | 快速发送面板与发送区空间优化：单行条目 + 属性按钮、多选删除、发送选项按钮、输入框吸收富余高度、面板折叠零占位 | ✅ 本次发布 |
 | **v1.4.0** | 质量批：键盘焦点环与无障碍名、诊断信息与崩溃日志、状态栏计数合并（等宽）、快捷键一览、CI 测试门禁 | ✅ 本次发布 |
 | **v1.5.0** | 启动时静默检查新版本（可关、失败静默、不发送本机信息），有新版本时状态栏提示 + 设置菜单直达下载页 | ✅ 已完成 |
 | **v1.6.0 ~ v1.6.3** | UI 批 A-D：居中图标与双折角、四类收/发过滤、接收行重排、面板标题、清空分体按钮、发送框换行、端口下拉显示全名 | ✅ 已完成 |
@@ -216,12 +216,13 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.7** | 发送历史支持多选（Ctrl/Shift）与 Ctrl+A 全选批量删除；README 文档大幅重整（下载章节按资产逐个说明、功能分类表格 + `{i}` 示例、开发进度块） | ✅ 已完成 |
 | **v1.8.8** | 换行不再需要设置：发送框与接收区一律自动换行（两处开关移除）；接收区「清空」由分裂按钮收敛为单一按钮——一次清空显示 + 计数，删掉下拉菜单与设置里的重复入口 | ✅ 已完成 |
 | **v1.8.9** | 发送区三处收敛：快速发送的 ASCII 行跟随发送区行尾；快速发送行任意模式下都能选中并删除（按钮改为「删除」）；HEX 模式下换行/转义控件改为可见但禁用并给出说明 | ✅ 已完成 |
-| **v1.9.0** | 数据通路修复与提速（ASCII 视角保留 \t \n \r、行模型单一来源、接收循环不再空转、计数合批、日志批量写盘，1 Mbps 单批 p95 67.65→2.27 ms）+ 快速发送四项（序列轮数、点击即选中删除、深色选中底色收敛、设置按钮图标化）+ 发送区四项（动作列 411→200px、文本框 364→575px、次级按钮改描边、转义与发送文件收进「发送设置」芯片、接收区「更多」样式统一） | ✅ 已完成 |
+| **v1.9.0** | 数据通路修复与提速（ASCII 视角保留 \t \n \r、行模型单一来源、接收循环不再空转、计数合批、日志批量写盘，1 Mbps 单批 p95 67.65→2.27 ms）+ 快速发送四项（序列轮数、点击即选中删除、深色选中底色收敛、设置按钮图标化）+ 发送区四项（动作列 411→200px、文本框 364→575px、次级按钮改描边、转义与发送文件收进「发送设置」下拉按钮、接收区「更多」样式统一） | ✅ 已完成 |
 | **v1.9.1** | UI 审查 L1 修复（点击目标统一 ≥24px、连接中/打开失败状态可见、动态行可达名补齐、控件高度收敛到 24/28/32 三档），并包含内部流程改进 | ✅ 已完成 |
 | **v1.9.2** | 安装器可选：可自选安装目录（修掉 Inno 默认隐藏目录页）与日志默认目录；应用按“便携版 → 配置 → 安装器选择 → 默认”解析日志目录，不可写自动回退 | ✅ 已完成 |
 | **v1.9.3** | 快速发送选中模型修正：勾选框只在序列模式下显示；序列模式下勾选=选中（可直接删）；非序列模式点行选中（Ctrl/Shift 多选）；删除按钮不可用时给出说明 tooltip | ✅ 已完成 |
 | **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 已完成 |
-| **v1.9.5** | 删除加二次确认：点删除弹出“确认删除 N 行”对话框（默认按钮为取消，防误按回车），确认后才删除；待删行在弹窗打开前锁定；仍保留 3 秒撤销 | ✅ 本次发布 |
+| **v1.9.5** | 删除加二次确认：点删除弹出“确认删除 N 行”对话框（默认按钮为取消，防误按回车），确认后才删除；待删行在弹窗打开前锁定；仍保留 3 秒撤销 | ✅ 已完成 |
+| **v1.9.6** | 快速发送循环次数默认改为 ∞；修复循环次数上下箭头点不动、数字被裁的问题（宽度算错）；spinbox/combo 保留 28px 下限；README 术语与乱码修正 | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -348,7 +349,7 @@ Both share the same notes:
 | View filter | all / RX only / TX only (filtering happens on the fragment level, markers never bleed into the wrong line) |
 | Keyword highlight | an always-on bar: highlights as you type without stealing the scroll position, case switch, and rows that arrive later are highlighted too |
 | Encodings | ASCII / UTF-8 / GBK / GB2312 for received and sent text |
-| Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally (the switch lives inside the send-settings chip) |
+| Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally (the switch lives inside the send-settings dropdown button) |
 | Status bar | RX/TX byte counters (monospaced) + port and baud + a connection light; a rolling receive-throughput read-out (rate / batches per second / fragments merged per batch / worst batch cost / dropped) |
 
 #### Sending and quick send
@@ -357,14 +358,14 @@ Both share the same notes:
 |---------|-------|
 | Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick-send ASCII rows append it too**; in HEX mode the picker stays visible but off (bytes are exact - type `0D 0A` yourself) |
-| Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval; interval and count sit in a chip beside it |
+| Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval; interval and count sit in a dropdown beside it |
 | Repeat count | optional limit; 0 = endless (shown as ∞, stop by hand) |
 | Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
 | Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
 | Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
 | Command sequence | sequence mode: each row has its own delay, press Run to fire them in order; the header shows a "sent N times" counter and the row being sent is highlighted |
 | Send history | the last 50 commands, deduplicated and persisted; filterable popup with format / size / age per entry; **multi-select (Ctrl/Shift) or Ctrl+A with batch delete**; double-click or Enter recalls it; clearing asks twice |
-| File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel (the entry is in the send-settings chip; while a transfer runs the row shows progress and Cancel) |
+| File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel (the entry is in the send-settings dropdown button; while a transfer runs the row shows progress and Cancel) |
 
 #### Example: the auto-increment placeholder `{i}`
 
@@ -449,7 +450,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 84 version tags (latest **v1.9.5**), 177 commits, 187 automated tests green
+- **Released**: 85 version tags (latest **v1.9.6**), 179 commits, 187 automated tests green
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, and the Windows installer and portable zip
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
@@ -470,7 +471,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.0.0** | **First stable release**: the feature set is closed - serial I/O, HEX, framing, timestamps, checksums, quick send, command sequences, file transfer, auto-reply, auto-reconnect, logging, Chinese + English UI, installer - and the project moves into long-term maintenance | ✅ This release |
 | **v1.1.0** | Quick-send panel rework (two-line rows, two-way fold with a labelled rail), unified send counter, visible delay unit, and a fix for folding wiping the settings | ✅ This release |
 | **v1.2.0** | Send-area and quick-send design pass: data-first heights, a line-ending picker, a real settings control, a selection that expires, and row detail fixes | ✅ This release |
-| **v1.3.0** | Quick-send and send area: one-line rows with a property chip, multi-select delete, an options chip, an input box that owns the pane's spare height, and a fold that costs no width | ✅ This release |
+| **v1.3.0** | Quick-send and send area: one-line rows with a property button, multi-select delete, an options button, an input box that owns the pane's spare height, and a fold that costs no width | ✅ This release |
 | **v1.4.0** | Quality pass: focus rings and accessible names, diagnostics plus a crash log, one monospace counter, a shortcut reference, and a CI test gate | ✅ This release |
 | **v1.5.0** | A quiet startup update check (disable-able, fails silently, sends nothing about this machine) with a status-bar note and a Settings link to the download page | ✅ This release |
 | **v1.6.0 ~ v1.6.3** | UI batches A-D: centred icons and double chevrons, a four-way RX/TX filter, a receive-row re-plan, panel titles, the clear split button, send-box wrapping, full device names in the port dropdown | ✅ Done |
@@ -485,12 +486,13 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.8.7** | Send history takes multi-select (Ctrl/Shift) and Ctrl+A with batch delete; README reworked (download section per release asset, categorised feature tables with a `{i}` example, progress block) | ✅ Done |
 | **v1.8.8** | Wrapping needs no setting any more (send box and receive pane always wrap; both switches removed); the receive Clear split button became one plain button that clears the display and the counters together (its dropdown and the duplicate Settings entry are gone) | ✅ Done |
 | **v1.8.9** | Three send-area refinements: quick-send ASCII rows follow the line ending; quick-send rows select and delete in any mode (the button reads "Delete"); in HEX mode the line-ending / escape controls stay visible but off, with the reason in the tooltip | ✅ Done |
-| **v1.9.0** | Data-path correctness and speed (the ASCII view keeps \t \n \r, one row model for pane and store, no busy-sleep in the read loop, coalesced counters, batched log writes - 1 Mbps batch p95 67.65 -> 2.27 ms) + four quick-send refinements (sequence rounds, click-to-select delete, quieter dark selection, icon-only Settings) + four send-area refinements (action column 411 -> 200 px, payload box 364 -> 575 px, outlined secondary buttons, escapes and send-file folded into the send-settings chip, receive More button matched to the row) | ✅ Done |
+| **v1.9.0** | Data-path correctness and speed (the ASCII view keeps \t \n \r, one row model for pane and store, no busy-sleep in the read loop, coalesced counters, batched log writes - 1 Mbps batch p95 67.65 -> 2.27 ms) + four quick-send refinements (sequence rounds, click-to-select delete, quieter dark selection, icon-only Settings) + four send-area refinements (action column 411 -> 200 px, payload box 364 -> 575 px, outlined secondary buttons, escapes and send-file folded into the send-settings dropdown button, receive More button matched to the row) | ✅ Done |
 | **v1.9.1** | The UI review L1 batch (24 px pointer-target floor, CONNECTING and open-failure states, accessible names on the dynamic rows, control heights down to 24/28/32) plus internal process improvements | ✅ Done |
 | **v1.9.2** | The installer lets you choose the install folder (Inno hid the destination page by default) and the default log folder; the log folder resolves portable -> config -> installer choice -> default, with an unwritable fallback | ✅ Done |
 | **v1.9.3** | Quick-send selection model fixed: the row tick shows only in sequence mode (and there a tick selects, so a ticked row can be deleted); outside the mode the click highlight selects (Ctrl/Shift for several); a disabled Delete explains itself in its tooltip | ✅ Done |
 | **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ Done |
-| **v1.9.5** | Deleting quick-send rows asks first: a confirmation dialog ("delete the N selected rows?") with Cancel as the default button; the rows are captured before the dialog opens; the 3-second undo stays | ✅ This release |
+| **v1.9.5** | Deleting quick-send rows asks first: a confirmation dialog ("delete the N selected rows?") with Cancel as the default button; the rows are captured before the dialog opens; the 3-second undo stays | ✅ Done |
+| **v1.9.6** | The quick-send loop count defaults to ∞; its steppers work again (the width was computed too tightly, clipping the number and the arrows); spin boxes and combos keep a 28 px floor; README wording and a corrupted character fixed | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start

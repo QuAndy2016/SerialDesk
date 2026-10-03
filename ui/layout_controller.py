@@ -211,10 +211,11 @@ def lock_control_widths(win: MainWindow) -> None:
             if isinstance(wdg.parentWidget(), (QComboBox, QSpinBox)):
                 continue
             if wdg.isVisible():
-                wdg.setMinimumHeight(max(24, wdg.minimumHeight()))
-                # snap the odd in-between heights (25/26) onto the 24/28/32 scale so the
-                # design system has three control heights instead of nine
-                if 24 < wdg.height() < 28:
+                # 2026-10-03: inputs keep a 28 px floor - 24 px squeezes a spin box's arrows
+                # until the number is clipped and the steppers stop responding (Andy).
+                floor = 28 if isinstance(wdg, (QSpinBox, QComboBox)) else 24
+                wdg.setMinimumHeight(max(floor, wdg.minimumHeight()))
+                if 24 < wdg.height() < 28 and floor == 24:
                     wdg.setFixedHeight(24)
 
 def fit_tx_edit_height(win: MainWindow) -> None:

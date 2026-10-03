@@ -212,11 +212,14 @@ class QuickSendPanel(QWidget):
         seq_row.addWidget(self._seq_loops_lbl)
         self.seq_loops = QSpinBox()
         self.seq_loops.setRange(0, 999)          # 0 = endless (special value text)
-        self.seq_loops.setValue(1)
+        self.seq_loops.setValue(0)               # 2026-10-03 (Andy): default is endless
         self.seq_loops.setSpecialValueText("\u221e")
         self.seq_loops.setToolTip(tr("qs.loops.tip"))
-        self.seq_loops.setFixedWidth(
-            self.seq_loops.fontMetrics().horizontalAdvance("999") + 26)
+        # 2026-10-03 (Andy): a fixed width computed from "999" + 26 left no room for the
+        # arrows, so the number was clipped and the steppers were unusable. Size it like the
+        # other numeric fields instead of pinning it.
+        self.seq_loops.setMinimumWidth(64)
+        self.seq_loops.setMaximumWidth(84)
         seq_row.addWidget(self.seq_loops)
         self.seq_sent_lbl = QLabel("")
         self.seq_sent_lbl.setObjectName("qsSeqSent")

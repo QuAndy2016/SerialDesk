@@ -1,5 +1,23 @@
 # Changelog
 
+## [v1.9.6] - 2026-10-03
+
+### Fixed
+
+- **The quick-send loop count defaults to endless** (Andy 2026-10-03): it started at 1 round;
+  the panel now opens at 0, shown as ∞.
+- **The loop-count steppers work again** (Andy 2026-10-03): its width was computed from the text
+  plus a fixed 26 px, which left no room for the arrows - the number was clipped and the up/down
+  buttons did nothing. It is sized like the other numeric fields now, and spin boxes / combos
+  keep a 28 px floor so their arrows are never squeezed.
+
+### Changed
+
+- Documentation wording: the small popup buttons are called "dropdown buttons" throughout the
+  README instead of the misleading word used before, and a corrupted character in the
+  repeat-count row is fixed.
+
+
 ## [v1.9.5] - 2026-10-03
 
 ### Changed
