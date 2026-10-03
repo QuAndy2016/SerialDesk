@@ -93,3 +93,29 @@ def test_delete_without_a_selection_says_so(app, win):
     app.processEvents()
     assert len(panel._rows) == before
     assert seen, "the delete must explain that nothing was selected"
+
+
+def test_delete_asks_for_confirmation_first(app, win):
+    """2026-10-03 (Andy): the button confirms before deleting, and Cancel keeps everything."""
+    panel = win.quick_panel
+    asked = []
+    panel._select_row(panel._rows[0], "replace")
+    app.processEvents()
+    before = len(panel._rows)
+
+    def cancel(_n):
+        asked.append("cancel")
+        return False
+
+    panel._confirm_delete = cancel
+    panel.delete_with_confirm()
+    app.processEvents()
+    assert asked == ["cancel"]
+    assert len(panel._rows) == before          # Cancel changes nothing
+
+    panel._select_row(panel._rows[0], "replace")
+    panel._confirm_delete = lambda _n: True
+    panel.delete_with_confirm()
+    app.processEvents()
+    assert len(panel._rows) == before - 1      # Confirm deletes
+    panel.clear_selection()

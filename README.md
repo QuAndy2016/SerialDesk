@@ -220,7 +220,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.9.1** | UI 审查 L1 修复（点击目标统一 ≥24px、连接中/打开失败状态可见、动态行可达名补齐、控件高度收敛到 24/28/32 三档），并包含内部流程改进 | ✅ 已完成 |
 | **v1.9.2** | 安装器可选：可自选安装目录（修掉 Inno 默认隐藏目录页）与日志默认目录；应用按“便携版 → 配置 → 安装器选择 → 默认”解析日志目录，不可写自动回退 | ✅ 已完成 |
 | **v1.9.3** | 快速发送选中模型修正：勾选框只在序列模式下显示；序列模式下勾选=选中（可直接删）；非序列模式点行选中（Ctrl/Shift 多选）；删除按钮不可用时给出说明 tooltip | ✅ 已完成 |
-| **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 本次发布 |
+| **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 已完成 |
+| **v1.9.5** | 删除加二次确认：点删除弹出“确认删除 N 行”对话框（默认按钮为取消，防误按回车），确认后才删除；待删行在弹窗打开前锁定；仍保留 3 秒撤销 | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -448,7 +449,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 83 version tags (latest **v1.9.4**), 175 commits, 186 automated tests green
+- **Released**: 84 version tags (latest **v1.9.5**), 177 commits, 187 automated tests green
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, and the Windows installer and portable zip
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
@@ -488,7 +489,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.9.1** | The UI review L1 batch (24 px pointer-target floor, CONNECTING and open-failure states, accessible names on the dynamic rows, control heights down to 24/28/32) plus internal process improvements | ✅ Done |
 | **v1.9.2** | The installer lets you choose the install folder (Inno hid the destination page by default) and the default log folder; the log folder resolves portable -> config -> installer choice -> default, with an unwritable fallback | ✅ Done |
 | **v1.9.3** | Quick-send selection model fixed: the row tick shows only in sequence mode (and there a tick selects, so a ticked row can be deleted); outside the mode the click highlight selects (Ctrl/Shift for several); a disabled Delete explains itself in its tooltip | ✅ Done |
-| **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ This release |
+| **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ Done |
+| **v1.9.5** | Deleting quick-send rows asks first: a confirmation dialog ("delete the N selected rows?") with Cancel as the default button; the rows are captured before the dialog opens; the 3-second undo stays | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start

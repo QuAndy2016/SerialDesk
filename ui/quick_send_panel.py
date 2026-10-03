@@ -227,7 +227,7 @@ class QuickSendPanel(QWidget):
         self.del_btn = QPushButton(tr("qs.del"))   # U68 plan A
         self.del_btn.setToolTip(tr("qs.del.tip"))
         self.del_btn.setEnabled(False)
-        self.del_btn.clicked.connect(self.delete_selected)
+        self.del_btn.clicked.connect(self.delete_with_confirm)
         seq_row.addWidget(self.del_btn)
         layout.addLayout(seq_row)
 
@@ -478,7 +478,7 @@ class QuickSendPanel(QWidget):
             # any text field deleted rows.
             key, mods = event.key(), event.modifiers()
             if key == Qt.Key.Key_Delete:
-                self.delete_selected()
+                self.delete_with_confirm()
                 return True
             if key == Qt.Key.Key_Escape and self.clear_selection():
                 return True
@@ -620,6 +620,39 @@ class QuickSendPanel(QWidget):
                 if row.isVisible() and row.rect().contains(row.mapFromGlobal(point)):
                     return True
         return False
+
+    def _confirm_delete(self, count: int) -> bool:
+        """Ask before a destructive action (Nielsen #5). Separated so tests can drive it.
+
+        2026-10-03 (Andy): the default button is Cancel, so an accidental Enter never
+        deletes anything.
+        """
+        from PySide6.QtWidgets import QMessageBox
+        if os.environ.get("SERIALDESK_SKIP_CONFIRM"):
+            return True          # test seam: a modal dialog would block a headless run
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(tr("qs.del.confirm.title"))
+        box.setText(tr("qs.del.confirm.text", n=count))
+        yes = box.addButton(tr("qs.del.confirm.yes"), QMessageBox.ButtonRole.AcceptRole)
+        no = box.addButton(tr("qs.del.confirm.no"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(no)
+        box.exec()
+        return box.clickedButton() is yes
+
+    def delete_with_confirm(self) -> None:
+        """Delete the armed rows behind a confirmation (Andy 2026-10-03).
+
+        The rows are captured *before* the dialog opens, so whatever happens to the
+        highlight while the dialog is up cannot turn the confirmation into a no-op.
+        """
+        entries = self._armed_entries() or list(getattr(self, "_delete_snapshot", []) or [])
+        self._delete_snapshot = []
+        if not entries:
+            self.log.emit(tr("qs.del.none"))
+            return
+        if self._confirm_delete(len(entries)):
+            self.delete_entries(entries)
 
     def delete_selected(self) -> None:
         """U118/B2: delete every armed row; the main window offers a 3 s batch undo.

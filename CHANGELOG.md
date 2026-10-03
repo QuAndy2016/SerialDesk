@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.9.5] - 2026-10-03
+
+### Changed
+
+- **Deleting quick-send rows asks first** (Andy 2026-10-03): the Delete button now opens a
+  confirmation - "delete the N selected command row(s)?" - with Cancel as the default button so
+  an accidental Enter deletes nothing. The rows are captured before the dialog opens, so nothing
+  that happens to the highlight while the dialog is up can turn the confirmation into a no-op.
+  The 3-second undo stays.
+
+
 ## [v1.9.4] - 2026-10-03
 
 ### Fixed

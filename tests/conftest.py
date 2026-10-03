@@ -21,3 +21,7 @@ os.environ.setdefault("APPDATA", str(_TMP))
 import app.config as config          # noqa: E402
 
 config.CONFIG_PATH = str(_TMP / "config.json")
+
+# A modal confirmation dialog would block any headless test that exercises the delete
+# action, so the suite switches it off; tests that check the confirmation drive it directly.
+os.environ.setdefault("SERIALDESK_SKIP_CONFIRM", "1")
