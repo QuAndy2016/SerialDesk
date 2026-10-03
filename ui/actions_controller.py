@@ -170,7 +170,9 @@ def repeat_count(win: MainWindow) -> int:
     "repeat count"
     """U171: how many repeats to send (0 = keep going until stopped)."""
     try:
-        return max(0, min(9999, int(win.repeat_times.value())))
+        if getattr(win, "repeat_endless", None) is not None and win.repeat_endless.isChecked():
+            return 0            # 2026-10-03: unlimited is the switch, not a magic count
+        return max(1, min(9999, int(win.repeat_times.value())))
     except (AttributeError, ValueError):
         return 0
 

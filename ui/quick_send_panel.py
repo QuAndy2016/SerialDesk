@@ -210,16 +210,21 @@ class QuickSendPanel(QWidget):
         # is one font step smaller than the body text (see QLabel#qsSeqSent).
         self._seq_loops_lbl = QLabel(tr("qs.loops"))
         seq_row.addWidget(self._seq_loops_lbl)
+        # 2026-10-03 (Andy): "0 = endless" was a magic value and he rightly called it out.
+        # The count is a plain 1..999 now; unlimited is this explicit switch (default on).
+        self.seq_endless = QCheckBox("\u221e")
+        self.seq_endless.setToolTip(tr("qs.loops.endless.tip"))
+        self.seq_endless.setChecked(True)
+        self.seq_endless.setFixedWidth(24)          # exactly the 24 px target floor
+        seq_row.addWidget(self.seq_endless)
         self.seq_loops = QSpinBox()
-        self.seq_loops.setRange(0, 999)          # 0 = endless (special value text)
-        self.seq_loops.setValue(0)               # 2026-10-03 (Andy): default is endless
-        self.seq_loops.setSpecialValueText("\u221e")
+        self.seq_loops.setRange(1, 999)
+        self.seq_loops.setValue(1)
         self.seq_loops.setToolTip(tr("qs.loops.tip"))
-        # 2026-10-03 (Andy): a fixed width computed from "999" + 26 left no room for the
-        # arrows, so the number was clipped and the steppers were unusable. Size it like the
-        # other numeric fields instead of pinning it.
-        self.seq_loops.setMinimumWidth(64)
-        self.seq_loops.setMaximumWidth(84)
+        self.seq_loops.setMinimumWidth(46)
+        self.seq_loops.setMaximumWidth(56)
+        self.seq_loops.setDisabled(True)
+        self.seq_endless.toggled.connect(self.seq_loops.setDisabled)
         seq_row.addWidget(self.seq_loops)
         self.seq_sent_lbl = QLabel("")
         self.seq_sent_lbl.setObjectName("qsSeqSent")
@@ -856,9 +861,11 @@ class QuickSendPanel(QWidget):
             self._seq_send_current()
 
     def _seq_loops_value(self) -> int:
-        """U170/U185: how many rounds to run (0 = endless, 1 = one pass, max 999)."""
+        """U170/U185/2026-10-03: rounds to run; 0 = unlimited, decided by the switch."""
+        if self.seq_endless.isChecked():
+            return 0
         try:
-            return max(0, min(999, int(self.seq_loops.value())))
+            return max(1, min(999, int(self.seq_loops.value())))
         except (AttributeError, ValueError):
             return 1
 

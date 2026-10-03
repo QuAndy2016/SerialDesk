@@ -319,6 +319,7 @@ def test_repeat_count_reads_the_spin(app, win):
     from ui.actions_controller import repeat_count
     win.repeat_times.setValue(0)
     assert repeat_count(win) == 0
+    win.repeat_endless.setChecked(False)      # 2026-10-03: the count applies only then
     win.repeat_times.setValue(5)
     assert repeat_count(win) == 5
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## [v1.9.7] - 2026-10-03
+
+### Changed
+
+- **"Unlimited" is an explicit switch, not a count of 0** (Andy 2026-10-03, who rightly called
+  the old rule out): both the quick-send sequence rounds and the send-area repeat count are now
+  plain 1..N fields with an ∞ switch beside them. Ticking ∞ disables the count and keeps going
+  until stopped by hand; unticking it makes the count apply. The send-area chip shows "∞" while
+  the switch is on.
+
+
 ## [v1.9.6] - 2026-10-03
 
 ### Fixed

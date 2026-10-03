@@ -89,7 +89,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快速发送的 ASCII 行同样追加**；HEX 模式下选择器可见但禁用（按字节原样发送，需要行尾自己写 `0D 0A`） |
 | 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔；间隔与次数收在旁边的下拉按钮里 |
-| 重复发送次数 | 循环可设次数；0 = 不限次数（显示 ∞，手动停止） |
+| 重复发送次数 | 循环可设次数（1–9999）；勾选「∞ 不限」则一直循环，直到手动停止 |
 | 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢；勾选行或单击行即选中，点「删除」即可删除（3 秒内可撤销） |
 | 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
 | 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
@@ -222,7 +222,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.9.3** | 快速发送选中模型修正：勾选框只在序列模式下显示；序列模式下勾选=选中（可直接删）；非序列模式点行选中（Ctrl/Shift 多选）；删除按钮不可用时给出说明 tooltip | ✅ 已完成 |
 | **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 已完成 |
 | **v1.9.5** | 删除加二次确认：点删除弹出“确认删除 N 行”对话框（默认按钮为取消，防误按回车），确认后才删除；待删行在弹窗打开前锁定；仍保留 3 秒撤销 | ✅ 已完成 |
-| **v1.9.6** | 快速发送循环次数默认改为 ∞；修复循环次数上下箭头点不动、数字被裁的问题（宽度算错）；spinbox/combo 保留 28px 下限；README 术语与乱码修正 | ✅ 本次发布 |
+| **v1.9.6** | 快速发送循环次数默认改为 ∞；修复循环次数上下箭头点不动、数字被裁的问题（宽度算错）；spinbox/combo 保留 28px 下限；README 术语与乱码修正 | ✅ 已完成 |
+| **v1.9.7** | “不限次数”改为显式 ∞ 开关（序列轮数与发送区循环次数均为 1..N + ∞ 勾选），不再用 0 当无限；发送区芯片在不限时显示 ∞ | ✅ 本次发布 |
 | **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
@@ -359,7 +360,7 @@ Both share the same notes:
 | Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick-send ASCII rows append it too**; in HEX mode the picker stays visible but off (bytes are exact - type `0D 0A` yourself) |
 | Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval; interval and count sit in a dropdown beside it |
-| Repeat count | optional limit; 0 = endless (shown as ∞, stop by hand) |
+| Repeat count | optional limit (1-9999); tick ∞ to keep going until stopped by hand |
 | Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
 | Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
 | Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
@@ -450,7 +451,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 
 ### Progress
 
-- **Released**: 85 version tags (latest **v1.9.6**), 179 commits, 187 automated tests green
+- **Released**: 86 version tags (latest **v1.9.7**), 181 commits, 187 automated tests green
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, and the Windows installer and portable zip
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
@@ -492,7 +493,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.9.3** | Quick-send selection model fixed: the row tick shows only in sequence mode (and there a tick selects, so a ticked row can be deleted); outside the mode the click highlight selects (Ctrl/Shift for several); a disabled Delete explains itself in its tooltip | ✅ Done |
 | **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ Done |
 | **v1.9.5** | Deleting quick-send rows asks first: a confirmation dialog ("delete the N selected rows?") with Cancel as the default button; the rows are captured before the dialog opens; the 3-second undo stays | ✅ Done |
-| **v1.9.6** | The quick-send loop count defaults to ∞; its steppers work again (the width was computed too tightly, clipping the number and the arrows); spin boxes and combos keep a 28 px floor; README wording and a corrupted character fixed | ✅ This release |
+| **v1.9.6** | The quick-send loop count defaults to ∞; its steppers work again (the width was computed too tightly, clipping the number and the arrows); spin boxes and combos keep a 28 px floor; README wording and a corrupted character fixed | ✅ Done |
+| **v1.9.7** | "Unlimited" became an explicit ∞ switch for both the sequence rounds and the send-area repeat count (plain 1..N fields), instead of treating a count of 0 as endless; the send-area chip shows ∞ while the switch is on | ✅ This release |
 | **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start
