@@ -24,7 +24,6 @@ DARK_TOKENS: dict[str, str] = {
     "border_muted": "#3a3a4a",
     "border_strong": "#4a4a5a",
     "border_hover": "#83839f",
-    "border_hover_soft": "#838397",
     "border_hover_rail": "#83839f",
     "focus_border": "#33404f",
     "text_primary": "#d4d4d4",
@@ -58,8 +57,7 @@ LIGHT_TOKENS: dict[str, str] = {
     "surface_disabled": "#e8e8ee",
     "surface_pressed": "#d5d5e0",
     "surface_pressed_alt": "#dcdce4",
-    "surface_secondary": "#f4f4f6",
-    "surface_secondary_hover": "#e9e9ee",
+
     "scroll_handle": "#b8b8c4",
     "scroll_handle_hover": "#9090a0",
     "border_muted": "#d0d0d8",

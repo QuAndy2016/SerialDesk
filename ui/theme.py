@@ -47,8 +47,10 @@ QPushButton {
 QPushButton:hover { background: $border_strong; }
 QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
-QPushButton[secondary="true"] { background: $surface_1; border: 1px solid $border_strong; color: $text_secondary; }
-QPushButton[secondary="true"]:hover { background: $border_muted; border-color: $border_hover_soft; }
+/* U191 (Andy): "secondary" must read as quieter, not as disabled - a grey fill is the
+   app's disabled language. Outlined instead; :disabled below still greys it out. */
+QPushButton[secondary="true"] { background: transparent; border: 1px solid $border_strong; color: $text_secondary; }
+QPushButton[secondary="true"]:hover { background: $border_muted; border-color: $border_hover; color: $text_primary; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
@@ -132,6 +134,14 @@ QToolButton#panelToggle:checked { background: $surface_pressed; border-color: $a
 QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsRail:hover { background: $border_muted; border-color: $border_hover_rail; border-left-color: $border_hover; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+/* U189 (Andy): the receive "More" menu sits in the control row, so it has to look
+   like the buttons next to it - same border, radius and weight as QPushButton. */
+QToolButton#moreBtn { color: $text_primary; background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 5px 8px; }
+QToolButton#moreBtn:hover { background: $border_strong; }
+QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_dark.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
+/* U190: the repeat toggle lives in the two-row action column; a tighter padding keeps
+   that column at or under 200 px without touching the other buttons. */
+QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid $check_border_off; border-radius: 3px; background: $surface_input; }
 QCheckBox::indicator:hover { border-color: $accent; }
 QCheckBox::indicator:checked { background: $check_bg; border-color: $check_border; image: url(__ASSETS__/check_accent.png); }
@@ -191,8 +201,9 @@ QPushButton {
 QPushButton:hover { background: $surface_soft; }
 QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
-QPushButton[secondary="true"] { background: $surface_secondary; border: 1px solid $border_secondary; color: $text_secondary; }
-QPushButton[secondary="true"]:hover { background: $surface_secondary_hover; border-color: $border_hover; }
+/* U191 (Andy): see the dark theme - outlined, not a grey fill. */
+QPushButton[secondary="true"] { background: transparent; border: 1px solid $border_secondary; color: $text_secondary; }
+QPushButton[secondary="true"]:hover { background: $surface_soft; border-color: $border_hover; color: $text_primary; }
 QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
@@ -272,6 +283,12 @@ QToolButton#panelToggle:checked { background: $surface_pressed; border-color: $a
 QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_light.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsRail:hover { background: $surface_hover; border-color: $border_hover_rail; border-left-color: $border_hover; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+/* U189 (Andy): the receive "More" menu matches the buttons beside it. */
+QToolButton#moreBtn { color: $text_primary; background: $surface_1; border: 1px solid $border_strong; border-radius: 4px; padding: 5px 8px; }
+QToolButton#moreBtn:hover { background: $surface_soft; }
+QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_light.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
+/* U190: see the dark theme - the repeat toggle keeps the action column compact. */
+QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid $check_border_off; border-radius: 3px; background: $surface_1; }
 QCheckBox::indicator:hover { border-color: $accent; }
 QCheckBox::indicator:checked { background: $accent; border-color: $check_border; image: url(__ASSETS__/check_light.png); }

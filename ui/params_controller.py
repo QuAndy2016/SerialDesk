@@ -285,7 +285,18 @@ def refresh_tx_settings_chip(win: MainWindow) -> None:
     "refresh tx settings chip"
     """U121: keep the "HEX · 无" chip in step with the two pickers it hides."""
     fmt = "HEX" if win.tx_fmt_combo.currentIndex() == 0 else "ASCII"
-    win.tx_settings_btn.setText("%s · %s" % (fmt, win.checksum_combo.currentText()))
+    # U192: keep the at-a-glance summary and add the caret that says "this opens".
+    win.tx_settings_btn.setText("%s · %s \u25be" % (fmt, win.checksum_combo.currentText()))
+
+def refresh_repeat_chip(win: MainWindow) -> None:
+    "refresh repeat chip"
+    """U190: the repeat chip shows interval and count at a glance - the same idea as
+    the format chip. The two fields live inside, their state stays visible outside."""
+    ms = (win.repeat_ms.text() or "").strip() or "?"
+    times = win.repeat_times.value()
+    count = "\u221e" if times == 0 else str(times)
+    win.repeat_chip.setText("%sms\u00d7%s" % (ms, count))
+
 
 def update_input_placeholder(win: MainWindow) -> None:
     "update input placeholder"

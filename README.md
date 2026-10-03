@@ -79,7 +79,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 视图过滤 | 全部 / 只看接收 / 只看发送（过滤在片断层生效，标记不串行） |
 | 关键词高亮 | 常驻高亮条：输入即高亮、不抢滚动位置，大小写可选；新到的数据同样即时高亮 |
 | 多编码 | 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码 |
-| 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送 |
+| 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送（入口在发送行的「发送设置」芯片内） |
 | 状态栏 | 收发字节计数（等宽）+ 端口与波特率 + 连接状态灯 |
 
 ### 发送与快捷发送
@@ -88,14 +88,14 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 |------|------|
 | 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快速发送的 ASCII 行同样追加**；HEX 模式下选择器可见但禁用（按字节原样发送，需要行尾自己写 `0D 0A`） |
-| 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔 |
+| 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔；间隔与次数收在旁边的芯片里 |
 | 重复发送次数 | 循环可设次数；0 �  不限次数（显示 ∞，手动停止） |
 | 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢；勾选行或单击行即选中，点「删除」即可删除（3 秒内可撤销） |
 | 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
 | 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
 | 指令序列 | 序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化）；头部显示「已发 N 次」，正在发送的那一行高亮 |
 | 发送历史 | 最近 50 条自动记录、去重、持久化；弹窗可筛选，每条带格式/字节数/时间；**支持多选（Ctrl/Shift）与 Ctrl+A 全选后批量删除**；双击或回车回填；清空需二次确认 |
-| 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消 |
+| 发送文件 | 文本 / HEX / 二进制按 4 KB 分块发送，带进度条与预计耗时，可中途取消（入口在「发送设置」芯片内，发送中行内显示「取消发送」） |
 
 #### 示例：发送内容自动递增 `{i}`
 
@@ -343,7 +343,7 @@ Both share the same notes:
 | View filter | all / RX only / TX only (filtering happens on the fragment level, markers never bleed into the wrong line) |
 | Keyword highlight | an always-on bar: highlights as you type without stealing the scroll position, case switch, and rows that arrive later are highlighted too |
 | Encodings | ASCII / UTF-8 / GBK / GB2312 for received and sent text |
-| Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally |
+| Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally (the switch lives inside the send-settings chip) |
 | Status bar | RX/TX byte counters (monospaced) + port and baud + a connection light |
 
 #### Sending and quick send
@@ -352,14 +352,14 @@ Both share the same notes:
 |---------|-------|
 | Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
 | Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick-send ASCII rows append it too**; in HEX mode the picker stays visible but off (bytes are exact - type `0D 0A` yourself) |
-| Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval |
+| Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval; interval and count sit in a chip beside it |
 | Repeat count | optional limit; 0 = endless (shown as ∞, stop by hand) |
 | Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
 | Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
 | Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
 | Command sequence | sequence mode: each row has its own delay, press Run to fire them in order; the header shows a "sent N times" counter and the row being sent is highlighted |
 | Send history | the last 50 commands, deduplicated and persisted; filterable popup with format / size / age per entry; **multi-select (Ctrl/Shift) or Ctrl+A with batch delete**; double-click or Enter recalls it; clearing asks twice |
-| File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel |
+| File send | text / HEX / binary files streamed in 4 KB chunks with a progress bar, ETA and cancel (the entry is in the send-settings chip; while a transfer runs the row shows progress and Cancel) |
 
 #### Example: the auto-increment placeholder `{i}`
 

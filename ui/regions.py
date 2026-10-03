@@ -308,8 +308,10 @@ def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     win.tx_settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
     win.tx_settings_btn.setToolTip(tr("tx.settings.tip"))
     _fmt_holder = QWidget()
-    _fh = QHBoxLayout(_fmt_holder)
-    _fh.setContentsMargins(8, 6, 8, 6)
+    _fcol = QVBoxLayout(_fmt_holder)
+    _fcol.setContentsMargins(8, 6, 8, 6)
+    _fcol.setSpacing(6)
+    _fh = QHBoxLayout()
     _fh.setSpacing(6)
     win._tx_fmt_lbl = QLabel(tr("txfmt.label"))
     _fh.addWidget(win._tx_fmt_lbl)
@@ -323,6 +325,21 @@ def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     win.checksum_combo.addItems([tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
     win.checksum_combo.setToolTip(tr("crc.tip"))
     _fh.addWidget(win.checksum_combo)
+    _fcol.addLayout(_fh)
+    # U192 (Andy): the escape switch and "send file" are low frequency, so they moved
+    # off the send row and into this chip - the row keeps its high-frequency controls.
+    _fh2 = QHBoxLayout()
+    _fh2.setSpacing(6)
+    win.escape_check = QCheckBox(tr("tx.escape"))
+    win.escape_check.setChecked(True)
+    win.escape_check.setToolTip(tr("tx.escape.tip"))
+    _fh2.addWidget(win.escape_check)
+    win.send_file_btn = QPushButton(tr("btn.send_file"))
+    win.send_file_btn.setToolTip(tr("btn.send_file"))
+    win.send_file_btn.clicked.connect(win.on_send_file)
+    _fh2.addWidget(win.send_file_btn)
+    _fh2.addStretch(1)
+    _fcol.addLayout(_fh2)
     _fmt_menu = QMenu(win.tx_settings_btn)
     _fmt_action = QWidgetAction(_fmt_menu)
     _fmt_action.setDefaultWidget(_fmt_holder)
@@ -414,7 +431,7 @@ def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
 
 
 def _build_text_decorations(win: MainWindow) -> QWidget:
-    """U98/U112: line ending and escape, hidden in HEX mode, in one group widget."""
+    """U98/U112/U192: the line-ending picker, kept visible (disabled) in HEX mode."""
     group = QWidget()
     win._tx_mod_group = group
     mod_row = QHBoxLayout(group)
@@ -433,20 +450,16 @@ def _build_text_decorations(win: MainWindow) -> QWidget:
     win.nl_combo.setToolTip(tr("tx.newline.tip"))
     win.nl_combo.currentIndexChanged.connect(win._persist_newline)
     mod_row.addWidget(win.nl_combo)
-    win.escape_check = QCheckBox(tr("tx.escape"))
-    win.escape_check.setChecked(True)
-    win.escape_check.setToolTip(tr("tx.escape.tip"))
-    mod_row.addWidget(win.escape_check)
+    # U192 (Andy): the escape switch moved into the send-settings chip, so this group
+    # is the line-ending picker only. escape_check is created there and is still
+    # addressed by name everywhere (retranslate / format change / tab order).
     return group
 
 
 def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
-    """U99: file sending moved up beside the checksum box; U121 payload hint."""
+    """U99/U192: the entry lives in the settings chip now; the row keeps the progress
+    feedback and a visible cancel button while a transfer is running."""
     tx_fmt_row.addSpacing(18)
-    win.send_file_btn = QPushButton(tr("btn.send_file"))
-    win.send_file_btn.setToolTip(tr("btn.send_file"))
-    win.send_file_btn.clicked.connect(win.on_send_file)
-    tx_fmt_row.addWidget(win.send_file_btn)
     win.file_progress = QProgressBar()
     win.file_progress.setRange(0, 100)
     win.file_progress.setValue(0)
@@ -455,6 +468,14 @@ def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     tx_fmt_row.addWidget(win.file_progress)
     win.file_info_lbl = QLabel("")
     tx_fmt_row.addWidget(win.file_info_lbl, 1)
+    # U192: with the entry inside the chip, "cancel send" needs a visible home of its
+    # own - it appears only while a file is being sent.
+    win.file_cancel_btn = QPushButton(tr("btn.cancel_send"))
+    win.file_cancel_btn.setToolTip(tr("btn.cancel_send"))
+    win.file_cancel_btn.setProperty("secondary", True)
+    win.file_cancel_btn.clicked.connect(win.on_send_file)
+    win.file_cancel_btn.hide()
+    tx_fmt_row.addWidget(win.file_cancel_btn)
 
 
 def _build_payload_box(win: MainWindow) -> QWidget:
@@ -554,25 +575,25 @@ def _build_action_column(win: MainWindow) -> QWidget:
     # U98: "Repeat send" starts and stops a process, so it is a toggle button that
     # reads "Stop repeat" while running - a checkbox stood in for an action before.
     win.repeat_btn = QPushButton(tr("tx.repeat"))
+    win.repeat_btn.setObjectName("repeatBtn")   # U190: compact, keeps the row ≤200 px
     win.repeat_btn.setCheckable(True)
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
     win.repeat_btn.setMinimumWidth(64)
     win.repeat_btn.setMaximumWidth(96)
     win.repeat_btn.toggled.connect(win._on_repeat_toggled)
     bottom_row.addWidget(win.repeat_btn)
-    win._repeat_lbl = QLabel(tr("tx.interval.label"))   # U31: unit lives in the label
-    bottom_row.addWidget(win._repeat_lbl)
+    # U190 (Andy): interval + count moved into one chip. As two labelled fields this
+    # row was wider than the Send/History row above, so the whole action column was
+    # stretched to this row's width and pushed the input box narrow.
+    # U31: the unit still lives in the label. U171: 0 (the infinity sign) keeps going.
+    win._repeat_lbl = QLabel(tr("tx.interval.label"))
     win.repeat_ms = QLineEdit("1000")
     win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
     win.repeat_ms.setMinimumWidth(56)
     win.repeat_ms.setMaximumWidth(76)
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win.repeat_ms.textChanged.connect(win._on_repeat_interval)
-    bottom_row.addWidget(win.repeat_ms)
-    # U171: how many repeats to send; 0 (shown as the infinity sign) keeps going
-    # until stopped - the same "0 = endless" rule as the quick-send sequence.
     win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
-    bottom_row.addWidget(win._repeat_cnt_lbl)
     win.repeat_times = QSpinBox()
     win.repeat_times.setRange(0, 9999)
     win.repeat_times.setValue(0)
@@ -580,7 +601,28 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.repeat_times.setMinimumWidth(56)
     win.repeat_times.setMaximumWidth(76)
     win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
-    bottom_row.addWidget(win.repeat_times)
+    _rep_form = QWidget()
+    _rf = QHBoxLayout(_rep_form)
+    _rf.setContentsMargins(8, 6, 8, 6)
+    _rf.setSpacing(6)
+    _rf.addWidget(win._repeat_lbl)
+    _rf.addWidget(win.repeat_ms)
+    _rf.addWidget(win._repeat_cnt_lbl)
+    _rf.addWidget(win.repeat_times)
+    win.repeat_chip = QToolButton()
+    win.repeat_chip.setObjectName("qsChip")
+    win.repeat_chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+    win.repeat_chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+    win.repeat_chip.setToolTip(tr("tx.repeat.chip.tip"))
+    _rep_menu = QMenu(win.repeat_chip)
+    _rep_action = QWidgetAction(_rep_menu)
+    _rep_action.setDefaultWidget(_rep_form)
+    _rep_menu.addAction(_rep_action)
+    win.repeat_chip.setMenu(_rep_menu)
+    win.repeat_ms.textChanged.connect(win._refresh_repeat_chip)
+    win.repeat_times.valueChanged.connect(win._refresh_repeat_chip)
+    win._refresh_repeat_chip()
+    bottom_row.addWidget(win.repeat_chip)
     bottom_row.addStretch(1)
     act_col.addLayout(bottom_row)
     act_col.addStretch(1)
@@ -744,6 +786,7 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.save_log_as_btn.hide()
 
     win.more_btn = QToolButton()
+    win.more_btn.setObjectName("moreBtn")   # U189: match the buttons beside it
     win.more_btn.setText(tr("btn.more"))
     win.more_btn.setToolTip(tr("btn.more.tip"))
     win.more_btn.setAccessibleName(tr("btn.more"))

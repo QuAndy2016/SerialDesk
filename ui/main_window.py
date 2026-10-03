@@ -89,7 +89,7 @@ from ui.log_controller import apply_autosave_settings, log_append, log_close, lo
 from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_byte_frames, flush_rx_frames, on_clear, on_clear_and_counters, on_received, recolor_rx_view, resume_rx_display, rx_tooltip, snapshot_rx_fragments, on_filter_changed
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_increment_changed, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entries, reset_increment, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
-from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
+from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_repeat_chip, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
 from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minimums, fit_settings_btn, fit_tx_edit_height, give_data_area_the_room, lock_control_widths, row_need, saved_sizes, widest_row
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
@@ -456,6 +456,8 @@ class MainWindow(QMainWindow):
     def _fit_tx_edit_height(self) -> None: return fit_tx_edit_height(self)
 
     def _refresh_tx_settings_chip(self) -> None: return refresh_tx_settings_chip(self)
+
+    def _refresh_repeat_chip(self) -> None: return refresh_repeat_chip(self)
 
     def _fit_settings_btn(self) -> None: return fit_settings_btn(self)
 

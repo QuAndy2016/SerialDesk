@@ -26,8 +26,9 @@ QPushButton {
 QPushButton:hover { background: #ececf2; }
 QPushButton:pressed { background: #dcdce4; }
 QPushButton:disabled { color: #636363; background: #e8e8ee; }
-QPushButton[secondary="true"] { background: #f4f4f6; border: 1px solid #c9c9d1; color: #44444c; }
-QPushButton[secondary="true"]:hover { background: #e9e9ee; border-color: #7f7f87; }
+/* U191 (Andy): see the dark theme - outlined, not a grey fill. */
+QPushButton[secondary="true"] { background: transparent; border: 1px solid #c9c9d1; color: #44444c; }
+QPushButton[secondary="true"]:hover { background: #ececf2; border-color: #7f7f87; color: #1f1f1f; }
 QComboBox, QLineEdit {
     background: #ffffff;
     border: 1px solid #c8c8d0;
@@ -107,6 +108,12 @@ QToolButton#panelToggle:checked { background: #d5d5e0; border-color: #1e5aa8; }
 QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #c8c8d0; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_light.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsRail:hover { background: #e0e0e8; border-color: #7a7a80; border-left-color: #7f7f87; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+/* U189 (Andy): the receive "More" menu matches the buttons beside it. */
+QToolButton#moreBtn { color: #1f1f1f; background: #ffffff; border: 1px solid #c8c8d0; border-radius: 4px; padding: 5px 8px; }
+QToolButton#moreBtn:hover { background: #ececf2; }
+QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_light.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
+/* U190: see the dark theme - the repeat toggle keeps the action column compact. */
+QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #b0b0bc; border-radius: 3px; background: #ffffff; }
 QCheckBox::indicator:hover { border-color: #1e5aa8; }
 QCheckBox::indicator:checked { background: #1e5aa8; border-color: #9dbfe8; image: url(__ASSETS__/check_light.png); }

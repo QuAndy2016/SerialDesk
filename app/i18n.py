@@ -397,6 +397,7 @@ STRINGS: dict[str, dict[str, str]] = {
                       "en": "Repeat the current input at the set interval; click once to start - the button then reads Stop repeat, click again to stop"},
     "tx.repeat.stop": {"zh": "停止循环", "en": "Stop repeat"},
     "tx.repeat.count": {"zh": "次数", "en": "Count"},
+    "tx.repeat.chip.tip": {"zh": "循环间隔与次数", "en": "Repeat interval and count"},
     "tx.repeat.count.tip": {"zh": "循环发送的次数；0 = 不限次数（显示 ∞，手动停止）",
                            "en": "How many times to repeat; 0 = unlimited (shows ∞, stop by hand)"},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},

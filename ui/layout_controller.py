@@ -192,6 +192,12 @@ def lock_control_widths(win: MainWindow) -> None:
         if isinstance(wdg, (QPushButton, QCheckBox)):
             # U101: height stays put as well - a button must not grow with the row
             wdg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+    # U189 (Andy): the More menu is a plain QToolButton, whose own sizeHint is a few
+    # pixels taller than the QPushButtons beside it; pin it to the row's button height.
+    more = getattr(win, "more_btn", None)
+    ref = getattr(win, "save_log_btn", None)
+    if more is not None and ref is not None:
+        more.setFixedHeight(ref.sizeHint().height())
 
 def fit_tx_edit_height(win: MainWindow) -> None:
     "fit tx edit height"
@@ -217,7 +223,9 @@ def fit_tx_edit_height(win: MainWindow) -> None:
         # measure the bottom of the fixed rows themselves - the action column's
         # container stretches, so its own geometry would report the row's bottom
         # U129: the options row sits above the input, the action toolbar below it
-        above_probes = [win.tx_settings_btn, win.send_file_btn, win.nl_combo]
+        # U192: send_file_btn lives inside the settings chip now (its own window), so
+        # the probes stay on widgets that are actually in this row.
+        above_probes = [win.tx_settings_btn, win.inc_chip, win.nl_combo]
         bottoms = [w.mapTo(win._tx_group, w.rect().bottomLeft()).y()
                    for w in above_probes if w.isVisible()]
         above = (max(bottoms) if bottoms else 0) + 6

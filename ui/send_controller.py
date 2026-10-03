@@ -172,7 +172,7 @@ def on_send_file(win: MainWindow):
     win.file_progress.setValue(0)
     win.file_progress.show()
     win.file_info_lbl.setText(tr("file.info", size=_human_bytes(len(data)), baud=baud, eta=eta))
-    win.send_file_btn.setText(tr("btn.cancel_send"))
+    win.file_cancel_btn.show()          # U192: the entry sits in the settings chip
     win._file_timer.start(FILE_CHUNK_MS)
 
 def send_file_chunk(win: MainWindow):
@@ -199,7 +199,7 @@ def finish_file_send(win: MainWindow):
     size = _human_bytes(len(win._file_data))
     name = os.path.basename(win._file_path)
     win._file_timer.stop()
-    win.send_file_btn.setText(tr("btn.send_file"))
+    win.file_cancel_btn.hide()
     win.file_progress.setValue(100)
     win.file_progress.hide()
     win._notify(tr("file.done", name=name, size=size), ms=5000)
@@ -207,7 +207,7 @@ def finish_file_send(win: MainWindow):
 def abort_file_send(win: MainWindow):
     "abort file send"
     win._file_timer.stop()
-    win.send_file_btn.setText(tr("btn.send_file"))
+    win.file_cancel_btn.hide()
     win.file_info_lbl.setText("")
     win.file_progress.setValue(0)
     win.file_progress.hide()

@@ -26,8 +26,10 @@ QPushButton {
 QPushButton:hover { background: #4a4a5a; }
 QPushButton:pressed { background: #2a2a3a; }
 QPushButton:disabled { color: #989898; background: #2a2a35; }
-QPushButton[secondary="true"] { background: #2d2d3d; border: 1px solid #4a4a5a; color: #cfcfcf; }
-QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #838397; }
+/* U191 (Andy): "secondary" must read as quieter, not as disabled - a grey fill is the
+   app's disabled language. Outlined instead; :disabled below still greys it out. */
+QPushButton[secondary="true"] { background: transparent; border: 1px solid #4a4a5a; color: #cfcfcf; }
+QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #83839f; color: #d4d4d4; }
 QComboBox, QLineEdit {
     background: #2d2d3d;
     border: 1px solid #4a4a5a;
@@ -111,6 +113,14 @@ QToolButton#panelToggle:checked { background: #2f2f3d; border-color: #8be9fd; }
 QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #4a4a5a; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 14px 14px; }
 QToolButton#qsRail:hover { background: #3a3a4a; border-color: #83839f; border-left-color: #83839f; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
+/* U189 (Andy): the receive "More" menu sits in the control row, so it has to look
+   like the buttons next to it - same border, radius and weight as QPushButton. */
+QToolButton#moreBtn { color: #d4d4d4; background: #3a3a4a; border: 1px solid #4a4a5a; border-radius: 4px; padding: 5px 8px; }
+QToolButton#moreBtn:hover { background: #4a4a5a; }
+QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_dark.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
+/* U190: the repeat toggle lives in the two-row action column; a tighter padding keeps
+   that column at or under 200 px without touching the other buttons. */
+QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
 QCheckBox::indicator:hover { border-color: #8be9fd; }
 QCheckBox::indicator:checked { background: #1f3a44; border-color: #4b8fa3; image: url(__ASSETS__/check_accent.png); }

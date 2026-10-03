@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **The send row is one tight block** (U190/U192, Andy 2026-10-03): the repeat interval and
+  count moved into a small chip, so the action column drops from 411 px to 200 px and the
+  payload box grows from 364 px to 575 px (dead space on its right: 252 px -> 2 px). "Escapes"
+  and "Send file" moved into the send-settings chip (now "HEX · none ▾": format / checksum /
+  escapes / send file); the row keeps the line-ending picker, and while a file is being sent
+  the row still shows the progress, the file info and a Cancel button.
+- **The History button reads as secondary, not disabled** (U191, Andy 2026-10-03): a grey
+  fill is the app's disabled language, so secondary buttons are outlined now (transparent
+  fill, border that lifts on hover). The button still greys out only when there is no history.
+- **The receive "More" button matches the row** (U189, Andy 2026-10-03): it uses the same
+  border, radius and height as Save log / Clear, with a themed dropdown arrow.
+
+
 ## [v1.8.9] - 2026-10-02
 
 ### Changed

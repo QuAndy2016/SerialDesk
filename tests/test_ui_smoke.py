@@ -169,6 +169,10 @@ def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
     The row was built and filled in, but `act_col.addLayout(repeat_row)` was lost when
     the action area became a single-line toolbar (v1.5.1), so both controls had no
     parent and were invisible - the feature was gone with no error anywhere.
+
+    U190 (2026-10-03): interval and count now live inside the repeat chip's popup, so
+    "attached" no longer means "visible in the row" - it means reachable from the chip.
+    The chip itself is the row control and must be visible.
     """
     from ui.main_window import MainWindow
 
@@ -176,11 +180,16 @@ def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
     win.show()
     for _ in range(4):
         app.processEvents()
-    for widget, name in ((win.repeat_btn, "repeat_btn"), (win.repeat_ms, "repeat_ms"),
-                         (win.send_btn, "send_btn"), (win.history_btn, "history_btn"),
-                         (win.tx_edit, "tx_edit")):
+    for widget, name in ((win.repeat_btn, "repeat_btn"), (win.send_btn, "send_btn"),
+                         (win.history_btn, "history_btn"), (win.tx_edit, "tx_edit"),
+                         (win.repeat_chip, "repeat_chip")):
         assert widget.parentWidget() is not None, "%s has no parent" % name
         assert widget.isVisible(), "%s is not visible" % name
+    # U190: the two fields are attached to the chip's popup, not to the row
+    holder = win.repeat_chip.menu().actions()[0].defaultWidget()
+    for widget, name in ((win.repeat_ms, "repeat_ms"), (win.repeat_times, "repeat_times")):
+        assert widget.parentWidget() is not None, "%s has no parent" % name
+        assert holder.isAncestorOf(widget), "%s is not inside the repeat chip" % name
     # with no port open the toggle must refuse to start a loop (U61) and reset itself
     win.repeat_btn.setChecked(True)
     assert not win._repeat_timer.isActive()

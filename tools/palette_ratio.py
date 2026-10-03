@@ -36,9 +36,9 @@ from ui.tokens import DARK_TOKENS, LIGHT_TOKENS                   # noqa: E402
 #:   alert   <= 2%    (error/danger colours)
 PLANES = ("bg_base", "surface_1", "surface_input", "surface_soft", "surface_hover",
           "surface_disabled", "surface_pressed", "surface_pressed_alt",
-          "surface_secondary", "surface_secondary_hover", "scroll_track", "scroll_handle")
+          "scroll_track", "scroll_handle")
 DETAIL = ("border_muted", "border_strong", "border_sep", "border_hover",
-          "border_hover_soft", "border_hover_rail", "border_secondary", "focus_border",
+          "border_hover_rail", "border_secondary", "focus_border",
           "focus_bg", "text_primary", "text_strong", "text_secondary", "text_disabled",
           "chip_text", "selection_text", "selection_bg")
 ACCENT = ("accent",)
