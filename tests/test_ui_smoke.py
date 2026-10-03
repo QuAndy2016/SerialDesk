@@ -314,14 +314,33 @@ def test_sequence_loop_rule():
     assert loop_should_continue(99, 0) is True
 
 
-def test_repeat_count_reads_the_spin(app, win):
-    # U171: 0 means endless, any other value is the target
+def test_repeat_count_reads_the_switch_and_the_spin(app, win):
+    # U199: 0 is not a magic count any more - the ∞ switch decides, the spin is 1..9999
     from ui.actions_controller import repeat_count
-    win.repeat_times.setValue(0)
-    assert repeat_count(win) == 0
-    win.repeat_endless.setChecked(False)      # 2026-10-03: the count applies only then
+    win.repeat_endless.setChecked(True)
+    win.repeat_times.setValue(7)
+    assert repeat_count(win) == 0             # unlimited comes from the switch
+    win.repeat_endless.setChecked(False)
     win.repeat_times.setValue(5)
     assert repeat_count(win) == 5
+    win.repeat_times.setValue(0)              # the spin clamps to 1, so 0 cannot mean endless
+    assert repeat_count(win) == 1
+
+
+def test_repeat_count_falls_back_to_one_send(app, win):
+    """2026-10-03 (review): a read failure must not be read as "keep sending forever"."""
+    from ui.actions_controller import repeat_count
+
+    class _Boom:
+        def value(self):
+            raise ValueError("no value")
+
+    win.repeat_endless.setChecked(False)
+    real, win.repeat_times = win.repeat_times, _Boom()
+    try:
+        assert repeat_count(win) == 1
+    finally:
+        win.repeat_times = real
 
 
 def test_repeat_tick_stops_after_the_count(app, win):

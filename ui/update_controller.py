@@ -8,6 +8,7 @@ import shutil
 import sys
 import time
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from shiboken6 import isValid      # 2026-10-03: a probe can outlive its window (see _deliver)
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
@@ -107,6 +108,27 @@ class _UpdateProbe(QObject):
 
     found = Signal(str)          # a newer tag exists (startup or manual)
     checked = Signal(bool, str)  # manual probe done: (ok, tag_or_reason)
+
+
+def _deliver(win: MainWindow, signal_name: str, *args) -> None:
+    """Hand a probe answer to the GUI thread - if a window is still there to take it.
+
+    2026-10-03 (review): the probe runs on a daemon thread and can outlive the window it
+    reports to, because closing a window destroys the C++ object behind it. The emit then
+    raised RuntimeError *inside that thread*, and nothing saw it: threading.excepthook only
+    writes to stderr, sys.excepthook is never called for thread exceptions, and the packaged
+    windowed build has no console - so the traceback vanished. Dropping a late answer is the
+    correct outcome: no window means nobody to notify.
+    """
+    try:
+        probe = win._update_probe
+        if not isValid(probe):
+            return
+        getattr(probe, signal_name).emit(*args)
+    except RuntimeError:      # PySide refuses access once the C++ object behind it is gone
+        return
+
+
 def init_update_check(win: MainWindow) -> None:
     "init update check"
     """A quiet look at the latest release; nothing is sent about the user."""
@@ -152,12 +174,12 @@ def probe_updates_worker(win: MainWindow, manual: bool = False) -> None:
         tag = update_check.fetch_latest_tag(raise_on_error=manual)
     except (OSError, ValueError, KeyError):   # a check must never break the app
         if manual:
-            win._update_probe.checked.emit(False, "")
+            _deliver(win, "checked", False, "")
         return
     if manual:
-        win._update_probe.checked.emit(True, tag)
+        _deliver(win, "checked", True, tag)
     elif tag:
-        win._update_probe.found.emit(tag)      # queued onto the GUI thread
+        _deliver(win, "found", tag)            # queued onto the GUI thread
 
 def on_update_checked(win: MainWindow, ok: bool, tag: str) -> None:
     """N10: a manual probe came back - tell the user what it found."""

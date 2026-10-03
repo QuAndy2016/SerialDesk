@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **A failed read of the repeat count can no longer turn into "send forever"**: the repeat loop
+  used to fall back to its unlimited value (0) whenever the count field could not be read. It now
+  falls back to a single send, the same choice the quick-send rounds already made.
+- **The send-area and quick-send tooltips describe the ∞ switch**, in both languages, instead of the
+  old "0 = unlimited" rule - that rule is gone, the count field only takes 1..N now.
+- **A late update-check answer can no longer raise inside its worker thread**: the check runs in the
+  background and can outlive the window it reports to. The answer is dropped when the window is gone;
+  before, the error was printed to stderr, which the packaged windowed build does not show.
+
 ## [v1.9.8] - 2026-10-03
 
 ### Changed

@@ -418,8 +418,8 @@ STRINGS: dict[str, dict[str, str]] = {
                            "en": "Delete the {n} selected command row(s)? You can undo within 3 seconds."},
     "qs.del.confirm.yes": {"zh": "删除", "en": "Delete"},
     "qs.del.confirm.no": {"zh": "取消", "en": "Cancel"},
-    "tx.repeat.count.tip": {"zh": "循环发送的次数；0 = 不限次数（显示 ∞，手动停止）",
-                           "en": "How many times to repeat; 0 = unlimited (shows ∞, stop by hand)"},
+    "tx.repeat.count.tip": {"zh": "循环发送的次数；勾选左侧 ∞ 表示不限次数（一直循环，手动停止）",
+                           "en": "How many times to repeat; tick ∞ on the left to repeat until stopped by hand"},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
     "tx.sent_count": {"zh": "已发送 {n} 次", "en": "sent \u00d7{n}"},
@@ -609,7 +609,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},
     "qs.loops": {"zh": "循环", "en": "Loops"},
     "qs.loops.tip": {"zh": "序列整体重复几轮；勾选左侧 ∞ 表示不限轮数（一直循环，手动停止）",
-                     "en": "How many rounds to repeat the whole sequence; 0 = unlimited (shows ∞)"},
+                     "en": "How many rounds to repeat the whole sequence; tick ∞ on the left for unlimited (keeps going until stopped)"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
 }
 
