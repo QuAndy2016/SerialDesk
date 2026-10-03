@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.9.3] - 2026-10-03
+
+### Fixed
+
+- **The quick-send Delete button could not be used after ticking a row** (Andy 2026-10-03): the
+  row tick is the sequence's member flag, but it looked exactly like a selection, so ticking a
+  row and reaching for Delete did nothing. The tick is now shown only in sequence mode, and
+  inside that mode ticking a row also selects it - there the tick *is* the row's primary state,
+  so deleting a ticked row works. Outside the mode the click highlight is the selection
+  (Ctrl / Shift for several), and a disabled Delete explains itself in its tooltip instead of
+  being a dead grey button.
+
+
 ## [v1.9.2] - 2026-10-03
 
 ### Added

@@ -405,6 +405,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.repeat.stop": {"zh": "停止循环", "en": "Stop repeat"},
     "tx.repeat.count": {"zh": "次数", "en": "Count"},
     "tx.repeat.chip.tip": {"zh": "循环间隔与次数", "en": "Repeat interval and count"},
+    "qs.del.none.tip": {"zh": "先点一行选中（Ctrl/Shift 可多选），再点删除；序列模式下勾选的行也可直接删",
+                        "en": "Click a row to select it first (Ctrl/Shift for several), then Delete; in sequence mode a ticked row can be deleted too"},
     "tx.repeat.count.tip": {"zh": "循环发送的次数；0 = 不限次数（显示 ∞，手动停止）",
                            "en": "How many times to repeat; 0 = unlimited (shows ∞, stop by hand)"},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},

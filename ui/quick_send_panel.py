@@ -319,6 +319,9 @@ class QuickSendPanel(QWidget):
         sel.setToolTip(tr("qs.sel.tip"))
         sel.setAccessibleName(tr("qs.sel.tip"))     # U122
         sel.toggled.connect(self._renumber_selection)
+        # 2026-10-03: the tick only exists in sequence mode - outside it, a tick looked like
+        # a selection but armed nothing (the "Delete does not work" report).
+        sel.setVisible(bool(getattr(self, "seq_check", None) and self.seq_check.isChecked()))
         h.addWidget(sel)
         # U80: the sequence number is a tiny label pinned to the checkbox corner.
         # It stays out of the layout so it neither widens the row nor eats stretch.
@@ -534,7 +537,9 @@ class QuickSendPanel(QWidget):
         count = len(self._armed_entries())
         self.del_btn.setEnabled(count > 0)
         self.del_btn.setText(tr("qs.del"))
-        self.del_btn.setToolTip(tr("qs.del.tip"))
+        # 2026-10-03: an explanation instead of a dead grey button (FMEA: make the
+        # disabled state diagnosable).
+        self.del_btn.setToolTip(tr("qs.del.tip") if count > 0 else tr("qs.del.none.tip"))
 
     def _armed_entries(self) -> list:
         """U186 (Andy 2026-10-03): the rows the delete action removes.
@@ -652,9 +657,13 @@ class QuickSendPanel(QWidget):
                 order += 1
                 widget.setText(str(order))
                 widget.show()
+                if entry["sel"].isVisible():
+                    self._paint_row(entry, True)      # in sequence mode a tick selects
             else:
                 widget.setText("")
                 widget.hide()
+                if entry["sel"].isVisible():
+                    self._paint_row(entry, False)
         self._place_order_badges()
 
     def _sequence_targets(self) -> list:
@@ -703,13 +712,18 @@ class QuickSendPanel(QWidget):
             self.clear_selection()
 
     def set_rows_selectable(self, enabled: bool = True) -> None:
-        """U186 (Andy 2026-10-03): the row ticks belong to sequence mode.
+        """2026-10-03 (Andy): the row tick belongs to sequence mode, and only there.
 
-        They say which rows the sequence sends and in what order - they are not a
-        delete selection. Deleting follows the click highlight (see _armed_entries).
+        Outside sequence mode the tick had no meaning yet still looked like a selection, so
+        ticking a row and then reaching for Delete did nothing. The tick is now hidden when
+        the mode is off; inside the mode a tick also selects the row, because there the tick
+        *is* the row's primary state and deleting a ticked row must work.
         """
         for entry in self._rows:
-            entry["sel"].setEnabled(bool(enabled))
+            entry["sel"].setVisible(bool(enabled))
+            if not enabled and entry["sel"].isChecked():
+                entry["sel"].setChecked(False)
+        self._update_del_btn()
 
     def toggle_sequence(self) -> None:
         """Start the row-by-row sequence, or stop it when already running."""
