@@ -24,8 +24,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install pyinstaller
+          # Pinned via constraints.txt so the bundle is the same on every build (U204);
+          # constraints cap versions without installing anything on their own.
+          pip install -r requirements.txt -c constraints.txt
+          pip install pyinstaller -c constraints.txt
 
       - name: Get version
         id: ver

@@ -9,6 +9,12 @@
   校验支持 none/sum8/xor8(BCC)/CRC16-Modbus/CRC16-CCITT/CRC32。内置 Modbus RTU、AT、NMEA 0183 三个模板。
   纯逻辑（不依赖界面），坏输入一律返回结构化错误而不抛异常。字段面板与帧列表在 B4-P2。
 
+### Changed
+
+- **构建可复现（U204）**：新增 `constraints.txt` 钉住构建期依赖版本（PySide6 / pyserial / PyInstaller），
+  CI 与本地构建装到同一组版本。此前 workflow 使用 `>=` 范围且不锁 pyinstaller，
+  同一个提交在不同日期可能打出不同的包。`requirements.txt` 的宽松范围保持不动，从源码运行不受影响。
+
 ### Fixed
 
 - **A failed read of the repeat count can no longer turn into "send forever"**: the repeat loop
