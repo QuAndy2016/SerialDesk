@@ -611,6 +611,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.loops.tip": {"zh": "序列整体重复几轮；勾选左侧 ∞ 表示不限轮数（一直循环，手动停止）",
                      "en": "How many rounds to repeat the whole sequence; tick ∞ on the left for unlimited (keeps going until stopped)"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
+    # B4-P1 declarative parser: error codes and template names (used by the field panel
+    # that lands with B4-P2; the kernel itself is Qt-free and has no user-visible text).
+    "parse.err.truncated": {"zh": "帧被截断：字节数不够读完字段", "en": "Truncated frame: not enough bytes for the fields"},
+    "parse.err.checksum_mismatch": {"zh": "校验不通过", "en": "Checksum mismatch"},
+    "parse.err.bad_length": {"zh": "长度字段无效或尚未解码", "en": "Length field is invalid or not decoded yet"},
+    "parse.err.bad_field": {"zh": "字段无法解析", "en": "Field cannot be decoded"},
+    "parse.err.unknown_function": {"zh": "不支持的功能码", "en": "Unsupported function code"},
+    "parse.err.bad_spec": {"zh": "解析规则无效", "en": "Invalid parse rule"},
+    "parse.tpl.modbus-rtu": {"zh": "Modbus RTU", "en": "Modbus RTU"},
+    "parse.tpl.at": {"zh": "AT 指令", "en": "AT commands"},
+    "parse.tpl.nmea-0183": {"zh": "NMEA 0183", "en": "NMEA 0183"},
 }
 
 

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- **声明式协议解析内核（B4-P1，内部，尚无可视入口）**：按声明式规则切帧与解码——帧头/定长/长度字段/定界符，
+  字段类型含整数、f32/f64（大小端可选）、ASCII/字节、位段、变长字段（长度引用另一字段）、scale/bias/单位；
+  校验支持 none/sum8/xor8(BCC)/CRC16-Modbus/CRC16-CCITT/CRC32。内置 Modbus RTU、AT、NMEA 0183 三个模板。
+  纯逻辑（不依赖界面），坏输入一律返回结构化错误而不抛异常。字段面板与帧列表在 B4-P2。
+
 ### Fixed
 
 - **A failed read of the repeat count can no longer turn into "send forever"**: the repeat loop
