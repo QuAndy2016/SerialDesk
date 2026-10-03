@@ -519,15 +519,24 @@ def test_quick_send_rows_follow_the_line_ending(app, win):
         app.processEvents()
 
 
-def test_quick_send_row_payload_carries_its_format(app, win):
+def test_quick_send_row_payload_carries_its_format(app, win, monkeypatch):
     """The panel tells the controller whether the row is HEX - that flag is what
-    decides if the line ending is appended."""
+    decides if the line ending is appended.
+
+    Run from source the app reads the repository's config.json, which can be full of
+    a developer's own rows; add_row then refuses and the two rows under test never
+    exist. Raise the cap for this test so it never depends on that machine state.
+    """
+    import ui.quick_send_panel as qsp
+
     panel = win.quick_panel
+    monkeypatch.setattr(qsp, "MAX_ENTRIES", len(panel._rows) + 2)
     seen = []
     panel.send_payload.connect(lambda payload, is_hex: seen.append((payload, is_hex)))
     panel.add_row("AT", is_hex=False)
     panel.add_row("41 54", is_hex=True)
     app.processEvents()
+    assert len(panel._rows) >= 2
     panel._send_row(panel._rows[-2]["widget"])
     panel._send_row(panel._rows[-1]["widget"])
     app.processEvents()
