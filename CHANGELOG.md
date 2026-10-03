@@ -1,8 +1,37 @@
 # Changelog
 
-## [Unreleased]
+## [v1.9.0] - 2026-10-03
+
+### Fixed
+
+- **The ASCII view keeps line structure** (data-path, Andy 2026-10-03): `\t`, `\n` and `\r`
+  arriving from the device were rendered as "." like any other non-printable byte, so a
+  three-line `T=24.6C\nVIN=12.12V\n` collapsed into one very long line - a correctness bug
+  and a layout performance trap at once. Line control characters pass through now; every
+  other non-printable byte still shows as ".". Measured batch cost at 1 Mbps: p50 36.56 ->
+  1.70 ms, p95 67.65 -> 2.27 ms.
+- **One row model for the pane and the fragment store** (data-path P0): the display and the
+  fragment store could disagree about line structure (an embedded newline was one store entry
+  but two document blocks). Both derive from `display.rows_from_fragments()` now.
+- **The receive loop no longer busy-sleeps** (data-path P1): `sleep(0.001)` became a 5 ms
+  blocking read plus coalescing (4096 B or 10 ms of silence), so a fast line cannot overflow
+  the driver buffer - "data stops mid-stream" is gone.
 
 ### Changed
+
+- **Counters, fragment formats and dropped frames** (data-path P1): status counters coalesce
+  on a 100 ms timer, per-kind `QTextCharFormat`s are cached (and invalidated on a theme
+  change), and a full TX queue reports a running count instead of a single toast.
+- **Log writes are batched** (data-path P1): auto-save flushes in 8 KB / 200 ms windows
+  (flushed when a session closes), so a crash costs at most 200 ms of log.
+- **Quick-send sequence rounds** (U185, Andy 2026-10-03): the header carries the run count
+  (1 = one pass) and the "sent N" hint is smaller.
+- **Quick-send delete follows the click** (U186, Andy 2026-10-03): ticking belongs to sequence
+  mode; a plain click selects a row for deletion, and the hover tint no longer reads as a
+  selection.
+- **Quieter dark-theme selection** (U187): the text-selection colour no longer swallows the
+  text in dark mode.
+- **Settings is an icon-only button** (U188): the connection row got about 60 px back.
 
 - **The send row is one tight block** (U190/U192, Andy 2026-10-03): the repeat interval and
   count moved into a small chip, so the action column drops from 411 px to 200 px and the
