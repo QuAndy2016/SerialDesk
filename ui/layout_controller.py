@@ -198,6 +198,20 @@ def lock_control_widths(win: MainWindow) -> None:
     ref = getattr(win, "save_log_btn", None)
     if more is not None and ref is not None:
         more.setFixedHeight(ref.sizeHint().height())
+    # Standard clause 16b / WCAG 2.5.8: a pointer target is at least 24x24 px. Row-level
+    # controls (quick-send buttons and ticks, option chips) came out 18-23 px tall. Raise
+    # the *hit* height, not the glyph: pad the control so the visual density is unchanged.
+    from PySide6.QtWidgets import QAbstractButton, QComboBox, QLineEdit, QSpinBox
+    for wdg in win.findChildren(QAbstractButton):
+        if wdg.isVisible():
+            wdg.setMinimumHeight(max(24, wdg.minimumHeight()))
+    for cls in (QComboBox, QSpinBox, QLineEdit):
+        for wdg in win.findChildren(cls):
+            # the internal editor of a spin box / combo is not itself the target
+            if isinstance(wdg.parentWidget(), (QComboBox, QSpinBox)):
+                continue
+            if wdg.isVisible():
+                wdg.setMinimumHeight(max(24, wdg.minimumHeight()))
 
 def fit_tx_edit_height(win: MainWindow) -> None:
     "fit tx edit height"

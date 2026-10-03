@@ -153,6 +153,45 @@ def _read_minwidth_baseline() -> dict:
     return out
 
 
+def check_target_size() -> int:
+    """Standard clause 16b / WCAG 2.5.8: every pointer target is at least 24x24 px.
+
+    The controls are laid out in pixels, so this is measurable: build the window, list the
+    interactive controls (buttons, chips, ticks, boxes - not the internal editor of a spin
+    box or combo) and fail when one sits under the floor.
+    """
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QLineEdit,
+                                   QSpinBox)
+    app = QApplication.instance() or QApplication([])
+    from app import i18n
+    from ui.main_window import MainWindow
+    i18n.set_language("zh")
+    win = MainWindow()
+    win.resize(1280, 820)
+    win.show()
+    for _ in range(4):
+        app.processEvents()
+    small = []
+    for cls in (QAbstractButton, QComboBox, QLineEdit, QSpinBox):
+        for wdg in win.findChildren(cls):
+            if isinstance(wdg.parentWidget(), (QComboBox, QSpinBox)):
+                continue
+            if not wdg.isVisible() or wdg.width() <= 1:
+                continue
+            if wdg.width() < 24 or wdg.height() < 24:
+                small.append((type(wdg).__name__, wdg.objectName() or "-",
+                              wdg.width(), wdg.height()))
+    _dispose(win)
+    if small:
+        print("[target-size] %d control(s) under 24x24:" % len(small))
+        for item in small[:10]:
+            print("   ", "%s %s %dx%d" % item)
+        return 1
+    print("[target-size] ok (every pointer target is at least 24x24 px)")
+    return 0
+
+
 def check_min_width() -> int:
     """U164: catch a receive row that grew again - on any platform.
 
@@ -240,7 +279,7 @@ def check_tests() -> int:
 
 def main() -> int:
     results = {"contrast": check_contrast(), "overflow": check_overflow(),
-               "min-width": check_min_width()}
+               "target-size": check_target_size(), "min-width": check_min_width()}
     if "--no-tests" not in sys.argv:
         results["tests"] = check_tests()
     bad = [name for name, code in results.items() if code]

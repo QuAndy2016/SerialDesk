@@ -50,6 +50,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "conn.auto.on": {"zh": "已开启断线自动重连", "en": "Auto-reconnect enabled"},
     "conn.auto.off": {"zh": "已关闭断线自动重连", "en": "Auto-reconnect disabled"},
     "conn.reconnecting": {"zh": "连接中断，正在重连（第 {n} 次）…", "en": "Connection lost - reconnecting (attempt {n})…"},
+    "conn.connecting": {"zh": "● 连接中…", "en": "● Connecting…"},
+    "conn.error": {"zh": "● 打开失败", "en": "● Open failed"},
     "conn.reconnected": {"zh": "已自动重新连接", "en": "Reconnected automatically"},
     "conn.lost": {"zh": "连接已断开", "en": "Connection lost"},
     "portset.locked": {

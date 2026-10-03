@@ -678,6 +678,19 @@ def apply_accessible_names(win: MainWindow) -> None:
                 label = tr(key)
         if label:
             widget.setAccessibleName(label.replace("&", ""))
+    # Standard clause 16b: the named list above covers the fixed chrome; the dynamic rows
+    # (quick-send buttons, ticks, option chips) are built on demand, so sweep anything that
+    # still has no name and fall back to its tooltip or text.
+    from PySide6.QtWidgets import QAbstractButton, QComboBox, QLineEdit, QSpinBox, QWidget
+    for cls in (QAbstractButton, QComboBox, QLineEdit, QSpinBox):
+        for wdg in win.findChildren(cls):
+            if not isinstance(wdg, QWidget) or wdg.accessibleName():
+                continue
+            fallback = wdg.toolTip() or (wdg.text() if hasattr(wdg, "text") else "")
+            if not fallback and isinstance(wdg, QLineEdit):
+                fallback = wdg.placeholderText()
+            if fallback:
+                wdg.setAccessibleName(fallback.replace("&", ""))
 
 def setup_tab_order(win: MainWindow) -> None:
     "setup tab order"

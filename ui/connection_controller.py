@@ -234,14 +234,30 @@ def toggle_open(win: MainWindow):
         except ValueError:
             win._notify(tr("status.bad_baud"), "error")
             return
+        win._opening = True                     # L1-2: a slow open must not look idle
+        _show_status(win, "conn.connecting", "idle")
         ok = win.worker.open_port(device, baud, **win._serial_params())
+        if not ok:
+            win._opening = False
+            _show_status(win, "conn.error", "idle")
         if ok:
             win.refresh_timer.stop()  # keep port list stable while open
             save_config({"last_port": device})   # N12: reuse it next launch
 
+
+def _show_status(win: MainWindow, key: str, color: str) -> None:
+    "show status"
+    """L1-2 / standard clause 9: one place that paints the connection state light."""
+    colors = theme.status_colors()
+    win.status_light.setText(tr(key))
+    win.status_light.setStyleSheet(
+        "color: %s; font-weight: bold; padding-right: 8px;"
+        % colors.get(color, colors.get("idle", "#888888")))
+
 def on_opened_changed(win: MainWindow, opened: bool):
     "on opened changed"
     if opened:
+        win._opening = False
         win.open_btn.setText(tr("port.close"))
         port = win.port_combo.currentData() or ""
         baud = win.baud_combo.currentText().strip()
