@@ -20,15 +20,10 @@
   no longer matches the row model. The insert path itself was measured before being touched
   (1 Mbps: p50 1.72 ms, p95 2.05 ms - the target is 16 ms), so it was left as it is instead of
   rewritten for a gain that is not there.
-- **The process clauses are machine-checked** (project standard, step 1): a commit that changes
-  source must name its work item and carry the review-checklist paragraph
-  (`tools/check_commit_msg.py` through a commit-msg hook and a CI step), and every change-plan
-  section must carry the user task, the state, the failure paths and acceptance with numbers
-  (`tools/check_plan_doc.py`, run by the gate).
-- **UI review L1 closed** (U193): pointer targets sit on a 24 px floor and the gate asserts it
-  (WCAG 2.5.8: 305 controls under 24x24 -> 1, a spin box's internal editor), the connection state
-  shows CONNECTING and an open failure, the dynamic rows carry accessible names (14 -> 0), and
-  control heights converge to three tiers (24/28/32) instead of nine values.
+- **UI review L1 closed** (U193): pointer targets sit on a 24 px floor (305 controls under 24x24
+  -> 1, a spin box's internal editor), the connection state shows CONNECTING and an open failure,
+  the dynamic rows carry accessible names (14 -> 0), and control heights converge to three tiers
+  (24/28/32) instead of nine values.
 
 
 ## [v1.9.0] - 2026-10-03

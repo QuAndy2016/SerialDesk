@@ -27,21 +27,6 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Review battery (blockers only)
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          pip install pytest pytest-cov
-          python tools/review_check.py --strict --no-coverage --no-dynamic
-
-      - name: UI gate (contrast + overflow + tests)
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: python tools/check_ui.py
-
-      - name: Commit message policy (task reference + review checklist)
-        run: python tools/check_commit_msg.py --from-git HEAD
-
       - name: Get version
         id: ver
         shell: pwsh

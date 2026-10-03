@@ -1,3 +1,0 @@
-# Known contrast debt (baseline). One entry per line, TAB separated:
-# THEME<TAB>selector<TAB>kind
-# 2026-10-02 (U153): emptied - all 22 debts were fixed, so any violation now fails.
