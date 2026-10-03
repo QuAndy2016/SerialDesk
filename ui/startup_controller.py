@@ -166,6 +166,9 @@ def init_timers(win: MainWindow) -> None:
     win._sig_timer = QTimer(win)
     win._sig_timer.timeout.connect(win._poll_signals)
     win._sig_timer.start(50)
+    win._meter_timer = QTimer(win)          # P2: receive-throughput read-out
+    win._meter_timer.timeout.connect(win._refresh_meter)
+    win._meter_timer.start(500)
     win._cfg_save_timer = QTimer(win)     # U52: debounced config persistence
     # U57: merge USB-fragmented chunks before deciding a line break
     _settle = float(load_config().get("rx_settle_ms", DEFAULT_SETTLE_MS) or DEFAULT_SETTLE_MS)

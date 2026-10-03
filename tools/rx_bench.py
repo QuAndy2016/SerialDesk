@@ -45,6 +45,8 @@ def main() -> int:
     parser.add_argument("--baud", type=int, default=1000000)
     parser.add_argument("--seconds", type=float, default=5.0)
     parser.add_argument("--timestamp", action="store_true", help="leave timestamps on")
+    parser.add_argument("--limit-ms", type=float, default=16.0,
+                        help="fail when the batch p95 exceeds this (default 16 ms)")
     args = parser.parse_args()
 
     from PySide6.QtWidgets import QApplication
@@ -53,6 +55,7 @@ def main() -> int:
 
     from ui.main_window import MainWindow
     from ui.regions import RX_ASCII, SPLIT_AUTO, SPLIT_FIXED
+    from app.display import rows_from_fragments
 
     win = MainWindow()
     win.resize(1280, 720)
@@ -104,9 +107,18 @@ def main() -> int:
           % (rows, len(getattr(win, "_rx_store", []))))
     print("counted bytes     : %d received / %d sent  -> %s"
           % (received, sent, "no loss" if received == sent else "LOSS"))
+    model_rows = len(rows_from_fragments(list(getattr(win, "_rx_store", []))))
+    pane_rows = win.rx_view.blockCount()
+    print("row model         : pane %d blocks, model %d rows" % (pane_rows, model_rows))
     verdict = "keeps up" if p95 <= BATCH_MS else "cannot keep up (queue would grow)"
     print("verdict           : %s (p95 %.2f ms vs %.0f ms batch period)" % (verdict, p95, BATCH_MS))
-    return 0 if received == sent else 1
+    ok_loss = received == sent
+    ok_cost = p95 <= args.limit_ms
+    ok_rows = pane_rows == model_rows                 # the P0 invariant: rows == blocks
+    print("acceptance        : loss=%s  p95<=%.0fms=%s  rows=%s"
+          % ("OK" if ok_loss else "FAIL", args.limit_ms,
+             "OK" if ok_cost else "FAIL", "OK" if ok_rows else "FAIL"))
+    return 0 if (ok_loss and ok_cost and ok_rows) else 1
 
 
 if __name__ == "__main__":

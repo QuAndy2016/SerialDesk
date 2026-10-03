@@ -153,6 +153,7 @@ def _retranslate_status(win: MainWindow) -> None:
     win.split_hint_lbl.setText(
         tr("split.auto.hint") if win.split_combo.currentIndex() == SPLIT_AUTO else tr("split.off.hint"))
     win.sent_lbl.setText(tr("tx.sent_count", n=win._sent_count))
+    win.meter_lbl.setToolTip(tr("tx.meter.tip"))
     win._enc_lbl.setText(tr("params.encoding"))
     win.encoding_combo.setToolTip(tr("params.encoding.tip"))
     win.escape_check.setText(tr("tx.escape"))

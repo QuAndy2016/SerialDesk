@@ -456,18 +456,25 @@ def update_params_summary(win: MainWindow) -> None:
 FIND_HIGHLIGHT_CAP = 10000  # U160: cap on how many matches get a background colour
 
 
-def _collect_find_matches(win: MainWindow, text: str, case_sensitive: bool = False) -> list:
-    """All matches of `text` in the receive pane, as (start, end) positions (U160/U181)."""
+def _collect_find_matches(win: MainWindow, text: str, case_sensitive: bool = False,
+                          start: int = 0, end: int | None = None) -> list:
+    """Matches of `text` in the receive pane as (start, end) positions (U160/U181/P2).
+
+    `start`/`end` let the incremental refresh scan only the newly received tail.
+    """
     doc = win.rx_view.document()
     out: list = []
     if not text:
         return out
+    if end is None:
+        end = doc.characterCount() - 1
     flags = (QTextDocument.FindFlag.FindCaseSensitively if case_sensitive
              else QTextDocument.FindFlag(0))
     needle = QTextCursor(doc)
+    needle.setPosition(min(max(0, start), max(0, end)))
     while True:
         needle = doc.find(text, needle, flags)
-        if needle.isNull():
+        if needle.isNull() or needle.selectionStart() >= end:
             break
         out.append((needle.selectionStart(), needle.selectionEnd()))
     return out
@@ -510,6 +517,7 @@ def on_find_text_changed(win: MainWindow) -> None:
     it unusable for reading. Jumping stays on Enter / the prev-next buttons.
     """
     text = win.find_edit.text()
+    win._find_state = None      # P2: a new query restarts the incremental scan
     win._find_matches = _collect_find_matches(win, text, find_case_sensitive(win))
     win._find_index = 0
     win._find_query = text
@@ -518,10 +526,13 @@ def on_find_text_changed(win: MainWindow) -> None:
 
 
 def refresh_find_highlights(win: MainWindow) -> None:
-    """B1 (2026-10-02): recompute the matches and re-apply them.
+    """B1/P2: recompute the matches and re-apply them.
 
-    Called (throttled) after new data lands in the receive pane, so rows that
-    arrive while a query is active get highlighted too. Keeps the current match
+    Called (throttled) after new data lands in the receive pane, so rows that arrive
+    while a query is active get highlighted too. When the query and the case switch
+    are unchanged the scan only covers what was added since the last pass (plus a
+    lookback of len(query)-1 so a match straddling the old end is not missed), so the
+    cost tracks the new data instead of the whole document. Keeps the current match
     index when it is still in range instead of jumping back to the first hit.
     """
     if not getattr(win, "_find_bar", None) or not win._find_bar.isVisible():
@@ -529,7 +540,16 @@ def refresh_find_highlights(win: MainWindow) -> None:
     text = win.find_edit.text()
     if not text:
         return
-    matches = _collect_find_matches(win, text, find_case_sensitive(win))
+    case = find_case_sensitive(win)
+    end = max(0, win.rx_view.document().characterCount() - 1)
+    state = getattr(win, "_find_state", None)
+    if state and state["query"] == text and state["case"] == case and state["end"] <= end:
+        start = max(0, state["end"] - (len(text) - 1))
+        matches = ([m for m in state["matches"] if m[0] < start]
+                   + _collect_find_matches(win, text, case, start, end))
+    else:
+        matches = _collect_find_matches(win, text, case, 0, end)
+    win._find_state = {"query": text, "case": case, "end": end, "matches": matches}
     win._find_matches = matches
     win._find_query = text
     index = getattr(win, "_find_index", 0)
@@ -585,6 +605,7 @@ def find_next(win: MainWindow, forward: bool = True) -> None:
     text = win.find_edit.text()
     matches = getattr(win, "_find_matches", None)
     if matches is None or text != getattr(win, "_find_query", None):
+        win._find_state = None       # P2: full rescan path
         matches = _collect_find_matches(win, text, find_case_sensitive(win))
         win._find_matches = matches
         win._find_query = text

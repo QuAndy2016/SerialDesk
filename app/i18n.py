@@ -319,6 +319,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Type what to send; in HEX mode e.g. 01 03 00 00 (0x prefixes and commas are fine)",
     },
     "tx.counter": {"zh": "TX {n} 次 · {tx} B　｜　RX {rx} B", "en": "TX {n} · {tx} B | RX {rx} B"},
+    "tx.meter": {"zh": "RX {bps} · {batches} 批/s · 合并 {merge} · 峰值 {peak} ms · 丢 {drop}",
+                 "en": "RX {bps} · {batches}/s · merge {merge} · peak {peak} ms · drop {drop}"},
+    "tx.meter.tip": {
+        "zh": "接收吞吐（1 秒滚动窗口）：速率 · 每秒批次数 · 平均每批合并片段数 · 单批最坏耗时 · 丢弃计数",
+        "en": "Receive throughput (1 s rolling window): rate · batches per second · fragments merged per batch · worst batch cost · dropped count"},
     "rx.empty.hint": {"zh": "打开串口后，接收到的数据会显示在这里", "en": "Data received after opening a port shows up here"},
     "update.menu": {"zh": "有新版本 {v} 可用…", "en": "Version {v} is available…"},
     "update.available": {"zh": "发现新版本 {v}，设置菜单里可打开下载页", "en": "Version {v} is out - the settings menu links to the download page"},

@@ -80,7 +80,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 关键词高亮 | 常驻高亮条：输入即高亮、不抢滚动位置，大小写可选；新到的数据同样即时高亮 |
 | 多编码 | 接收与发送支持 ASCII / UTF-8 / GBK / GB2312，中文报文不再乱码 |
 | 转义解析开关 | `\r \n \t \xNN` 可解析为控制字符，也可按字面原样发送（入口在发送行的「发送设置」芯片内） |
-| 状态栏 | 收发字节计数（等宽）+ 端口与波特率 + 连接状态灯 |
+| 状态栏 | 收发字节计数（等宽）+ 端口与波特率 + 连接状态灯；接收吞吐仪表：1 秒滚动窗口显示速率 / 批每秒 / 每批合并片段数 / 单批最坏耗时 / 丢帧计数 |
 
 ### 发送与快捷发送
 
@@ -345,7 +345,7 @@ Both share the same notes:
 | Keyword highlight | an always-on bar: highlights as you type without stealing the scroll position, case switch, and rows that arrive later are highlighted too |
 | Encodings | ASCII / UTF-8 / GBK / GB2312 for received and sent text |
 | Escape parsing | `\r \n \t \xNN` interpreted as control characters, or sent literally (the switch lives inside the send-settings chip) |
-| Status bar | RX/TX byte counters (monospaced) + port and baud + a connection light |
+| Status bar | RX/TX byte counters (monospaced) + port and baud + a connection light; a rolling receive-throughput read-out (rate / batches per second / fragments merged per batch / worst batch cost / dropped) |
 
 #### Sending and quick send
 

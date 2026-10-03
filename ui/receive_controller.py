@@ -120,7 +120,7 @@ def flush_byte_frames(win: MainWindow) -> None:
     win._append_rx_group(win._format_rx(tail), time.monotonic(), True)
     win._scroll_rx_bottom()
 
-def on_received(win: MainWindow, ts: float, data: bytes):
+def _on_received_body(win: MainWindow, ts: float, data: bytes):
     "on received"
     win._check_auto_reply(data)
     win.rx_bytes += len(data)
@@ -148,6 +148,50 @@ def on_received(win: MainWindow, ts: float, data: bytes):
     win._frames.feed(ts, data)
     if not win._frame_timer.isActive():
         win._frame_timer.start(int(win._frames.settle_ms))
+
+
+def on_received(win: MainWindow, ts: float, data: bytes):
+    "on received"
+    """Time one received batch and feed the throughput read-out (data-path P2).
+
+    What is measured is the GUI thread's whole share of the batch: framing, the
+    fragment store and the pane. That is the number the meter shows and the number
+    the bench asserts on.
+    """
+    before = len(_rx_store(win))
+    t0 = time.perf_counter()
+    _on_received_body(win, ts, data)
+    _meter(win).record(time.monotonic(), len(data),
+                       len(_rx_store(win)) - before,
+                       (time.perf_counter() - t0) * 1000.0)
+
+
+def _meter(win: MainWindow):
+    """The rolling throughput meter for this window (created on first use)."""
+    meter = getattr(win, "_rx_meter", None)
+    if meter is None:
+        from app.throughput import ThroughputMeter
+        meter = ThroughputMeter()
+        win._rx_meter = meter
+    return meter
+
+
+def refresh_meter(win: MainWindow) -> None:
+    "refresh meter"
+    """P2: paint the rolling receive-throughput read-out (cleared when idle)."""
+    from app.throughput import human_rate
+    lbl = getattr(win, "meter_lbl", None)
+    if lbl is None:
+        return
+    snap = _meter(win).snapshot(time.monotonic())
+    if not snap["batches"] and not snap["dropped"] and not snap["max_ms"]:
+        lbl.setText("")
+        return
+    lbl.setText(tr("tx.meter", bps=human_rate(snap["bps"]),
+                   batches="%.0f" % snap["batches"],
+                   merge="%.1f" % snap["merge"],
+                   peak="%.0f" % snap["max_ms"],
+                   drop=snap["dropped"]))
 
 def flush_rx_frames(win: MainWindow) -> None:
     "flush rx frames"
@@ -233,6 +277,8 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
             win._rx_pause_buf = buf
         if len(buf) < 20000:
             buf.append((text, kind))
+        else:
+            _meter(win).note_dropped()      # P2: the read-out must show real loss
         if log:
             win._log_append(text)
         return

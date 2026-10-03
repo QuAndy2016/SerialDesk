@@ -857,6 +857,11 @@ def _build_status_counters(win: MainWindow) -> None:
     win.sent_lbl = QLabel(tr("tx.counter", n=0, tx=0, rx=0))
     win.sent_lbl.setObjectName("statusCounters")
     win.statusBar().addPermanentWidget(win.sent_lbl)
+    # P2: rolling receive-throughput read-out (data-path observability)
+    win.meter_lbl = QLabel("")
+    win.meter_lbl.setObjectName("statusCounters")
+    win.meter_lbl.setToolTip(tr("tx.meter.tip"))
+    win.statusBar().addPermanentWidget(win.meter_lbl)
 
 
 def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:

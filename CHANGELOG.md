@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **A receive-throughput read-out** (data-path P2): the status bar shows a rolling one-second
+  window - RX rate, batches per second, fragments merged per batch, the worst batch cost and
+  the fragments dropped while the display was paused. "Can it keep up?" is a number on screen
+  instead of a feeling.
+
+### Changed
+
+- **Keyword highlighting is incremental** (data-path P2): freshly received data used to
+  trigger a full-document search on every refresh; the pass now only scans the new tail (with
+  a lookback so a match straddling the boundary is still found), so the cost tracks the new
+  data instead of the whole receive log.
+- **The throughput bench is an assertion now** (data-path P2): `tools/rx_bench.py` fails on
+  byte loss, on a batch p95 above `--limit-ms` (default 16 ms) and when the pane's block count
+  no longer matches the row model. The insert path itself was measured before being touched
+  (1 Mbps: p50 1.72 ms, p95 2.05 ms - the target is 16 ms), so it was left as it is instead of
+  rewritten for a gain that is not there.
+
+
 ## [v1.9.0] - 2026-10-03
 
 ### Fixed
