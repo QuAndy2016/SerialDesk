@@ -42,7 +42,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 | 文件 | 说明 |
 |------|------|
-| `SerialDesk_vX.Y.Z-win64-setup.exe` | **安装版**（约 24 MB）：双击安装，自动创建开始菜单项与卸载入口，可选创建桌面快捷方式；装完可直接勾选运行 |
+| `SerialDesk_vX.Y.Z-win64-setup.exe` | **安装版**（约 24 MB）：双击安装，自动创建开始菜单项与卸载入口，可选创建桌面快捷方式；**安装时可自选安装目录与日志默认目录**；装完可直接勾选运行 |
 | `SerialDesk_vX.Y.Z-win64.zip` | **免安装版**（约 34 MB）：解压即用，整个目录一起拷贝即可带走，适合 U 盘 / 绿色部署 |
 | `SerialDesk_vX.Y.Z-win64-setup.exe.sha256` | 安装版的 SHA256 校验文件 |
 | `SerialDesk_vX.Y.Z-win64.zip.sha256` | 免安装版的 SHA256 校验文件 |
@@ -307,7 +307,7 @@ Grab them from the [Releases page](https://github.com/QuAndy2016/SerialDesk/rele
 
 | File | What it is |
 |------|------------|
-| `SerialDesk_vX.Y.Z-win64-setup.exe` | **Installer** (~24 MB): double-click to install, creates a Start-menu entry and an uninstaller, optional desktop shortcut, and can launch the app when it finishes |
+| `SerialDesk_vX.Y.Z-win64-setup.exe` | **Installer** (~24 MB): double-click to install, creates a Start-menu entry and an uninstaller, optional desktop shortcut, **and you choose the install folder and the default log folder during setup**; can launch the app when it finishes |
 | `SerialDesk_vX.Y.Z-win64.zip` | **Portable zip** (~34 MB): extract and run, copy the whole folder anywhere - handy on a USB stick or for a green deployment |
 | `SerialDesk_vX.Y.Z-win64-setup.exe.sha256` | SHA256 checksum for the installer |
 | `SerialDesk_vX.Y.Z-win64.zip.sha256` | SHA256 checksum for the portable zip |

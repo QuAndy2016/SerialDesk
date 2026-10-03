@@ -31,13 +31,63 @@ def data_dir() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def _installer_log_dir() -> str:
+    """The log folder the user picked in the installer, if the build was installed.
+
+    The installer writes ``logs_dir.txt`` next to the exe; a portable copy has no such
+    file, so this returns "" and the portable/exe-relative default stands.
+    """
+    if not getattr(sys, "frozen", False):
+        return ""
+    seed = os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "logs_dir.txt")
+    try:
+        with open(seed, encoding="utf-8") as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def _writable(path: str) -> bool:
+    """Whether logs can actually be written there (create it and probe once)."""
+    try:
+        os.makedirs(path, exist_ok=True)
+        probe = os.path.join(path, ".write_probe")
+        with open(probe, "w", encoding="utf-8") as fh:
+            fh.write("")
+        os.remove(probe)
+        return True
+    except OSError:
+        return False
+
+
+def _is_portable() -> bool:
+    return bool(getattr(sys, "frozen", False)) and os.path.exists(
+        os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "portable.txt"))
+
+
 def log_dir() -> str:
-    """Directory for saved receive logs (created on demand)."""
-    path = os.path.join(data_dir(), "logs")
+    """Directory for saved receive logs (created on demand).
+
+    Order: a portable copy keeps everything beside its exe; otherwise the folder the user
+    configured (``config.json:log_dir``), then the folder chosen in the installer
+    (``logs_dir.txt`` beside the exe), then the per-user default. A choice that cannot be
+    written falls back to the default instead of failing - a broken log folder must never
+    stop the app from starting.
+    """
+    base = os.path.join(data_dir(), "logs")
+    if _is_portable():
+        path = base
+    else:
+        chosen = str(load_config().get("log_dir") or "").strip() or _installer_log_dir()
+        path = chosen if (chosen and _writable(chosen)) else base
     try:
         os.makedirs(path, exist_ok=True)
     except OSError:
-        pass
+        path = base
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError:
+            pass
     return path
 
 

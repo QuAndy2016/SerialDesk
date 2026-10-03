@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **The installer lets you choose where things go** (Andy 2026-10-03): the setup wizard always
+  shows the destination page - Inno's default hides it once the same AppId is installed, which is
+  why the folder looked fixed on re-install - and a new page picks the default log folder. The app
+  resolves the log folder as: portable copy -> `config.json:log_dir` -> the installer's
+  `logs_dir.txt` -> the per-user default; a folder it cannot write falls back to the default
+  instead of failing to start.
+
+
 ## [v1.9.1] - 2026-10-03
 
 ### Added

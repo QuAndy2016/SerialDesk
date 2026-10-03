@@ -20,6 +20,9 @@ AppPublisher=Qu Andy
 AppPublisherURL=https://github.com/QuAndy2016/SerialDesk
 AppSupportURL=https://github.com/QuAndy2016/SerialDesk/issues
 DefaultDirName={autopf}\{#MyAppName}
+; 2026-10-03: always offer the destination page - Inno's default (auto) hides it once the
+; same AppId is installed, which is why the folder looked fixed on re-install.
+DisableDirPage=no
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist
@@ -50,6 +53,28 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName} / 运行 Se
 ; user data (config.json / logs) lives in %APPDATA%\SerialDesk and is intentionally kept
 
 [Code]
+// 2026-10-03: pick the default log folder during setup and leave it beside the exe as
+// logs_dir.txt; the app reads it when no per-user choice has been made yet.
+var
+  LogDirPage: TInputDirWizardPage;
+
+procedure InitializeWizard();
+begin
+  LogDirPage := CreateInputDirPage(wpSelectTasks,
+    'Default log folder',
+    'Where should saved logs go by default?',
+    'SerialDesk writes saved and auto-saved receive logs here. You can change it later in Settings.',
+    False, '');
+  LogDirPage.Add('Log folder:');
+  LogDirPage.Values[0] := ExpandConstant('{userappdata}\SerialDesk\logs');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    SaveStringToFile(ExpandConstant('{app}\logs_dir.txt'), LogDirPage.Values[0], False);
+end;
+
 // U163d: on uninstall, ask whether the per-user settings and logs should go too.
 // They live in %APPDATA%\SerialDesk and are otherwise intentionally kept.
 // (Note: inside [Code] only // and { } are comments; ';' is rejected by the Pascal compiler.)
