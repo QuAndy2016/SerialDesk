@@ -43,3 +43,7 @@ logs/
 .coverage
 .coverage.*
 htmlcov/
+
+# local-only material: dev tasks, standards, reviews, tooling, history backups
+# (never publish; the public repo holds source + product docs only)
+local_docs/
