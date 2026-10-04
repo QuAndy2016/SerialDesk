@@ -413,13 +413,11 @@ STRINGS: dict[str, dict[str, str]] = {
                         "en": "Click a row to select it first (Ctrl/Shift for several), then Delete; in sequence mode a ticked row can be deleted too"},
     "qs.del.none": {"zh": "没有选中任何行：先点一下要删的那行，再点删除",
                     "en": "Nothing selected - click the row you want to delete, then press Delete"},
-    "tx.repeat.count.tip": {"zh": "循环发送多少次。默认 ∞（一直循环，手动停止）：点上箭头 ∞ → 1 → 2 …，"
-                                  "点下箭头减少，1 再往下回到 ∞，到顶也会绕回 ∞（轮盘式）；"
-                                  "也可以直接把数字（或 ∞）敲进去",
-                           "en": "How many times to repeat. Default \u221e (until stopped): "
-                                 "Up \u221e -> 1 -> 2 ..., Down counts back, 1 steps down to \u221e "
-                                 "and the top wraps to \u221e as well (a wheel). You can also type "
-                                 "a number (or \u221e)."},
+    "tx.repeat.count.tip": {"zh": "最多 999 次（多填按 999 算）；∞ 表示一直循环发送，手动停止才结束（默认）；"
+                                  "上箭头 ∞→1→2…→999→∞，下箭头反向；也可直接输入数字或 ∞",
+                           "en": "999 max (a larger entry becomes 999); \u221e repeats until you "
+                                 "stop it (default); Up \u221e -> 1 -> 2 ... -> 999 -> \u221e, "
+                                 "Down counts back; type a number or \u221e directly"},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
     "tx.sent_count": {"zh": "已发送 {n} 次", "en": "sent \u00d7{n}"},
@@ -613,12 +611,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
     "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},
     "qs.rounds.label": {"zh": "轮数", "en": "Rounds"},
-    "qs.rounds.tip": {"zh": "序列重复几轮。默认 ∞（一直循环）；点上箭头：∞ → 1 → 2 …，"
-                            "点下箭头递减，1 再往下又回到 ∞，到顶也会绕回 ∞（轮盘式）；"
-                            "也可以直接把数字（或 ∞）敲进去",
-                      "en": "How many rounds the sequence repeats. Default \u221e (until stopped); "
-                            "Up: \u221e -> 1 -> 2 ..., Down counts back, and 1 steps down to \u221e "
-                            "just like the top wraps around (a wheel). You can also type a number (or \u221e)."},
+    "qs.rounds.tip": {"zh": "最多 999 轮（多填按 999 算）；∞ 表示一直循环发送，手动停止才结束（默认）；"
+                            "上箭头 ∞→1→2…→999→∞，下箭头反向；也可直接输入数字或 ∞",
+                      "en": "999 max (a larger entry becomes 999); \u221e repeats until you "
+                            "stop it (default); Up \u221e -> 1 -> 2 ... -> 999 -> \u221e, "
+                            "Down counts back; type a number or \u221e directly"},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
     # declarative parser: error codes and template names (used by the field panel
     # that lands with ; the kernel itself is Qt-free and has no user-visible text).

@@ -417,6 +417,17 @@ def test_the_repeat_chip_shows_the_wheel(app, win):
     win.repeat_ms.setText("1000")
 
 
+def test_both_wheels_document_the_cap_and_the_endless_state(app, win):
+    """2026-10-04 (R27): the tooltip must name the top of the wheel (999) and say that ∞
+    keeps repeating - both wheels, both languages (the wording is checked language-free:
+    "999" and the ∞ glyph appear in the zh and the en string)."""
+    for label, wheel in (("sequence rounds", win.quick_panel.rounds),
+                         ("repeat count", win.repeat_times)):
+        tip = wheel.toolTip()
+        assert "999" in tip, "%s tooltip does not state the cap" % label
+        assert "\u221e" in tip, "%s tooltip does not explain the endless state" % label
+
+
 def test_repeat_count_falls_back_to_one_send(app, win):
     """2026-10-03 (review): a read failure must not be read as "keep sending forever"."""
     from ui.actions_controller import repeat_count

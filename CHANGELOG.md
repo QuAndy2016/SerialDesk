@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **The two count wheels say what their limit is**: the tooltips now state that 999 is the
+  largest value you can enter (a larger entry becomes 999) and that ∞ means "repeat until
+  you stop it", next to the wheel behaviour they already described. Same wording for the
+  sequence rounds and the send area's repeat count, both languages.
 - **The repeat-send count is one wheel now, ∞ included**: the send area used to pair an
   "∞" checkbox with a plain spin box (the box greyed out while the checkbox was ticked).
   It now uses the same wheel as the quick-send sequence: ∞ is the default *and* a value of
