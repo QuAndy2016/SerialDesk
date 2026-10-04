@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **One command per line in the quick-send panel**: a row used to spend two lines on one
+  command (name line + command line), so ten commands ate twenty lines of height. The row is
+  one line now - the command owns the left, the label and the action sit on the right - which
+  takes a command from 54 px to 32 px and shows eighteen rows where eleven fitted before
+  (10 commands: 540 px -> 320 px). The per-row "Send" button became a 24x24 paper-plane icon
+  (tooltip + screen-reader name), the format + delay chip became a one-letter marker plus the
+  per-row delay field, and that delay together with the sequence tick only appears in sequence
+  mode. The name column is capped at 96 px (about ten half-width characters) - a long name
+  stays readable in full on hover - and Enter in a command box sends that row.
+
 ### Fixed
 
 - **The two count wheels say what their limit is**: the tooltips now state that 999 is the

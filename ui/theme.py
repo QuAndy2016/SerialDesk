@@ -138,6 +138,12 @@ QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px sol
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $border_muted; }
 QToolButton#qsChip:focus { border: 1px solid $focus_ring; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
+/* the per-row send button: a 24x24 icon target with no chrome of its own, so the paper
+   plane reads as an action rather than as a field (2026-10-04, one-line rows) */
+QToolButton#qsSend { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0px; margin: 0px; }
+QToolButton#qsSend:hover { background: $border_muted; border-color: $border_hover; }
+QToolButton#qsSend:pressed { background: $surface_pressed; border-color: $accent; }
+QToolButton#qsSend:focus { border: 1px solid $focus_ring; }
 /* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: $border_muted; border-color: $border_hover; }
@@ -298,6 +304,11 @@ QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px sol
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $surface_hover; }
 QToolButton#qsChip:focus { border: 1px solid $focus_ring; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
+/* the per-row send button - see the dark sheet */
+QToolButton#qsSend { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0px; margin: 0px; }
+QToolButton#qsSend:hover { background: $surface_hover; border-color: $border_hover; }
+QToolButton#qsSend:pressed { background: $surface_pressed; border-color: $accent; }
+QToolButton#qsSend:focus { border: 1px solid $focus_ring; }
 /* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: $surface_hover; border-color: $border_hover; }

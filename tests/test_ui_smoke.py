@@ -79,18 +79,32 @@ def test_actions_sit_beside_the_input(app, win):
     assert win.tx_edit.mapTo(group, win.tx_edit.rect().topLeft()).y() > 0
 
 
-def test_quick_send_rows_show_name_and_command_lines(app, win):
-    # each row is a name line above the command line, plus the property chip
+def test_quick_send_rows_are_one_line_with_a_send_icon(app, win):
+    """2026-10-04: one command = one line, ``[command][name][send]`` (user request).
+
+    The two-line layout cost 54 px per command; this one keeps the command on the left
+    stretch (so every command starts at the same x) and puts label + action on the right.
+    """
+    from PySide6.QtWidgets import QToolButton
+
     row = win.quick_panel._rows[0]
     assert row.name_edit is not None and row.text_edit is not None
     assert row.name_edit is not row.text_edit
-    # The chip mirrors the row's format + delay. Do not hard-code HEX here: on a
-    # fresh machine the panel seeds ASCII examples first (AT / AT+VERSION?), so
-    # which format row 0 carries depends on the run's config, not on the wiring.
+    tops = {w.geometry().top() for w in (row.text_edit, row.chip, row.name_edit, row.send_btn)}
+    assert max(tops) - min(tops) <= 4, "the row is not a single line any more"
+    assert row.text_edit.x() < row.name_edit.x() < row.send_btn.x()
+    # the format marker replaced the old "HEX · 500 ms" chip; the tooltip spells it out.
+    # Do not hard-code which format row 0 carries: a fresh machine seeds ASCII examples
+    # first (AT / AT+VERSION?), so it depends on the run's config, not on the wiring.
     row.fmt.setCurrentIndex(0)                          # HEX
-    assert "HEX" in row.chip.text() and "500" in row.chip.text()
+    assert row.chip.text() == "H" and "HEX" in row.chip.toolTip()
+    assert "500" in row.chip.toolTip()                  # the delay stays visible in the hint
     row.fmt.setCurrentIndex(1)                          # ASCII
-    assert "ASCII" in row.chip.text()
+    assert row.chip.text() == "A" and "ASCII" in row.chip.toolTip()
+    # the paper-plane send button is a real 24x24 target with a name for screen readers
+    assert isinstance(row.send_btn, QToolButton)
+    assert (row.send_btn.width(), row.send_btn.height()) == (24, 24)
+    assert not row.send_btn.icon().isNull() and row.send_btn.accessibleName()
     row.height() < 80                  # two lines, not a tall block
 
 

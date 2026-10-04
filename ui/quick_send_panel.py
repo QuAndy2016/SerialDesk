@@ -31,7 +31,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF
+from PySide6.QtGui import QColor, QIcon, QIntValidator, QPainter, QPolygonF
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
@@ -70,6 +70,14 @@ DEFAULT_ROWS = 10                       # blank rows seeded on first run
 RAIL_W = 28                             # width of the strip the folded panel keeps
 DELAY_DEFAULT = 500                     # ms, when the field is empty or damaged
 DELAY_MIN, DELAY_MAX = 0, 60000
+#: One-line row budget (measured on the real widgets, 2026-10-04 review): the command owns
+#: the left stretch, the label + action cluster on the right.
+NAME_W = 96                  # the label column: ~10 half-width chars / 6 CJK
+NAME_W_SEQ = 64              # in sequence mode the name yields room to the command
+NAME_MAX = 200               # the display is width-capped; typing is only guarded
+COMMAND_MIN_W = 80           # the command never collapses; keeps the row floor under 330 px
+SEND_SIZE = 24               # WCAG 2.5.8 / project D4 pointer-target floor
+CHIP_W = 30                  # the format marker: one letter + the qsChip padding, no more
 EXAMPLES = (                            # seeded once so the panel is never a blank wall
     ("AT", False),
     ("AT+VERSION?", False),
@@ -235,18 +243,28 @@ class RowItem(QFrame):
     # -- construction ---------------------------------------------------------------
 
     def _build(self) -> None:
-        """Build the two-line row: name + tick + chip + send, then the command box."""
-        column = QVBoxLayout(self)
-        column.setContentsMargins(0, 2, 0, 2)
-        column.setSpacing(2)
+        """Build the one-line row: ``[tick] command delay? format name [send]``.
 
-        top = QHBoxLayout()
-        top.setSpacing(6)
+        The 2026-10-04 review fixed this order: the command owns the left stretch so every
+        command starts on the same x and the list scans vertically, while the label and the
+        action cluster on the right. Measured at the panel's real 344 px: command 162 px,
+        format marker 30 px, name 96 px, send 24x24 (the offscreen font here is ~1.5x wider
+        than the real mono face, where those 162 px read as ~20 characters).
+        """
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 2, 0, 2)
+        row.setSpacing(6)
+        self._build_leading(row)
+        self._build_command(row)
+        self._build_trailing(row)
+
+    def _build_leading(self, row: QHBoxLayout) -> None:
+        """The sequence tick (only visible in sequence mode) and its order badge."""
         self.tick = QCheckBox(self)
         self.tick.setToolTip(tr("qs.sel.tip"))
         self.tick.setAccessibleName(tr("qs.sel.tip"))
         self.tick.toggled.connect(self._on_tick)
-        top.addWidget(self.tick)
+        row.addWidget(self.tick)
         # the sequence number is a tiny label pinned to the tick's corner; it stays out of
         # the layout so it neither widens the row nor eats the stretch
         self.badge = QLabel("", self)
@@ -254,59 +272,85 @@ class RowItem(QFrame):
         self.badge.setToolTip(tr("qs.sel.order.tip"))
         self.badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.badge.hide()
-        self.name_edit = QLineEdit(self)
-        self.name_edit.setObjectName("qsName")
-        self.name_edit.setPlaceholderText(tr("qs.name.ph"))
-        self.name_edit.setToolTip(tr("qs.name.tip"))
-        self.name_edit.setAccessibleName(tr("qs.name.ph"))
-        self.name_edit.textChanged.connect(self.refresh_tip)
-        top.addWidget(self.name_edit, 1)
+
+    def _build_command(self, row: QHBoxLayout) -> None:
+        """The command box - the row's primary content, and the only stretch item."""
+        self.text_edit = QLineEdit(self)
+        self.text_edit.setPlaceholderText(tr("qs.empty_row"))
+        self.text_edit.setAccessibleName(tr("qs.row.tip"))
+        self.text_edit.setMinimumWidth(COMMAND_MIN_W)
+        row.addWidget(self.text_edit, 1)
+
+    def _build_trailing(self, row: QHBoxLayout) -> None:
+        """The right cluster: the delay (sequence only), the format, the label, the send."""
+        # the delay is sequence material, so it is only on screen in sequence mode
+        self.delay = QLineEdit(self)
+        self.delay.setValidator(QIntValidator(DELAY_MIN, DELAY_MAX, self))
+        self.delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.delay.setStyleSheet("padding: 3px 4px;")
+        self.delay.setFixedWidth(self._delay_width())
+        self.delay.setToolTip(tr("qs.delay.tip"))
+        self.delay.setAccessibleName(tr("qs.delay.tip"))
+        self.delay.textChanged.connect(self.refresh_chip)
+        row.addWidget(self.delay)
+
+        # the row's format: one letter on the row, the combo in its popup - a format change
+        # reinterprets the text, so it must not be a one-click toggle
         self.chip = QToolButton(self)
         self.chip.setObjectName("qsChip")
         self.chip.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.chip.setToolTip(tr("qs.chip.tip"))
         self.chip.setAccessibleName(tr("qs.chip.tip"))
-        top.addWidget(self.chip)
-        self.send_btn = QPushButton(tr("qs.send"), self)
-        self.send_btn.setAccessibleName(tr("qs.send"))
-        self.send_btn.setMinimumWidth(52)
-        self.send_btn.setStyleSheet("padding: 2px 6px;")   # override the QSS padding
-        self.send_btn.clicked.connect(self.sendRequested)
-        top.addWidget(self.send_btn)
-        column.addLayout(top)
-
-        bottom = QHBoxLayout()
-        bottom.setSpacing(6)
-        self.text_edit = QLineEdit(self)
-        self.text_edit.setPlaceholderText(tr("qs.empty_row"))
-        self.text_edit.setAccessibleName(tr("qs.row.tip"))
-        bottom.addWidget(self.text_edit, 1)
-        column.addLayout(bottom)
-
+        self.chip.setFixedWidth(CHIP_W)     # one letter: Qt's default hint is 44 px, too wide
+        row.addWidget(self.chip)
         self._build_chip_menu()
 
+        self.name_edit = QLineEdit(self)
+        self.name_edit.setObjectName("qsName")
+        self.name_edit.setPlaceholderText(tr("qs.name.ph"))
+        self.name_edit.setToolTip(tr("qs.name.tip"))
+        self.name_edit.setAccessibleName(tr("qs.name.ph"))
+        self.name_edit.setMaxLength(NAME_MAX)          # typing is free, the column is capped
+        self.name_edit.setFixedWidth(NAME_W)
+        self.name_edit.textChanged.connect(self.refresh_tip)
+        row.addWidget(self.name_edit)
+
+        self.send_btn = QToolButton(self)
+        self.send_btn.setObjectName("qsSend")
+        self.send_btn.setToolTip(tr("qs.send.row.tip"))
+        self.send_btn.setAccessibleName(tr("qs.send"))
+        self.send_btn.setFixedSize(SEND_SIZE, SEND_SIZE)
+        self.send_btn.setIconSize(QSize(16, 16))
+        self.refresh_send_icon()
+        self.send_btn.clicked.connect(self.sendRequested)
+        row.addWidget(self.send_btn)
+
+    def set_sequence_mode(self, on: bool) -> None:
+        """Sequence mode shows the tick and the delay, and narrows the name column."""
+        on = bool(on)
+        self.tick.setVisible(on)
+        self.tick.setEnabled(on)
+        self.delay.setVisible(on)
+        self.delay.setEnabled(on)
+        self.name_edit.setFixedWidth(NAME_W_SEQ if on else NAME_W)
+
+    def refresh_send_icon(self) -> None:
+        """The paper-plane glyph follows the theme (the dark sheet draws a light glyph)."""
+        suffix = "dark" if theme.resolved_dark() else "light"
+        self.send_btn.setIcon(QIcon("%s/send_%s.png" % (theme.asset_dir(), suffix)))
+
     def _build_chip_menu(self) -> None:
-        """Format + delay live in the chip's popup ("HEX / 500 ms" at a glance)."""
+        """The format lives in the marker's popup; the row itself shows one letter."""
         holder_widget = QWidget()
         holder_layout = QHBoxLayout(holder_widget)
         holder_layout.setContentsMargins(8, 6, 8, 6)
         holder_layout.setSpacing(6)
         self.fmt = QComboBox(holder_widget)
         self.fmt.addItems(["HEX", "ASCII"])
+        self.fmt.setAccessibleName(tr("qs.chip.tip"))
         self.fmt.currentIndexChanged.connect(self.refresh_chip)
         holder_layout.addWidget(self.fmt)
-        self.delay = QLineEdit(holder_widget)
-        self.delay.setValidator(QIntValidator(DELAY_MIN, DELAY_MAX, self))
-        self.delay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.delay.setStyleSheet("padding: 3px 4px;")
-        self.delay.setFixedWidth(self._delay_width())
-        self.delay.setToolTip(tr("qs.delay.tip"))
-        self.delay.textChanged.connect(self.refresh_chip)
-        holder_layout.addWidget(self.delay)
-        self.unit = QLabel(tr("qs.delay.unit"), holder_widget)
-        self.unit.setObjectName("qsMeta")
-        holder_layout.addWidget(self.unit)
         menu = QMenu(self.chip)
         holder = QWidgetAction(menu)
         holder.setDefaultWidget(holder_widget)
@@ -321,7 +365,7 @@ class RowItem(QFrame):
 
     def watched(self) -> tuple:
         """The widgets whose events the panel needs (presses, focus, context menu)."""
-        return (self, self.text_edit, self.name_edit)
+        return (self, self.text_edit, self.delay, self.name_edit)
 
     def text(self) -> str:
         """The command as typed."""
@@ -379,15 +423,23 @@ class RowItem(QFrame):
     # -- presentation ---------------------------------------------------------------
 
     def refresh_chip(self) -> None:
-        """The chip shows the row's format and delay at a glance."""
+        """The marker shows the row's format; its tooltip spells out format + delay."""
         fmt = "HEX" if self.is_hex() else "ASCII"
-        self.chip.setText("%s · %s %s" % (fmt, self.delay.text().strip() or "0",
-                                          tr("qs.delay.unit")))
+        self.chip.setText("H" if self.is_hex() else "A")
+        self.chip.setToolTip(tr("qs.chip.tip", fmt=fmt,
+                                ms=(self.delay.text().strip() or "0")))
 
     def refresh_tip(self) -> None:
-        """The row tooltip carries the name and the note."""
-        parts = [part for part in (self.name().strip(), str(self.note).strip()) if part]
+        """The row tooltip carries the name and the note; the name field shows its full text.
+
+        The name column is width-capped, and an editable field clips instead of drawing an
+        ellipsis, so hovering the field is how the whole name stays reachable
+        (the "full name infotip" pattern, uxguide/ctrl-tooltips-and-infotips.md:126).
+        """
+        name, note = self.name().strip(), str(self.note).strip()
+        parts = [part for part in (name, note) if part]
         self.setToolTip("\n".join(parts) if parts else tr("qs.row.tip"))
+        self.name_edit.setToolTip(name or tr("qs.name.tip"))
 
     def set_badge(self, order: int | None) -> None:
         """Show (or hide) the sequence position badge."""
@@ -416,10 +468,11 @@ class RowItem(QFrame):
         self.name_edit.setToolTip(tr("qs.name.tip"))
         self.tick.setToolTip(tr("qs.sel.tip"))
         self.badge.setToolTip(tr("qs.sel.order.tip"))
-        self.send_btn.setText(tr("qs.send"))
+        self.send_btn.setToolTip(tr("qs.send.row.tip"))
+        self.send_btn.setAccessibleName(tr("qs.send"))
+        self.refresh_send_icon()
         self.delay.setToolTip(tr("qs.delay.tip"))
-        self.unit.setText(tr("qs.delay.unit"))
-        self.chip.setToolTip(tr("qs.chip.tip"))
+        self.delay.setAccessibleName(tr("qs.delay.tip"))
         self.refresh_chip()
         self.refresh_tip()
 
@@ -578,8 +631,7 @@ class QuickSendPanel(QWidget):
         row.tickChanged.connect(lambda item=row: self._on_tick_changed(item))
         row.sendRequested.connect(lambda item=row: self._send_one(item))
         self._rows.append(row)
-        row.tick.setEnabled(self.seq_check.isChecked())
-        row.tick.setVisible(self.seq_check.isChecked())
+        row.set_sequence_mode(self.seq_check.isChecked())
         self._refresh_badges()
         self._refresh_controls()
         return row
@@ -711,9 +763,28 @@ class QuickSendPanel(QWidget):
                 menu.exec(event.globalPos())
                 menu.deleteLater()      # createStandardContextMenu hands the menu over
                 return True
-        elif kind == QEvent.Type.KeyPress and self._owns_keyboard():
-            return self._on_key(event)
+        elif kind == QEvent.Type.KeyPress:
+            # Enter inside a row's command box sends that row: the box owns the key, so the
+            # panel's own key path (which ignores text fields) would never see it. Same rule
+            # as the send box - Enter runs the default command (inter-keyboard.md:78).
+            if self._is_row_send_key(obj, event):
+                row = self._row_of(obj)
+                if row is not None:
+                    self._send_one(row)
+                    return True
+            if self._owns_keyboard():
+                return self._on_key(event)
         return super().eventFilter(obj, event)
+
+    def _is_row_send_key(self, obj: QObject, event: QKeyEvent) -> bool:
+        """True when this key means "send the row that owns ``obj``"."""
+        row = self._row_of(obj)
+        if row is None or obj is not row.text_edit:
+            return False                       # the name box is a label, not a command box
+        if event.key() not in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            return False
+        return event.modifiers() in (Qt.KeyboardModifier.NoModifier,
+                                     Qt.KeyboardModifier.KeypadModifier)
 
     def keyPressEvent(self, event: QKeyEvent):  # noqa: N802 - Qt naming
         """Panel-level keys when the panel itself (not a row) has the focus."""
@@ -721,11 +792,17 @@ class QuickSendPanel(QWidget):
             super().keyPressEvent(event)
 
     def _on_key(self, event: QKeyEvent) -> bool:
-        """The panel's own keys: Delete, the arrows, Space, Ctrl+A and Esc."""
+        """The panel's own keys: Delete, Enter, the arrows, Space, Ctrl+A and Esc."""
         key, mods = event.key(), event.modifiers()
         if key == Qt.Key.Key_Delete:
             self.delete_armed()
             return True
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not mods:
+            # the list's default command is "send": Enter runs the row the click selected
+            armed = self.armed_rows()
+            if len(armed) == 1:
+                self._send_one(armed[0])
+                return True
         if key in (Qt.Key.Key_Down, Qt.Key.Key_Up):
             step = 1 if key == Qt.Key.Key_Down else -1
             if self._move_arm(step, bool(mods & Qt.KeyboardModifier.ShiftModifier)):
@@ -802,8 +879,7 @@ class QuickSendPanel(QWidget):
         swallowed (the row highlighted, the tick never took).
         """
         for row in self._rows:
-            row.tick.setVisible(bool(enabled))
-            row.tick.setEnabled(bool(enabled))
+            row.set_sequence_mode(bool(enabled))
         self._refresh_badges()
 
     def sequence_rows(self) -> list[RowItem]:

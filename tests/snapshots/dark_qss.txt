@@ -117,6 +117,12 @@ QToolButton#qsChip { color: #a9a9bd; background: transparent; border: 1px solid 
 QToolButton#qsChip:hover { color: #d4d4d4; border-color: #83839f; background: #3a3a4a; }
 QToolButton#qsChip:focus { border: 1px solid #5f7f9f; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
+/* the per-row send button: a 24x24 icon target with no chrome of its own, so the paper
+   plane reads as an action rather than as a field (2026-10-04, one-line rows) */
+QToolButton#qsSend { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0px; margin: 0px; }
+QToolButton#qsSend:hover { background: #3a3a4a; border-color: #83839f; }
+QToolButton#qsSend:pressed { background: #2f2f3d; border-color: #8be9fd; }
+QToolButton#qsSend:focus { border: 1px solid #5f7f9f; }
 /* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: #3a3a4a; border-color: #83839f; }

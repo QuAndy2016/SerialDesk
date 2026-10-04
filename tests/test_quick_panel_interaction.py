@@ -108,6 +108,87 @@ def action_labels(menu):
             for action in menu.actions() if not action.isSeparator()]
 
 
+# -- the one-line row (2026-10-04: "one command = one line") ---------------------------
+
+def test_the_row_is_one_line_and_the_command_drives_the_width(app, config_path):
+    """50 px -> 28 px per command; the command keeps the widest slot of the row.
+
+    Measured at the real panel width (344 px, as it sits in the splitter): command 162 px,
+    format marker 30 px, name 96 px, send 24 px. The offscreen font here is ~1.5x wider
+    than the real mono face, so 162 px reads as ~13 chars in this test but ~20 characters
+    in the running app - the frame that needs more room is a drag of the splitter away.
+    """
+    panel = make_panel(app, config_path)
+    panel.resize(344, 560)
+    app.processEvents()
+    row = panel._rows[0]
+    assert row.height() <= 36, "the row grew back into two lines (%d px)" % row.height()
+    assert row.name_edit.width() == qsp.NAME_W
+    assert row.chip.width() == qsp.CHIP_W
+    assert row.send_btn.width() == qsp.SEND_SIZE
+    assert row.text_edit.width() > row.name_edit.width()      # the command owns the row
+    assert row.text_edit.width() >= 155
+
+
+def test_sequence_mode_owns_the_tick_and_the_delay(app, config_path):
+    """The tick and the per-row delay are sequence material; the name yields them room."""
+    panel = make_panel(app, config_path)
+    row = panel._rows[0]
+    assert not row.tick.isVisible() and not row.delay.isVisible()
+    assert row.name_edit.width() == qsp.NAME_W
+    panel.seq_check.setChecked(True)
+    app.processEvents()
+    assert row.tick.isVisible() and row.delay.isVisible()
+    assert row.name_edit.width() == qsp.NAME_W_SEQ
+    panel.seq_check.setChecked(False)
+    app.processEvents()
+    assert not row.tick.isVisible() and not row.delay.isVisible()
+    assert row.name_edit.width() == qsp.NAME_W
+
+
+def test_enter_in_the_command_box_sends_that_row(app, config_path):
+    """The command box owns Enter: the panel's key path ignores text fields, so the event
+    filter sends the row itself (inter-keyboard.md:78 - Enter runs the default command)."""
+    panel = make_panel(app, config_path)
+    sent: list = []
+    panel.send_payload.connect(lambda payload, is_hex: sent.append(payload))
+    row = panel._rows[1]
+    row.text_edit.setFocus()
+    app.processEvents()
+    assert panel.eventFilter(row.text_edit, key_event(Qt.Key.Key_Return)) is True
+    assert sent == [b"AT1"]
+    # the name box is a label: Enter there must not fire the command
+    row.name_edit.setFocus()
+    app.processEvents()
+    assert not panel.eventFilter(row.name_edit, key_event(Qt.Key.Key_Return))
+    assert sent == [b"AT1"]
+
+
+def test_a_long_name_is_capped_but_never_lost(app, config_path):
+    """The column is width-capped; the full name stays reachable on hover (UI-25)."""
+    long_name = "查询版本-第二路-备用通道"
+    panel = make_panel(app, config_path,
+                       rows=[{"text": "AT", "hex": False, "delay": 0, "name": long_name}])
+    row = panel._rows[0]
+    assert row.name_edit.width() == qsp.NAME_W
+    assert row.name_edit.toolTip() == long_name
+    assert long_name in row.toolTip()
+    row.name_edit.setText("")                  # empty: the tooltip falls back to the hint
+    assert row.name_edit.toolTip()
+
+
+def test_the_send_icon_follows_the_theme(app, config_path, monkeypatch):
+    """The dark sheet draws a light glyph; a theme refresh swaps the file."""
+    panel = make_panel(app, config_path)
+    row = panel._rows[0]
+    monkeypatch.setattr(theme, "resolved_dark", lambda *args, **kwargs: True)
+    row.refresh_send_icon()
+    dark_glyph = row.send_btn.icon().pixmap(16, 16).toImage()
+    monkeypatch.setattr(theme, "resolved_dark", lambda *args, **kwargs: False)
+    row.refresh_send_icon()
+    assert row.send_btn.icon().pixmap(16, 16).toImage() != dark_glyph
+
+
 # -- selection: click / Ctrl / Shift / keyboard ---------------------------------------
 
 def test_shift_click_as_the_first_interaction_still_selects(app, config_path):

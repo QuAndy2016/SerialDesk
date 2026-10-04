@@ -547,7 +547,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.del": {"zh": "删除", "en": "Delete"},
     "qs.armed": {"zh": "已选 {n}", "en": "{n} selected"},
 "tx.settings.tip": {"zh": "发送格式与校验（点击修改）", "en": "Send format and checksum (click to change)"},
-    "qs.chip.tip": {"zh": "本行的格式与延迟（点击修改）", "en": "This row's format and delay (click to change)"},
+    "qs.chip.tip": {"zh": "{fmt} · 延迟 {ms} ms（点击修改本行格式）",
+                    "en": "{fmt} · {ms} ms after sending (click to change the row's format)"},
+    "qs.send.row.tip": {"zh": "发送本条命令（Enter）", "en": "Send this command (Enter)"},
     "qs.del.tip": {
         "zh": "删除选中的命令行（标题栏显示已选条数）；删除后 3 秒内可撤销；左侧方框属于序列模式，不参与删除",
         "en": "Delete the selected rows (the header shows how many are armed); undo is available for 3 seconds; the box on the left belongs to sequence mode",
@@ -605,7 +607,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.run": {"zh": "运行", "en": "Run"},
     "qs.stop": {"zh": "停止", "en": "Stop"},
     "qs.delay.tip": {"zh": "本条发送后等待的毫秒数（0~60000，默认 500）", "en": "Delay after this row, in ms (0-60000, default 500)"},
-    "qs.delay.unit": {"zh": "ms", "en": "ms"},
     "qs.rail.tip": {"zh": "展开快速发送面板（Ctrl+B）", "en": "Show the quick-send panel (Ctrl+B)"},
     "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},

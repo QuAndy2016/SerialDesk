@@ -105,6 +105,11 @@ QToolButton#qsChip { color: #55556a; background: transparent; border: 1px solid 
 QToolButton#qsChip:hover { color: #1f1f1f; border-color: #7f7f87; background: #e0e0e8; }
 QToolButton#qsChip:focus { border: 1px solid #4a6f9c; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
+/* the per-row send button - see the dark sheet */
+QToolButton#qsSend { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0px; margin: 0px; }
+QToolButton#qsSend:hover { background: #e0e0e8; border-color: #7f7f87; }
+QToolButton#qsSend:pressed { background: #d5d5e0; border-color: #1e5aa8; }
+QToolButton#qsSend:focus { border: 1px solid #4a6f9c; }
 /* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid #c8c8d0; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: #e0e0e8; border-color: #7f7f87; }
