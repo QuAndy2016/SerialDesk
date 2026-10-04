@@ -21,7 +21,7 @@ _lang: str = SYSTEM
 # key -> {"zh": ..., "en": ...}
 STRINGS: dict[str, dict[str, str]] = {
     # ---- menus / theme / language ----
-    # ---- config import / export (T15) ----
+    # ---- config import / export ----
     "cfg.menu": {"zh": "配置(&C)", "en": "&Config"},
     "cfg.reset": {"zh": "恢复默认设置(&R)…", "en": "&Restore defaults…"},
     "cfg.reset.title": {"zh": "恢复默认设置", "en": "Restore default settings"},
@@ -89,7 +89,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "rx.filter.rx": {"zh": "只看接收", "en": "RX only"},
     "rx.filter.tx": {"zh": "只看发送", "en": "TX only"},
     "rx.filter.tip": {"zh": "过滤接收区显示：全部 / 只看接收 / 只看发送", "en": "Filter the receive pane: all / RX only / TX only"},
-    # ---- U180 send auto-increment ----
+    # ---- send auto-increment ----
     "inc.chip": {"zh": "递增", "en": "Increment"},
     "inc.chip.on": {"zh": "递增 ✓", "en": "Increment ✓"},
     "inc.chip.tip": {"zh": "发送自动递增：在发送内容里写 {i} 占位，例如 HEX 的 AA 55 {i:2} 0D 0A；每发一帧自动加一个步长",
@@ -140,7 +140,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "sc.send.tip": {"zh": "发送（Ctrl+Enter）", "en": "Send (Ctrl+Enter)"},
     "sc.clear.tip": {"zh": "清空显示与计数（Ctrl+L，5 秒内可撤销）", "en": "Clear the display and the counters (Ctrl+L, undoable within 5 s)"},
     "sc.save.tip": {"zh": "保存接收日志（Ctrl+S）", "en": "Save receive log (Ctrl+S)"},
-    "sc.open.tip": {"zh": "打开/关闭串口（F5）", "en": "Open/close the port (F5)"},
+    "sc.open.tip": {"zh": "打开/关闭串口", "en": "Open/close the port"},
     "rx.cap": {
         "zh": "接收区已达显示上限（{n} 行），更早的数据不再显示；自动保存的日志文件不受影响",
         "en": "The receive pane hit its display limit ({n} lines); older data is no longer shown. Auto-saved logs are unaffected",
@@ -213,7 +213,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Tick to prefix every receive line with a timestamp, always shaped like [04:02:10.456]",
     },
     "btn.clear": {"zh": "清空", "en": "Clear"},
-    # ---- receive log to file (T4) ----
+    # ---- receive log to file ----
     "btn.save_log_quick": {"zh": "保存日志", "en": "Save log"},
     "btn.save_log_as": {"zh": "日志另存为…", "en": "Save log as…"},
     "log.quick.tip": {
@@ -253,7 +253,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "发送时自动追加的校验\nCRC16-Modbus：低字节在前（Modbus RTU）\nCRC16-CCITT：高字节在前\nCRC32：4 字节大端\nSUM8：单字节累加和",
         "en": "Checksum appended on send\nCRC16-Modbus: low byte first (Modbus RTU)\nCRC16-CCITT: high byte first\nCRC32: 4 bytes, big endian\nSUM8: single-byte sum",
     },
-    # ---- serial parameters (T1) ----
+    # ---- serial parameters ----
     "params.databits": {"zh": "数据位:", "en": "Data bits:"},
     "params.parity": {"zh": "校验位:", "en": "Parity:"},
     "params.stopbits": {"zh": "停止位:", "en": "Stop bits:"},
@@ -312,9 +312,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "e.g. 01 03 00 00 (HEX sends bytes exactly - add 0D 0A yourself if you need an ending)",
     },
     "tx.placeholder.ascii": {"zh": "例如：AT+VERSION?", "en": "e.g. AT+VERSION?"},
+    "tx.reject.trailing_space": {"zh": "末尾的空格不算数据，已忽略（需要分隔时把空格放在字节之间）",
+                                 "en": "A trailing space is not part of the command - ignored (put spaces between bytes)"},
     "tx.input.tip.ascii": {
-        "zh": "字符串模式：按文本发送（勾选「解析转义符」后 \\r\\n 等转义生效）",
-        "en": "Text mode: sent as characters (\\r\\n escapes apply when the escape option is on)",
+        "zh": "字符串模式：按文本发送（勾选「解析转义符」后 \\r\\n 等转义生效）；Enter 发送，Shift+Enter 换行；末尾的空格不算数据",
+        "en": "Text mode: sent as characters (\\r\\n escapes apply when the escape option is on); Enter sends, Shift+Enter breaks the line, a trailing space is not data",
     },
     "tx.placeholder": {
         "zh": "在此输入要发送的内容；HEX 模式如 01 03 00 00（支持 0x 前缀与逗号）",
@@ -327,6 +329,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "接收吞吐（1 秒滚动窗口）：速率 · 每秒批次数 · 平均每批合并片段数 · 单批最坏耗时 · 丢弃计数",
         "en": "Receive throughput (1 s rolling window): rate · batches per second · fragments merged per batch · worst batch cost · dropped count"},
     "rx.empty.hint": {"zh": "打开串口后，接收到的数据会显示在这里", "en": "Data received after opening a port shows up here"},
+    "rx.view.name": {"zh": "接收区", "en": "Receive pane"},
     "update.menu": {"zh": "有新版本 {v} 可用…", "en": "Version {v} is available…"},
     "update.available": {"zh": "发现新版本 {v}，设置菜单里可打开下载页", "en": "Version {v} is out - the settings menu links to the download page"},
     "update.check": {"zh": "启动时检查更新", "en": "Check for updates at startup"},
@@ -373,8 +376,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "flow.none": {"zh": "无", "en": "None"},
     "flow.sw": {"zh": "软件(XON/XOFF)", "en": "Software (XON/XOFF)"},
     "flow.hw": {"zh": "硬件(RTS/CTS)", "en": "Hardware (RTS/CTS)"},
-    # ---- append CRLF (T3) ----
+    # ---- append CRLF ----
     "tx.newline.label": {"zh": "换行:", "en": "Line ending:"},
+    "tx.checksum.label": {"zh": "校验:", "en": "Checksum:"},
     "tx.nl.none": {"zh": "无", "en": "None"},
     "tx.nl.cr": {"zh": "回车 CR", "en": "CR"},
     "tx.nl.lf": {"zh": "换行 LF", "en": "LF"},
@@ -391,7 +395,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "zh": "ASCII 模式下发完内容后追加的字节：无 / 回车 0D / 换行 0A / 回车+换行 0D 0A（AT 指令常用）",
         "en": "Bytes appended after the payload in ASCII mode: none / CR 0D / LF 0A / CR+LF 0D 0A (the usual choice for AT commands)",
     },
-    # ---- repeat send (T2) / send history (T5) ----
+    # ---- repeat send / send history ----
     "tx.content.label": {"zh": "发送内容区（文本输入区）", "en": "Send content (text input)"},
     "tx.interval.label": {"zh": "间隔(ms)", "en": "Interval (ms)"},
     "split.auto.hint": {
@@ -413,11 +417,6 @@ STRINGS: dict[str, dict[str, str]] = {
                         "en": "Click a row to select it first (Ctrl/Shift for several), then Delete; in sequence mode a ticked row can be deleted too"},
     "qs.del.none": {"zh": "没有选中任何行：先点一下要删的那行，再点删除",
                     "en": "Nothing selected - click the row you want to delete, then press Delete"},
-    "qs.del.confirm.title": {"zh": "确认删除", "en": "Confirm delete"},
-    "qs.del.confirm.text": {"zh": "确定删除选中的 {n} 行命令？删除后 3 秒内可撤销。",
-                           "en": "Delete the {n} selected command row(s)? You can undo within 3 seconds."},
-    "qs.del.confirm.yes": {"zh": "删除", "en": "Delete"},
-    "qs.del.confirm.no": {"zh": "取消", "en": "Cancel"},
     "tx.repeat.count.tip": {"zh": "循环发送的次数；勾选左侧 ∞ 表示不限次数（一直循环，手动停止）",
                            "en": "How many times to repeat; tick ∞ on the left to repeat until stopped by hand"},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},
@@ -449,7 +448,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.history.removed": {"zh": "已删除历史：{text}", "en": "Removed from history: {text}"},
     "tx.history.removed.n": {"zh": "已删除 {n} 条发送历史", "en": "Removed {n} history entries"},
     "tx.history.cleared": {"zh": "已清空发送历史", "en": "Send history cleared"},
-    # ---- file send (T6) ----
+    # ---- file send ----
     "btn.send_file": {"zh": "发送文件", "en": "Send file"},
     "btn.cancel_send": {"zh": "取消发送", "en": "Cancel send"},
     "file.dialog.title": {"zh": "选择要发送的文件", "en": "Choose a file to send"},
@@ -462,7 +461,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "file.done": {"zh": "文件发送完成：{name}（{size}）", "en": "File sent: {name} ({size})"},
     "file.error": {"zh": "文件发送失败: {e}", "en": "File send failed: {e}"},
     "file.no_port": {"zh": "请先打开串口再发送文件", "en": "Open the port before sending a file"},
-    # ---- auto reply (T10) ----
+    # ---- auto reply ----
     "rb.enable": {"zh": "自动应答", "en": "Auto-reply"},
     "rb.enable.tip": {
         "zh": "勾选后，收到匹配串即自动发送响应串；规则在「规则…」中配置",
@@ -547,13 +546,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.empty_row": {"zh": "（空行）", "en": "(empty)"},
     "qs.send": {"zh": "发送", "en": "Send"},
     "qs.del": {"zh": "删除", "en": "Delete"},
+    "qs.armed": {"zh": "已选 {n}", "en": "{n} selected"},
 "tx.settings.tip": {"zh": "发送格式与校验（点击修改）", "en": "Send format and checksum (click to change)"},
     "qs.chip.tip": {"zh": "本行的格式与延迟（点击修改）", "en": "This row's format and delay (click to change)"},
     "qs.del.tip": {
-        "zh": "删除单击选中的命令行（也可以按 Delete 键）；左侧方框是序列模式用的，不参与删除；删除后 3 秒内可撤销",
-        "en": "Delete the clicked row(s) (or press Delete); the box on the left belongs to sequence mode and is not a delete selection; undo is available for 3 seconds",
+        "zh": "删除选中的命令行（标题栏显示已选条数）；删除后 3 秒内可撤销；左侧方框属于序列模式，不参与删除",
+        "en": "Delete the selected rows (the header shows how many are armed); undo is available for 3 seconds; the box on the left belongs to sequence mode",
     },
-    "qs.row.tip": {"zh": "单击选中这一行（选中后有蓝色边框），再用「删除」删除；左侧方框用于序列模式", "en": "Click to select this row (it gets the accent border), then press Delete; the box on the left is for sequence mode"},
+    "qs.row.tip": {
+        "zh": "单击选中这一行（出现蓝框）；Shift+单击选一段，Ctrl+单击加选；删除用「删除」按钮，或先让行本身获得焦点再按 Delete（焦点在命令行里时 Delete 归文本编辑）",
+        "en": "Click to select this row (it gets the accent border); Shift+click extends, Ctrl+click toggles; delete with the Delete button, or focus the row itself and press Delete (inside a command box Delete belongs to the text)",
+    },
     "qs.sel.tip": {
         "zh": "勾选后点「运行」只按顺序发送勾选的指令；一个都不勾则发送全部",
         "en": "Tick to include this row when running the sequence; with nothing ticked every row runs",
@@ -588,12 +591,13 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "qs.bad_fmt": {"zh": "指令格式错误: {e}", "en": "Invalid command format: {e}"},
     "qs.save_fail": {"zh": "保存配置失败: {e}", "en": "Failed to save config: {e}"},
-    # ---- command sequence (T13) ----
+    # ---- command sequence ----
     "qs.name.ph": {"zh": "名称（可选）", "en": "Name (optional)"},
     "qs.name.tip": {"zh": "给这条命令起个名字（例如“查询IMEI”）；留空则只显示命令内容",
                      "en": "A display name for this command (e.g. 'Query IMEI'); empty shows the command only"},
     "qs.note.title": {"zh": "命令备注", "en": "Command note"},
     "qs.note.label": {"zh": "备注（悬停该行可看）", "en": "Note (shown when hovering the row)"},
+    "qs.note.menu": {"zh": "编辑备注…", "en": "Edit note…"},
     "qs.seq": {"zh": "序列模式", "en": "Sequence mode"},
     "qs.seq.tip": {
         "zh": "按顺序发送：每条指令可单独设延迟（毫秒），点「运行」依次自动发出",
@@ -607,12 +611,16 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
     "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},
-    "qs.loops": {"zh": "循环", "en": "Loops"},
-    "qs.loops.tip": {"zh": "序列整体重复几轮；勾选左侧 ∞ 表示不限轮数（一直循环，手动停止）",
-                     "en": "How many rounds to repeat the whole sequence; tick ∞ on the left for unlimited (keeps going until stopped)"},
+    "qs.rounds.label": {"zh": "轮数", "en": "Rounds"},
+    "qs.rounds.tip": {"zh": "序列重复几轮。默认 ∞（一直循环）；点上箭头：∞ → 1 → 2 …，"
+                            "点下箭头递减，1 再往下又回到 ∞，到顶也会绕回 ∞（轮盘式）；"
+                            "也可以直接把数字（或 ∞）敲进去",
+                      "en": "How many rounds the sequence repeats. Default \u221e (until stopped); "
+                            "Up: \u221e -> 1 -> 2 ..., Down counts back, and 1 steps down to \u221e "
+                            "just like the top wraps around (a wheel). You can also type a number (or \u221e)."},
     "qs.seq.none": {"zh": "没有可发送的指令", "en": "No commands to send"},
-    # B4-P1 declarative parser: error codes and template names (used by the field panel
-    # that lands with B4-P2; the kernel itself is Qt-free and has no user-visible text).
+    # declarative parser: error codes and template names (used by the field panel
+    # that lands with ; the kernel itself is Qt-free and has no user-visible text).
     "parse.err.truncated": {"zh": "帧被截断：字节数不够读完字段", "en": "Truncated frame: not enough bytes for the fields"},
     "parse.err.checksum_mismatch": {"zh": "校验不通过", "en": "Checksum mismatch"},
     "parse.err.bad_length": {"zh": "长度字段无效或尚未解码", "en": "Length field is invalid or not decoded yet"},

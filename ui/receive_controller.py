@@ -98,10 +98,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
-CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
+CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted
 def _byte_splitter(win: MainWindow) -> ByteFrameSplitter:
     "byte splitter"
-    """The lazy per-window byte-stream splitter for the B3 modes (U50 slot)."""
+    """The lazy per-window byte-stream splitter for the B3 modes (slot)."""
     splitter = getattr(win, "_byte_splitter", None)
     if splitter is None:
         splitter = ByteFrameSplitter()
@@ -143,7 +143,7 @@ def _on_received_body(win: MainWindow, ts: float, data: bytes):
         win._last_ts = ts
         return
 
-    # U57: collect chunks first; the line break is decided when the group settles
+    # collect chunks first; the line break is decided when the group settles
     win._frames.set_threshold(win._split_threshold_ms())
     win._frames.feed(ts, data)
     if not win._frame_timer.isActive():
@@ -152,7 +152,7 @@ def _on_received_body(win: MainWindow, ts: float, data: bytes):
 
 def on_received(win: MainWindow, ts: float, data: bytes):
     "on received"
-    """Time one received batch and feed the throughput read-out (data-path P2).
+    """Time one received batch and feed the throughput read-out .
 
     What is measured is the GUI thread's whole share of the batch: framing, the
     fragment store and the pane. That is the number the meter shows and the number
@@ -195,7 +195,7 @@ def refresh_meter(win: MainWindow) -> None:
 
 def flush_rx_frames(win: MainWindow) -> None:
     "flush rx frames"
-    """Emit assembled frames: USB fragments merged, real gaps split (U57)."""
+    """Emit assembled frames: USB fragments merged, real gaps split."""
     now = time.monotonic()
     while True:
         got = win._frames.take(now)
@@ -204,15 +204,15 @@ def flush_rx_frames(win: MainWindow) -> None:
         new_line, ts, data = got
         win._append_rx_group(win._format_rx(data), ts, new_line)
     win._last_ts = now
-    win._scroll_rx_bottom()          # U43
+    win._scroll_rx_bottom()          # 
     if win._frames.has_pending():
         win._frame_timer.start(int(win._frames.settle_ms))
 
-RX_STORE_MAX = 40000   # U163b: fragments kept so the RX/TX view filter can rebuild
+RX_STORE_MAX = 40000   # b: fragments kept so the RX/TX view filter can rebuild
 
 
 def _rx_store(win: MainWindow) -> list:
-    """The bounded (text, kind) stream that backs view filtering (U163b)."""
+    """The bounded (text, kind) stream that backs view filtering (b)."""
     store = getattr(win, "_rx_store", None)
     if store is None:
         store = []
@@ -221,14 +221,14 @@ def _rx_store(win: MainWindow) -> list:
 
 
 def _insert_rx_fragment(win: MainWindow, text: str, kind: int) -> None:
-    """Insert one fragment with the colour its class calls for (U62/U163b)."""
+    """Insert one fragment with the colour its class calls for (/b)."""
     cursor = win.rx_view.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
     cursor.insertText(text, _kind_format(win, kind))
 
 
 def _kind_format(win: MainWindow, kind: int) -> QTextCharFormat:
-    """The char format for a fragment kind, built once and reused (P1).
+    """The char format for a fragment kind, built once and reused.
 
     Rebuilding a QTextCharFormat (colour + user property) for every fragment was
     pure per-fragment overhead; four kinds exist, so four cached objects do.
@@ -255,7 +255,7 @@ def _kind_format(win: MainWindow, kind: int) -> QTextCharFormat:
 
 
 def _frag_visible(win: MainWindow, kind: int) -> bool:
-    """Whether a fragment survives the active view filter (U163b/U176)."""
+    """Whether a fragment survives the active view filter (b/)."""
     return fragment_visible(kind, getattr(win, "_rx_filter", 0))
 
 
@@ -266,7 +266,7 @@ def emit_rx_text(win: MainWindow, text: str, tx: bool = False, meta: bool = Fals
     kind: RX/TX payload or RX/TX timestamp marker (see app.display.frag_kind).
     The kind is stored on the format so a theme switch can recolour it correctly.
 
-    While the display is paused (U160) the text is buffered instead of inserted,
+    While the display is paused the text is buffered instead of inserted,
     so it can be replayed when the user resumes; the log keeps receiving it.
     """
     kind = frag_kind(tx, meta)
@@ -329,7 +329,7 @@ def _run_find_refresh(win: MainWindow) -> None:
 
 def rebuild_rx_view(win: MainWindow) -> None:
     "rebuild rx view"
-    """Re-render the pane from the fragment store under the active filter (U163b)."""
+    """Re-render the pane from the fragment store under the active filter (b)."""
     if not hasattr(win, "rx_view"):
         return
     store = _rx_store(win)
@@ -350,13 +350,13 @@ def rebuild_rx_view(win: MainWindow) -> None:
 
 def on_filter_changed(win: MainWindow, index: int) -> None:
     "on filter changed"
-    """Switch the RX/TX view filter and rebuild the pane (U163b)."""
+    """Switch the RX/TX view filter and rebuild the pane (b)."""
     win._rx_filter = int(index)
     rebuild_rx_view(win)
 
 def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> None:
     "append rx group"
-    """Emit one RX group without gluing it onto the previous text (U59).
+    """Emit one RX group without gluing it onto the previous text.
 
     - new line requested, or the current line belongs to a TX echo -> open a
       fresh, timestamped line;
@@ -364,7 +364,7 @@ def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> No
       (previously '39 30' + '31 32' collapsed into '39 3031 32').
     """
     if win.rx_fmt_combo.currentIndex() == RX_COLUMN_HEX:
-        new_line = True      # U163c: every hexdump row set starts on its own line
+        new_line = True      # c: every hexdump row set starts on its own line
     has_text = win.rx_view.document().characterCount() > 1
     if new_line or win._line_is_tx:
         if has_text:
@@ -377,7 +377,7 @@ def append_rx_group(win: MainWindow, text: str, ts: float, new_line: bool) -> No
     win._emit_rx_text(text)
     win._line_is_tx = False
     if not win._cap_warned and win.rx_view.blockCount() >= RECEIVE_MAX_LINES - 5:
-        win._cap_warned = True          # U45: one clear warning, not per line
+        win._cap_warned = True          # one clear warning, not per line
         win._notify(tr("rx.cap", n=RECEIVE_MAX_LINES), "warn", ms=8000)
 
 def append_header_split(win: MainWindow, data: bytes, ts: float):
@@ -394,7 +394,7 @@ def append_header_split(win: MainWindow, data: bytes, ts: float):
     segs = data.split(header_b)
     for i, seg in enumerate(segs):
         if i == 0:
-            # bytes before the first header: continue the current frame (U59)
+            # bytes before the first header: continue the current frame
             if seg:
                 win._append_rx_group(win._format_rx(seg), ts, False)
             continue
@@ -402,15 +402,15 @@ def append_header_split(win: MainWindow, data: bytes, ts: float):
             continue  # adjacent headers, frame with empty body
         win._append_rx_group(win._format_rx(header_b + seg), ts, True)
 
-    win._scroll_rx_bottom()          # U43
+    win._scroll_rx_bottom()          # 
 
 def recolor_rx_view(win: MainWindow) -> None:
     "recolor rx view"
-    """Re-apply theme colours to already-displayed lines (U27).
+    """Re-apply theme colours to already-displayed lines.
 
     Text inserted under one theme keeps the colour it was given, which turns
     black-on-dark (or worse) after a theme switch, so re-colour the document.
-    The cached per-kind formats are dropped first (P1) - they hold the old colours.
+    The cached per-kind formats are dropped first - they hold the old colours.
     """
     win._rx_fmt_cache = {}
     doc = win.rx_view.document()
@@ -444,7 +444,7 @@ def recolor_rx_view(win: MainWindow) -> None:
 
 def snapshot_rx_fragments(win: MainWindow) -> list:
     "snapshot rx fragments"
-    """Capture (text, kind) for every fragment so clearing can be undone (U42).
+    """Capture (text, kind) for every fragment so clearing can be undone.
 
     QPlainTextEdit refuses a cloned document (its layout class differs), so the
     pane is rebuilt from the fragments with our own emitter instead.
@@ -472,7 +472,7 @@ def snapshot_rx_fragments(win: MainWindow) -> list:
 
 def rx_tooltip(win: MainWindow, obj: QObject, event) -> bool:
     "rx tooltip"
-    """Show the whole line when hovering a very long receive line (U129-A4).
+    """Show the whole line when hovering a very long receive line.
 
     Returns True when the tooltip was ours, so the window's event filter stops
     there; the displayed text is never altered, so copy keeps the full data.
@@ -491,7 +491,7 @@ def rx_tooltip(win: MainWindow, obj: QObject, event) -> bool:
 
 def on_clear(win: MainWindow):
     "on clear"
-    """Clear the display only (U169); the session counters keep counting.
+    """Clear the display only; the session counters keep counting.
 
     (The old docstring said "and the counters"; the code never zeroed them, so the
     label was wrong - the counter actions now live in the split button's menu.)
@@ -512,10 +512,10 @@ def on_clear(win: MainWindow):
     if _bsplit is not None:
         _bsplit.reset()
     win._last_ts = None
-    win._rx_pause_buf = []      # U160: a pause buffer must not survive a clear
-    win._rx_store = []          # U163b: the filter store goes with the display
+    win._rx_pause_buf = []      # a pause buffer must not survive a clear
+    win._rx_store = []          # b: the filter store goes with the display
     win._cur_line_tx = False
-    win._col_off = 0            # U163c: the hexdump offset starts over with the pane
+    win._col_off = 0            # c: the hexdump offset starts over with the pane
     win.rx_view.clear()
     win._line_is_tx = False
     win._cap_warned = False
@@ -526,9 +526,9 @@ def on_clear(win: MainWindow):
 
 def on_clear_and_counters(win: MainWindow) -> None:
     "on clear and counters"
-    """U169/2026-10-02: clear the pane and zero the counters in one step.
+    """/2026-10-02: clear the pane and zero the counters in one step.
 
-    This is the only clear action now (Andy: one button, one meaning). on_clear runs
+    This is the only clear action now (: one button, one meaning). on_clear runs
     first, so the undo snapshot still holds the pre-clear counters and undoing brings
     both the text and the numbers back.
     """
@@ -540,7 +540,7 @@ def on_clear_and_counters(win: MainWindow) -> None:
 
 
 def resume_rx_display(win: MainWindow) -> None:
-    """Replay the buffered lines after the user resumes display (U160)."""
+    """Replay the buffered lines after the user resumes display."""
     win._rx_paused = False   # replay must go to the view, not back into the buffer
     buf = getattr(win, "_rx_pause_buf", None) or []
     win._rx_pause_buf = []

@@ -1,4 +1,4 @@
-"""Frame assembly for received bytes (U57).
+"""Frame assembly for received bytes.
 
 USB serial adapters do not deliver one frame per read: the driver and the OS
 scheduler hand over a frame in several chunks (1-16 ms apart). Deciding a line

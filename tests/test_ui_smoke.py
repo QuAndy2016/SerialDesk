@@ -13,8 +13,9 @@ import pytest                                   # noqa: E402
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QEvent, QPointF, Qt   # noqa: E402
-from PySide6.QtGui import QKeySequence, QMouseEvent  # noqa: E402
+from PySide6.QtCore import QEvent, QPoint, QPointF, QSize, Qt   # noqa: E402
+from PySide6.QtGui import QImage, QKeySequence, QMouseEvent  # noqa: E402
+from PySide6.QtTest import QTest                     # noqa: E402
 from PySide6.QtWidgets import QApplication       # noqa: E402
 
 from app import __version__, shortcuts           # noqa: E402
@@ -54,7 +55,7 @@ def test_status_counter_reads_from_the_stats_object(app, win):
 
 
 def test_send_input_is_compact_and_wraps(app, win):
-    """2026-10-02 (Andy): the pane is about two button rows high and long payloads
+    """2026-10-02: the pane is about two button rows high and long payloads
     wrap + scroll, so the floor is two lines and wrapping is the default."""
     from PySide6.QtWidgets import QPlainTextEdit
     line = win.tx_edit.fontMetrics().lineSpacing()
@@ -63,7 +64,7 @@ def test_send_input_is_compact_and_wraps(app, win):
 
 
 def test_actions_sit_beside_the_input(app, win):
-    """2026-10-02 (Andy): input left, send/history/repeat in a column on the right.
+    """2026-10-02: input left, send/history/repeat in a column on the right.
 
     The old assertion was "input above the buttons"; the buttons intentionally moved
     to the right edge, so this now checks the column is beside the box, not under it.
@@ -79,37 +80,40 @@ def test_actions_sit_beside_the_input(app, win):
 
 
 def test_quick_send_rows_show_name_and_command_lines(app, win):
-    # U182: each row is a name line above the command line, plus the property chip
+    # each row is a name line above the command line, plus the property chip
     row = win.quick_panel._rows[0]
-    assert row["name"] is not None and row["edit"] is not None
-    assert row["name"] is not row["edit"]
+    assert row.name_edit is not None and row.text_edit is not None
+    assert row.name_edit is not row.text_edit
     # The chip mirrors the row's format + delay. Do not hard-code HEX here: on a
     # fresh machine the panel seeds ASCII examples first (AT / AT+VERSION?), so
     # which format row 0 carries depends on the run's config, not on the wiring.
-    row["fmt"].setCurrentIndex(0)                       # HEX
-    assert "HEX" in row["chip"].text() and "500" in row["chip"].text()
-    row["fmt"].setCurrentIndex(1)                       # ASCII
-    assert "ASCII" in row["chip"].text()
-    row["widget"].height() < 80        # two lines, not a tall block
+    row.fmt.setCurrentIndex(0)                          # HEX
+    assert "HEX" in row.chip.text() and "500" in row.chip.text()
+    row.fmt.setCurrentIndex(1)                          # ASCII
+    assert "ASCII" in row.chip.text()
+    row.height() < 80                  # two lines, not a tall block
 
 
-def test_selection_survives_a_row_click_and_clears_outside(app, win):
+def test_selection_survives_a_row_click_and_clears_on_a_blank_click(app, win):
     panel = win.quick_panel
-    panel._select_row(panel._rows[0], "replace")
-    assert panel.selected_entry() is not None
+    panel.arm_row(panel._rows[0], "replace")
+    assert panel.selected_row() is not None
     outside = QMouseEvent(QEvent.Type.MouseButtonPress, QPointF(5, 5), QPointF(5, 5),
                           Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
                           Qt.KeyboardModifier.NoModifier)
-    panel.eventFilter(win.rx_view, outside)
-    assert panel.selected_entry() is None
+    # the panel only filters its *own* widgets now (no application-wide filter, which used
+    # to keep closed windows alive), so a click on the log no longer reaches it - the
+    # selection is dropped by Esc, by a click on the panel's blank area, or by the delete
+    panel.eventFilter(panel._content, outside)
+    assert panel.selected_row() is None
 
 
 def test_batch_delete_and_undo_restore_the_rows(app, win):
     panel = win.quick_panel
     before = len(panel._rows)
-    panel._select_row(panel._rows[0], "replace")
-    panel._select_row(panel._rows[1], "toggle")
-    panel.delete_selected()
+    panel.arm_row(panel._rows[0], "replace")
+    panel.arm_row(panel._rows[1], "toggle")
+    panel.delete_armed()
     assert len(panel._rows) == before - 2
     panel.restore_rows([{"text": "a", "hex": True, "delay": 500, "index": 0},
                         {"text": "b", "hex": True, "delay": 500, "index": 1}])
@@ -121,7 +125,7 @@ def test_keyboard_scope_leaves_text_fields_alone(app, win):
     win.tx_edit.setFocus()
     app.processEvents()
     assert panel._owns_keyboard() is False       # Ctrl+A/Delete must not be stolen
-    panel._rows[0]["widget"].setFocus()
+    panel._rows[0].setFocus()
     app.processEvents()
     assert panel._owns_keyboard() is True        # focus inside the panel: ours
 
@@ -170,7 +174,7 @@ def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
     the action area became a single-line toolbar (v1.5.1), so both controls had no
     parent and were invisible - the feature was gone with no error anywhere.
 
-    U190 (2026-10-03): interval and count now live inside the repeat chip's popup, so
+    (2026-10-03): interval and count now live inside the repeat chip's popup, so
     "attached" no longer means "visible in the row" - it means reachable from the chip.
     The chip itself is the row control and must be visible.
     """
@@ -185,31 +189,88 @@ def test_repeat_toolbar_is_attached_and_guarded(app) -> None:
                          (win.repeat_chip, "repeat_chip")):
         assert widget.parentWidget() is not None, "%s has no parent" % name
         assert widget.isVisible(), "%s is not visible" % name
-    # U190: the two fields are attached to the chip's popup, not to the row
+    # the two fields are attached to the chip's popup, not to the row
     holder = win.repeat_chip.menu().actions()[0].defaultWidget()
     for widget, name in ((win.repeat_ms, "repeat_ms"), (win.repeat_times, "repeat_times")):
         assert widget.parentWidget() is not None, "%s has no parent" % name
         assert holder.isAncestorOf(widget), "%s is not inside the repeat chip" % name
-    # with no port open the toggle must refuse to start a loop (U61) and reset itself
+    # with no port open the toggle must refuse to start a loop and reset itself
     win.repeat_btn.setChecked(True)
     assert not win._repeat_timer.isActive()
     assert not win.repeat_btn.isChecked()
 
 
+def _icon_pixels(icon) -> bytes:
+    """The icon's pixels - ``QIcon.cacheKey()`` is per instance, so it cannot be compared.
+
+    Two calls to ``button.icon()`` hand back distinct QIcon objects (different keys) even
+    when they hold the same image, so the regression test compares what is actually drawn.
+    """
+    image = icon.pixmap(QSize(16, 16)).toImage().convertToFormat(QImage.Format.Format_ARGB32)
+    return bytes(image.constBits())
+
+
 def test_panel_toggle_button_is_never_blank(app, win):
-    # U161: the fold button used to render blank until the first manual toggle
+    # the fold button used to render blank until the first manual toggle
     btn = win._panel_btn
     assert not btn.icon().isNull()          # icon present right after build
+    open_icon = _icon_pixels(btn.icon())
     win._on_quick_panel_collapsed(True)
     app.processEvents()
-    assert not btn.icon().isNull() and not btn.isChecked()
+    assert not btn.icon().isNull() and _icon_pixels(btn.icon()) != open_icon
     win._on_quick_panel_collapsed(False)
     app.processEvents()
-    assert not btn.icon().isNull() and btn.isChecked()
+    assert not btn.icon().isNull() and _icon_pixels(btn.icon()) == open_icon
+
+
+def test_fold_button_is_a_command_button_not_a_toggle(app, win):
+    """2026-10-04 report: it sat there looking "selected" (grey fill + accent border) the
+    whole time the panel was open, because it was checkable and checked meant "panel shown".
+
+    Evidence and reasoning: a control whose label/icon changes with the state is a command
+    button, not a toggle button (W3C APG button pattern, 08_refs/w3c-aria-practices/
+    content/patterns/button/button-pattern.html:32,34). The icon already flips, so the
+    button must not carry a checked state at all.
+    """
+    btn = win._panel_btn
+    assert not btn.isCheckable()
+    # a real click still folds and unfolds - the arrow icon is the only state cue now
+    assert not win.quick_panel.is_folded()
+    QTest.mouseClick(btn, Qt.MouseButton.LeftButton)
+    app.processEvents()
+    assert win.quick_panel.is_folded()
+    QTest.mouseClick(btn, Qt.MouseButton.LeftButton)
+    app.processEvents()
+    assert not win.quick_panel.is_folded()
+    assert not btn.isChecked()          # no latched "on" look can come back
+
+
+def _border_colour(win, widget) -> str:
+    """The colour of the widget's own border, read off a rendered window."""
+    top_left = widget.mapTo(win, QPoint(0, 0))
+    image = win.grab().toImage()
+    return image.pixelColor(top_left.x(), top_left.y() + widget.height() // 2).name()
+
+
+def test_fold_button_shows_a_focus_ring(app, win):
+    """A ``#objectName`` rule outranks the generic ``QToolButton:focus``, so the ring needs
+    its own line in the sheet - without it the border never changed under the keyboard
+    (measured: it stayed at the resting colour while a focused combo box did change).
+    """
+    btn = win._panel_btn
+    win.activateWindow()
+    btn.clearFocus()
+    app.processEvents()
+    rest = _border_colour(win, btn)
+    btn.setFocus()
+    app.processEvents()
+    assert btn.hasFocus()
+    assert _border_colour(win, btn) != rest, "no visible keyboard focus indicator"
+    btn.clearFocus()
 
 
 def test_receive_pane_always_wraps(app, win):
-    """2026-10-02 (Andy): the soft-wrap switch was removed - the pane always wraps.
+    """2026-10-02: the soft-wrap switch was removed - the pane always wraps.
 
     The old test flipped win._on_wrap_toggled both ways; the switch no longer exists.
     """
@@ -219,7 +280,7 @@ def test_receive_pane_always_wraps(app, win):
 
 
 def test_clean_copy_strips_timestamps_and_markers(app, win):
-    # U162-B2: the clean copy drops kind-2 (timestamp/marker) fragments
+    # the clean copy drops kind-2 (timestamp/marker) fragments
     from ui.actions_controller import _rx_copy_text
     win.rx_view.clear()
     win._emit_rx_text("[00:00:00.000] ", meta=True)
@@ -232,7 +293,7 @@ def test_clean_copy_strips_timestamps_and_markers(app, win):
 
 
 def test_clear_button_clears_display_and_counters(app, win):
-    """2026-10-02 (Andy): one clear action - display + counters.
+    """2026-10-02: one clear action - display + counters.
 
     The split button (clear display / clear+counters / reset counters) is gone; the
     single Clear button and Ctrl+L both zero the counters as well.
@@ -248,22 +309,20 @@ def test_clear_button_clears_display_and_counters(app, win):
 
 
 def test_focus_inside_row_selects_it(app, win):
-    # U163-I2: a FocusIn landing on a row control selects that row (keyboard reach)
+    # a FocusIn landing on a row control selects that row (keyboard reach)
     from PySide6.QtCore import QEvent
     from PySide6.QtGui import QFocusEvent
-    from PySide6.QtWidgets import QLineEdit
     panel = win.quick_panel
     panel.clear_selection()
-    entry = panel._rows[0]
-    field = entry["widget"].findChild(QLineEdit)
-    panel.eventFilter(field, QFocusEvent(QEvent.Type.FocusIn))
+    row = panel._rows[0]
+    panel.eventFilter(row.text_edit, QFocusEvent(QEvent.Type.FocusIn))
     app.processEvents()
-    assert bool(entry["widget"].property("selected")) is True
+    assert row.armed() is True
     panel.clear_selection()
 
 
 def test_rx_view_filter_hides_tx_or_rx(app, win):
-    # U163b: the RX/TX filter rebuilds the pane from the fragment store
+    # b: the RX/TX filter rebuilds the pane from the fragment store
     win.rx_view.clear()
     win._rx_store = []
     win._emit_rx_text("\n")
@@ -276,19 +335,19 @@ def test_rx_view_filter_hides_tx_or_rx(app, win):
     app.processEvents()
     text = win.rx_view.toPlainText()
     assert "RXLINE" in text and "TXLINE" not in text
-    assert "<- " in text and "-> " not in text     # U176: no TX marker in RX only
+    assert "<- " in text and "-> " not in text     # no TX marker in RX only
     win._on_rx_filter_changed(2)          # TX only
     app.processEvents()
     text = win.rx_view.toPlainText()
     assert "TXLINE" in text and "RXLINE" not in text
-    assert "-> " in text and "<- " not in text     # U177: TX marker (timestamp) visible
+    assert "-> " in text and "<- " not in text     # TX marker (timestamp) visible
     win._on_rx_filter_changed(0)          # back to all
     app.processEvents()
     assert "RXLINE" in win.rx_view.toPlainText() and "TXLINE" in win.rx_view.toPlainText()
 
 
 def test_find_highlights_and_case_switch(app, win):
-    # U181: the highlight box is persistent and the case switch re-runs the search
+    # the highlight box is persistent and the case switch re-runs the search
     win.rx_view.clear()
     win._rx_store = []
     win._emit_rx_text("AT+CGSN=1 at ok")
@@ -306,7 +365,7 @@ def test_find_highlights_and_case_switch(app, win):
 
 
 def test_sequence_loop_rule():
-    # U170: 0 = endless, otherwise stop once the requested rounds are done
+    # 0 = endless, otherwise stop once the requested rounds are done
     from ui.quick_send_panel import loop_should_continue
     assert loop_should_continue(1, 1) is False
     assert loop_should_continue(1, 2) is True
@@ -315,7 +374,7 @@ def test_sequence_loop_rule():
 
 
 def test_repeat_count_reads_the_switch_and_the_spin(app, win):
-    # U199: 0 is not a magic count any more - the ∞ switch decides, the spin is 1..9999
+    # 0 is not a magic count any more - the ∞ switch decides, the spin is 1..9999
     from ui.actions_controller import repeat_count
     win.repeat_endless.setChecked(True)
     win.repeat_times.setValue(7)
@@ -344,20 +403,27 @@ def test_repeat_count_falls_back_to_one_send(app, win):
 
 
 def test_repeat_tick_stops_after_the_count(app, win):
-    # U171: each tick sends once and the loop stops itself at the target
+    # each tick sends once and the loop stops itself at the target
     from ui.actions_controller import on_repeat_tick
     sent = []
+    real_send = win.on_send
     win.on_send = lambda: sent.append(1)
-    win.repeat_times.setValue(3)
-    win._repeat_count = 0
-    for _ in range(3):
-        on_repeat_tick(win)
-    assert len(sent) == 3
-    assert not win._repeat_timer.isActive()
+    try:
+        win.repeat_times.setValue(3)
+        win._repeat_count = 0
+        for _ in range(3):
+            on_repeat_tick(win)
+        assert len(sent) == 3
+        assert not win._repeat_timer.isActive()
+    finally:
+        # the window is shared by this whole module: a stub left behind makes every later
+        # send silently do nothing (that is exactly how the 2026-10-04 line-ending test
+        # failed with an empty payload list)
+        win.on_send = real_send
 
 
 def test_column_hex_rows_and_offset():
-    # U163c: pure hexdump formatter - 16 bytes per row, running offset
+    # c: pure hexdump formatter - 16 bytes per row, running offset
     from app.display import column_hex
     text, off = column_hex(bytes(range(20)), 0)
     lines = text.split("\n")
@@ -368,7 +434,7 @@ def test_column_hex_rows_and_offset():
 
 
 def test_column_hex_mode_renders_rows(app, win):
-    # U163c: the HEX cols mode renders hexdump rows into the pane
+    # c: the HEX cols mode renders hexdump rows into the pane
     win.rx_view.clear()
     win._rx_store = []
     win._col_off = 0
@@ -416,7 +482,7 @@ def test_byte_split_modes_cut_frames_in_the_receive_path(app, win):
 
 
 def test_long_receive_line_shows_a_hover_tooltip(app, win):
-    """U129-A4: a long line can be read in full from a tooltip, text untouched."""
+    """a long line can be read in full from a tooltip, text untouched."""
     from PySide6.QtCore import QPoint
     from PySide6.QtGui import QHelpEvent
 
@@ -439,21 +505,24 @@ def test_long_receive_line_shows_a_hover_tooltip(app, win):
 
 
 def test_quick_send_seeds_examples_on_first_run(app, tmp_path, monkeypatch):
-    """U128: a fresh install opens with three real commands, not ten blank rows."""
+    """a fresh install opens with three real commands, not ten blank rows."""
+    # the panel persists through app.config now (review R9), so the path lives there
+    from app import config as appconfig
     from ui import quick_send_panel as qsp
 
-    monkeypatch.setattr(qsp, "CONFIG_PATH", str(tmp_path / "config.json"))
+    monkeypatch.setattr(appconfig, "CONFIG_PATH", str(tmp_path / "config.json"))
     panel = qsp.QuickSendPanel()
-    texts = [e["edit"].text() for e in panel._rows]
+    panel.detach_app_filter()          # an app-wide filter would outlive this test
+    texts = [row.text() for row in panel._rows]
     assert texts[:3] == ["AT", "AT+VERSION?", "01 03 00 00 00 02"]
     assert texts[3:] == [""] * (len(texts) - 3)
     assert len(panel._rows) == qsp.DEFAULT_ROWS
-    assert panel._rows[0]["edit"].toolTip()          # the seeded rows say why
+    assert panel._rows[0].text_edit.toolTip()        # the seeded rows say why
     panel.deleteLater()
 
 
 def test_more_menu_holds_the_low_frequency_switches(app, win):
-    """U164/U179: only pause/save-as live in the More menu now (the wrap switch was
+    """/only pause/save-as live in the More menu now (the wrap switch was
     removed in 2026-10-02); auto-scroll is back in the row because it is high frequency."""
     assert win.more_btn.menu() is win.more_menu
     for widget in (win.pause_check, win.save_log_as_btn):
@@ -481,7 +550,7 @@ def test_link_checkbox_mirrors_both_ways(app):
 
 
 def test_receive_row_keeps_the_low_frequency_controls_out(app, win):
-    """U164: frequent controls stay in the row, the rest live in the More menu.
+    """frequent controls stay in the row, the rest live in the More menu.
 
     Font-independent on purpose: the pixel width differs per platform, the
     ownership of the controls does not.
@@ -508,8 +577,152 @@ class _FakeWorker:
         return True
 
 
+def test_enter_runs_the_command_instead_of_breaking_the_line(app, win):
+    """Windows rule: Enter activates the default button - here that button is Send.
+
+    Reported 2026-10-04: clicking into the box and pressing Enter moved the caret to a new
+    line, which both looked like input and could end up inside the payload.
+    """
+    from PySide6.QtGui import QTextCursor
+    fake = _FakeWorker()
+    worker, fmt_index, nl_index = win.worker, win.tx_fmt_combo.currentIndex(), \
+        win.nl_combo.currentIndex()
+    win.worker = fake
+    try:
+        win.tx_fmt_combo.setCurrentIndex(1)          # ASCII
+        win.nl_combo.setCurrentIndex(0)              # no line ending appended
+        win.tx_edit.setPlainText("AT")
+        win.tx_edit.setFocus()
+        cursor = win.tx_edit.textCursor()      # as if typed: the caret sits after the text
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        win.tx_edit.setTextCursor(cursor)
+        app.processEvents()
+        QTest.keyClick(win.tx_edit, Qt.Key.Key_Return)
+        app.processEvents()
+        assert win.tx_edit.toPlainText() == "AT"     # no line break was inserted
+        assert fake.sent == [b"AT"]                  # Enter ran the command
+        QTest.keyClick(win.tx_edit, Qt.Key.Key_Return, Qt.KeyboardModifier.ShiftModifier)
+        app.processEvents()
+        assert win.tx_edit.toPlainText() == "AT\n"   # Shift+Enter is the explicit break
+        assert fake.sent == [b"AT"]                  # ... and it did not send
+    finally:
+        win.worker = worker
+        win.tx_fmt_combo.setCurrentIndex(fmt_index)
+        win.nl_combo.setCurrentIndex(nl_index)
+        win.tx_edit.setPlainText("")
+        app.processEvents()
+
+
+def test_enter_on_an_empty_box_sends_nothing(app, win):
+    """No data typed: Enter must not smuggle a blank line into the payload."""
+    fake = _FakeWorker()
+    worker = win.worker
+    win.worker = fake
+    try:
+        win.tx_edit.setPlainText("")
+        win.tx_edit.setFocus()
+        app.processEvents()
+        QTest.keyClick(win.tx_edit, Qt.Key.Key_Return)
+        app.processEvents()
+        assert win.tx_edit.toPlainText() == ""
+        assert fake.sent == []
+    finally:
+        win.worker = worker
+        win.tx_edit.setPlainText("")
+        app.processEvents()
+
+
+def test_a_trailing_space_is_ignored_and_explained(app, win):
+    """A space after the data is not data: ignored at the key, explained once.
+
+    The official rule is "ignore the character and display an input problem balloon that
+    explains the valid characters" (ctrl-text-boxes.md:211) - the panel's toast is that
+    explanation.
+    """
+    from PySide6.QtGui import QTextCursor
+    seen = []
+    win.tx_edit.rejected.connect(seen.append)
+    try:
+        win.tx_edit.setPlainText("AT")
+        win.tx_edit.setFocus()
+        cursor = win.tx_edit.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        win.tx_edit.setTextCursor(cursor)
+        app.processEvents()
+        QTest.keyClick(win.tx_edit, Qt.Key.Key_Space)
+        app.processEvents()
+        assert win.tx_edit.toPlainText() == "AT"           # nothing trailed
+        assert seen == ["tx.reject.trailing_space"]
+        cursor.movePosition(QTextCursor.MoveOperation.Left)
+        win.tx_edit.setTextCursor(cursor)
+        QTest.keyClick(win.tx_edit, Qt.Key.Key_Space)      # between bytes: allowed
+        app.processEvents()
+        assert win.tx_edit.toPlainText() == "A T"
+    finally:
+        win.tx_edit.setPlainText("")
+        app.processEvents()
+
+
+def test_the_send_chip_shows_the_line_ending(app, win):
+    """A setting that appends bytes must not hide inside a popup (user report 2026-10-04).
+
+    The chip used to read "ASCII · 无" - and that "无" was the *checksum*. A line ending
+    left on CRLF from an earlier session therefore appended \\r\\n invisibly.
+    """
+    win.tx_fmt_combo.setCurrentIndex(1)                  # ASCII: the ending applies
+    app.processEvents()
+    for index, expected in ((0, "无"), (1, "CR"), (2, "LF"), (3, "CRLF")):
+        win.nl_combo.setCurrentIndex(index)
+        app.processEvents()
+        chip = win.tx_settings_btn.text()
+        assert expected in chip, (index, chip)
+        assert "校验" in chip, chip                       # ... and the checksum says so too
+    win.tx_fmt_combo.setCurrentIndex(0)                  # HEX never appends an ending
+    app.processEvents()
+    assert "CRLF" not in win.tx_settings_btn.text()
+    win.tx_fmt_combo.setCurrentIndex(1)
+    win.nl_combo.setCurrentIndex(0)
+    app.processEvents()
+
+
+def test_the_payload_ends_at_the_last_character_when_no_ending_is_chosen(app, win):
+    """The reported case: type the command, send, and exactly that arrives - no CR/LF.
+
+    Trailing spaces/blank lines typed into the box never reach the device (the send path
+    strips them); the only thing that used to add bytes was the line-ending picker.
+    """
+    panel = win.quick_panel
+    fake = _FakeWorker()
+    worker, fmt_index, nl_index = win.worker, win.tx_fmt_combo.currentIndex(), \
+        win.nl_combo.currentIndex()
+    win.worker = fake
+    import ui.send_controller as sc
+    try:
+        win.tx_fmt_combo.setCurrentIndex(1)              # ASCII
+        win.nl_combo.setCurrentIndex(0)                  # 无
+        win.tx_edit.setPlainText("ffffffffffffffffffRR  \n")
+        app.processEvents()
+        sc.on_send(win)          # the controller itself: no sibling test can stub this one
+        app.processEvents()
+        assert fake.sent == [b"ffffffffffffffffffRR"], (
+            "sent=%r text=%r fmt=%s enc=%s"
+            % (fake.sent, win.tx_edit.toPlainText(), win.tx_fmt_combo.currentIndex(),
+               win._encoding()))
+        win.nl_combo.setCurrentIndex(3)                  # explicitly asking for CRLF
+        win.tx_edit.setPlainText("ffffffffffffffffffRR")
+        sc.on_send(win)
+        app.processEvents()
+        assert fake.sent[1] == b"ffffffffffffffffffRR\r\n"
+    finally:
+        win.worker = worker
+        win.tx_fmt_combo.setCurrentIndex(fmt_index)
+        win.nl_combo.setCurrentIndex(nl_index)
+        win.tx_edit.setPlainText("")
+        app.processEvents()
+
+
 def test_quick_send_rows_follow_the_line_ending(app, win):
-    """2026-10-02 (Andy): picking CRLF must also end the quick-send rows.
+    """2026-10-02: picking CRLF must also end the quick-send rows.
 
     An ASCII row gets exactly what a manual send would append; a HEX row stays
     byte-exact, the same rule the send box itself follows in HEX mode.
@@ -526,16 +739,15 @@ def test_quick_send_rows_follow_the_line_ending(app, win):
         panel.add_row("AT+RST", is_hex=False)
         panel.add_row("01 03 00 00", is_hex=True)
         ascii_entry, hex_entry = panel._rows[-2], panel._rows[-1]
-        ascii_entry["send"].click()
-        hex_entry["send"].click()
+        ascii_entry.send_btn.click()
+        hex_entry.send_btn.click()
         app.processEvents()
         assert fake.sent == [b"AT+RST\r\n", b"\x01\x03\x00\x00"]
     finally:
         win.worker = worker
         win.nl_combo.setCurrentIndex(nl_index)
         win.checksum_combo.setCurrentIndex(crc_index)
-        for entry in (panel._rows[-2], panel._rows[-1]):
-            panel._remove_row(entry["widget"]) if hasattr(panel, "_remove_row") else None
+        panel.delete_entries([panel._rows[-2], panel._rows[-1]])
         app.processEvents()
 
 
@@ -557,16 +769,16 @@ def test_quick_send_row_payload_carries_its_format(app, win, monkeypatch):
     panel.add_row("41 54", is_hex=True)
     app.processEvents()
     assert len(panel._rows) >= 2
-    panel._send_row(panel._rows[-2]["widget"])
-    panel._send_row(panel._rows[-1]["widget"])
+    panel._send_one(panel._rows[-2])
+    panel._send_one(panel._rows[-1])
     app.processEvents()
     assert seen == [(b"AT", False), (b"AT", True)]
 
 
 def test_row_ticks_belong_to_sequence_mode_only(app, win):
-    """U186 (Andy 2026-10-03): the tick is the sequence's member flag, not a delete selection.
+    """the tick is the sequence's member flag, not a delete selection.
 
-    Andy: "the box in front is for sequence sending, not for ticking-then-deleting".
+    : "the box in front is for sequence sending, not for ticking-then-deleting".
     So a tick must neither be available outside sequence mode nor arm Delete.
     """
     panel = win.quick_panel
@@ -575,7 +787,7 @@ def test_row_ticks_belong_to_sequence_mode_only(app, win):
     panel.seq_check.setChecked(False)
     app.processEvents()
     try:
-        assert not any(entry["sel"].isEnabled() for entry in panel._rows)
+        assert not any(row.tick.isEnabled() for row in panel._rows)
         assert not panel.del_btn.isEnabled()
     finally:
         panel.seq_check.setChecked(was_seq)
@@ -583,21 +795,21 @@ def test_row_ticks_belong_to_sequence_mode_only(app, win):
 
 
 def test_click_selection_is_what_delete_removes(app, win):
-    """U186: the click highlight arms Delete and Delete removes that row.
+    """the click highlight arms Delete and Delete removes that row.
 
-    The grey Andy saw was the hover background (theme: QFrame#qsRow:hover), which is
+    The grey  saw was the hover background (theme: QFrame#qsRow:hover), which is
     not a selection at all; the selected row now paints with the accent border so the
     two are distinguishable.
     """
     panel = win.quick_panel
-    for entry in panel._rows:
-        panel._paint_row(entry, False)
+    for row in panel._rows:
+        row.set_armed(False)
     app.processEvents()
     assert not panel.del_btn.isEnabled()
     entry = panel._rows[0]
-    panel._select_row(entry, "replace")
+    panel.arm_row(entry, "replace")
     app.processEvents()
-    assert bool(entry["widget"].property("selected"))
+    assert entry.armed()
     assert panel.del_btn.isEnabled()
     before = len(panel._rows)
     panel.del_btn.click()
@@ -607,19 +819,19 @@ def test_click_selection_is_what_delete_removes(app, win):
 
 
 def test_delete_button_reads_delete(app, win):
-    """2026-10-02 (Andy): the button is just "Delete" - no "selected", no count."""
+    """2026-10-02: the button is just "Delete" - no "selected", no count."""
     from app.i18n import tr
     assert win.quick_panel.del_btn.text() == tr("qs.del")
-    for entry in win.quick_panel._rows:
-        if entry["sel"].isChecked():
-            entry["sel"].setChecked(False)
+    for row in win.quick_panel._rows:
+        if row.ticked():
+            row.set_ticked(False)
     app.processEvents()
     assert win.quick_panel.del_btn.text() == tr("qs.del")
     assert not win.quick_panel.del_btn.isEnabled()
 
 
 def test_line_ending_control_is_visible_but_disabled_in_hex(app, win):
-    """U184-A (2026-10-02): the picker must not vanish in HEX mode.
+    """-A (2026-10-02): the picker must not vanish in HEX mode.
 
     Hiding the whole group made the option look unsupported - the user could not see
     that it existed or what state it was in. It now stays visible and switches off,
@@ -667,7 +879,7 @@ def test_store_rows_and_document_lines_agree_with_embedded_newlines(app, win):
 
 
 def test_status_counts_are_coalesced_not_recomputed_per_batch(app, win):
-    """2026-10-03 (data-path P1): one status refresh per 100 ms, not one per batch."""
+    """2026-10-03: one status refresh per 100 ms, not one per batch."""
     win.rx_bytes += 1234
     win._schedule_counts()
     app.processEvents()
@@ -683,7 +895,7 @@ def test_status_counts_are_coalesced_not_recomputed_per_batch(app, win):
 
 
 def test_dropped_send_frames_are_counted(app, win):
-    """2026-10-03 (data-path P1): a full TX queue must not drop a frame silently."""
+    """2026-10-03: a full TX queue must not drop a frame silently."""
     before = getattr(win, "_tx_dropped", 0)
     win._on_send_error("queue", "64")
     assert win._tx_dropped == before + 1

@@ -1,4 +1,4 @@
-"""Declarative frame kernel (B4-P1): cut a stream, decode fields, verify the checksum.
+"""Declarative frame kernel: cut a stream, decode fields, verify the checksum.
 
 Qt-free and side-effect free: `split_stream` holds no state (the caller owns the buffer),
 `parse_frame` returns a structured status instead of raising, so a truncated or corrupt

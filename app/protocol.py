@@ -25,7 +25,7 @@ class HexFormatError(ValueError):
         super().__init__(f"hex format error: kind={kind} pos={pos} ch={ch!r}")
 
 
-# Separators accepted between hex bytes (U36/D2): whitespace, comma, dash.
+# Separators accepted between hex bytes: whitespace, comma, dash.
 _HEX_SEPARATORS = " \t\r\n,;-"
 _HEX_DIGITS = "0123456789abcdefABCDEF"
 
@@ -108,7 +108,7 @@ def ascii_str_to_bytes(s: str) -> bytes:
     return s.encode("utf-8").decode("unicode_escape").encode("latin-1")
 
 
-# Text encodings offered for send/receive (T7). "ascii" keeps the legacy
+# Text encodings offered for send/receive. "ascii" keeps the legacy
 # byte-per-character view; the others decode/encode Chinese text properly.
 TEXT_ENCODINGS = ("ascii", "utf-8", "gbk", "gb2312")
 
@@ -129,7 +129,7 @@ def encode_text(s: str, encoding: str = "ascii", escapes: bool = True) -> bytes:
     """Encode typed text for sending.
 
     escapes=True keeps the historical behaviour (control escapes are interpreted);
-    escapes=False sends the literal characters instead (T8).
+    escapes=False sends the literal characters instead.
     """
     text = s.encode("utf-8").decode("unicode_escape") if escapes else s
     try:

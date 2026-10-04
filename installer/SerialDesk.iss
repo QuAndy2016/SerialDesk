@@ -1,4 +1,4 @@
-; SerialDesk Windows installer (U34)
+; SerialDesk Windows installer
 ; Built in CI with Inno Setup 6:  ISCC.exe /DMyVersion=0.6.0 installer\SerialDesk.iss
 ; Produces dist\SerialDesk_v<version>-win64-setup.exe from the PyInstaller onedir bundle.
 
@@ -16,7 +16,7 @@ AppId={{8E4B4C8E-5B3A-4E5C-9C2E-SERIALDESK01}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
-AppPublisher=Qu Andy
+AppPublisher=Qu 
 AppPublisherURL=https://github.com/QuAndy2016/SerialDesk
 AppSupportURL=https://github.com/QuAndy2016/SerialDesk/issues
 DefaultDirName={autopf}\{#MyAppName}
@@ -75,7 +75,7 @@ begin
     SaveStringToFile(ExpandConstant('{app}\logs_dir.txt'), LogDirPage.Values[0], False);
 end;
 
-// U163d: on uninstall, ask whether the per-user settings and logs should go too.
+// d: on uninstall, ask whether the per-user settings and logs should go too.
 // They live in %APPDATA%\SerialDesk and are otherwise intentionally kept.
 // (Note: inside [Code] only // and { } are comments; ';' is rejected by the Pascal compiler.)
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

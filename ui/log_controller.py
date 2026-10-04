@@ -95,13 +95,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
-LOG_FLUSH_MS = 200          # 2026-10-03 (data-path P1): batch the auto-save writes
+LOG_FLUSH_MS = 200          # 2026-10-03: batch the auto-save writes
 LOG_FLUSH_BYTES = 8192      # ...or flush as soon as this much text is buffered
 
 
 def log_header_text(win: MainWindow) -> str:
     "log header text"
-    """Context for the log segment, so a shared capture can be reproduced (N3)."""
+    """Context for the log segment, so a shared capture can be reproduced."""
     port = win.port_combo.currentData() or "-"
     return tr("log.header", app="SerialDesk", version=__version__, port=port,
               baud=win.baud_combo.currentText().strip(),
@@ -115,7 +115,7 @@ def log_open(win: MainWindow) -> None:
     try:
         win._log_path = win._log_sink.open()
         prune_log_dir(win._log_dir, getattr(win, "_log_quota_bytes", 0),
-                      keep=win._log_path)       # U163d: folder quota, oldest first
+                      keep=win._log_path)       # d: folder quota, oldest first
         win._log_fp = True                      # legacy flag: "a segment is open"
         win._notify(tr("log.autosave.on", path=win._log_path), ms=5000)
     except OSError as exc:
@@ -182,7 +182,7 @@ def log_flush(win: MainWindow) -> None:
 
 def on_save_log_quick(win: MainWindow) -> None:
     "on save log quick"
-    """One-click save of the receive pane into logs/ (U25-D)."""
+    """One-click save of the receive pane into logs/ (-D)."""
     try:
         os.makedirs(win._log_dir, exist_ok=True)
         path = os.path.join(win._log_dir, time.strftime("serial_RX_%Y%m%d_%H%M%S.txt"))
@@ -195,9 +195,9 @@ def on_save_log_quick(win: MainWindow) -> None:
 
 def on_save_log_as(win: MainWindow) -> None:
     "on save log as"
-    """Save the receive pane to a user-chosen path (U25-D)."""
+    """Save the receive pane to a user-chosen path (-D)."""
     try:
-        os.makedirs(win._log_dir, exist_ok=True)      # U97: the configured log folder
+        os.makedirs(win._log_dir, exist_ok=True)      # the configured log folder
     except OSError:
         pass
     default = os.path.join(win._log_dir, time.strftime("serial_%Y%m%d_%H%M%S.txt"))
@@ -218,7 +218,7 @@ def on_log_line(win: MainWindow, line: str):
 
 def apply_autosave_settings(win: MainWindow) -> None:
     "apply autosave settings"
-    """Apply the auto-save dialog values live and remember them (U75)."""
+    """Apply the auto-save dialog values live and remember them."""
     values = win._autosave_dlg.values()
     win._log_max_bytes = max(1, int(values["max_mb"])) * 1024 * 1024
     win._log_max_seconds = max(1, int(values["max_minutes"])) * 60
@@ -233,12 +233,12 @@ def apply_autosave_settings(win: MainWindow) -> None:
     config["log_dir"] = win._log_dir
     save_config(config)
     prune_log_dir(win._log_dir, win._log_quota_bytes,
-                  keep=win._log_path if win._log_fp else "")   # U163d
+                  keep=win._log_path if win._log_fp else "")   # d
     if values["enabled"]:
         if win._log_fp is None:
             win._log_open()
         if win._log_fp is None:
-            # U97: opening the file failed - the dialog is the only switch now, so
+            # opening the file failed - the dialog is the only switch now, so
             # it must fall back to "off" instead of showing an enabled state.
             config["autosave_enabled"] = False
             save_config(config)
@@ -250,7 +250,7 @@ def apply_autosave_settings(win: MainWindow) -> None:
 
 def show_autosave_settings(win: MainWindow) -> None:
     "show autosave settings"
-    """Open the auto-save settings dialog (U75)."""
+    """Open the auto-save settings dialog."""
     win._autosave_dlg.show()
     win._autosave_dlg.raise_()
     win._autosave_dlg.activateWindow()

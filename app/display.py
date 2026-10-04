@@ -10,12 +10,12 @@ import time
 
 from app.protocol import bytes_to_hex_str, decode_text
 
-MARK_RX = "<- "      # ASCII markers keep the monospace columns aligned (U26)
+MARK_RX = "<- "      # ASCII markers keep the monospace columns aligned
 MARK_TX = "-> "
 
-# Fragment kinds stamped on the receive document (and kept in the U163b store).
+# Fragment kinds stamped on the receive document (and kept in the b store).
 # Side (RX/TX) and meta (timestamp/direction marker) are separate bits, so the
-# view filter can tell a TX marker from an RX one (U176/U177). The old 3-kind
+# view filter can tell a TX marker from an RX one. The old 3-kind
 # encoding conflated "meta" with "RX side", which let TX markers leak into
 # "RX only" and hid TX timestamps in "TX only".
 RX_PAYLOAD = 0
@@ -40,7 +40,7 @@ def kind_is_meta(kind: int) -> bool:
 
 
 def fragment_visible(kind: int, mode: int) -> bool:
-    """Whether a fragment survives the view filter (U163b: 0=all, 1=RX, 2=TX).
+    """Whether a fragment survives the view filter (b: 0=all, 1=RX, 2=TX).
 
     The pane is filtered by line side, so a filter must keep the marker of the
     side it shows and drop the other side's marker - markers are not side-neutral.
@@ -91,18 +91,18 @@ def rows_from_fragments(store) -> list[list[tuple[str, int]]]:
 RX_ASCII = 0
 RX_HEX = 1
 RX_HEX_ASCII = 2
-RX_COLUMN_HEX = 3     # U163c: classic hexdump columns (offset + 16 bytes + ASCII)
+RX_COLUMN_HEX = 3     # c: classic hexdump columns (offset + 16 bytes + ASCII)
 
 COL_WIDTH = 16
-LONG_LINE_CHARS = 240     # U129-A4: above this, hovering shows the whole line
+LONG_LINE_CHARS = 240     # above this, hovering shows the whole line
 
 
 def long_line_tooltip(text: str, limit: int = LONG_LINE_CHARS) -> str | None:
-    """Full line for a hover tooltip when it is very long (U129-A4).
+    """Full line for a hover tooltip when it is very long.
 
     Long frames are read by scrolling horizontally (wrap off); the tooltip gives
     the whole line at once without touching the text that is displayed, so the
-    copy semantics (U162) stay exactly as they are.
+    copy semantics stay exactly as they are.
     """
     if len(text) <= limit:
         return None
@@ -113,7 +113,7 @@ def column_hex(data: bytes, offset: int = 0, width: int = COL_WIDTH):
     """Hexdump rows: offset, spaced hex bytes, ASCII gutter.
 
     Returns (text, next_offset) so a caller can keep the offset running across
-    chunks (U163c). Pads the hex column so the ASCII gutter stays aligned.
+    chunks (c). Pads the hex column so the ASCII gutter stays aligned.
     """
     rows = []
     for i in range(0, len(data), width):

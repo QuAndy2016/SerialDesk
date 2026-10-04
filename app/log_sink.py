@@ -22,7 +22,7 @@ SEGMENT_PATTERN = "serial_%Y%m%d_%H%M%S.txt"
 
 
 def prune_log_dir(directory: str, quota_bytes: int, keep: str = "") -> int:
-    """Delete the oldest segments until the folder is under quota (E4/U163d).
+    """Delete the oldest segments until the folder is under quota (E4/d).
 
     Only *.txt segments are candidates, oldest first; the currently open segment
     (``keep``) is never removed. ``quota_bytes <= 0`` means unlimited. Returns the

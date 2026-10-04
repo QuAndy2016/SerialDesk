@@ -136,7 +136,7 @@ def apply_config(win: MainWindow) -> None:
 
 def apply_defaults(win: MainWindow) -> None:
     "apply defaults"
-    """Put every user-facing option back to its default value (U76)."""
+    """Put every user-facing option back to its default value."""
     win._set_theme_system()
     win._set_language("system")
     win._reconnect_act.setChecked(False)
@@ -147,28 +147,28 @@ def apply_defaults(win: MainWindow) -> None:
     win._autosave_dlg.set_values(enabled=False, max_mb=2, max_minutes=30, quota_mb=0, folder=win._log_dir)
     win._apply_autosave_settings()
     win.autoscroll_check.setChecked(True)
-    win.ts_check.setChecked(True)          # U96: timestamps are on by default
+    win.ts_check.setChecked(True)          # timestamps are on by default
     win._send_history = []
     win._update_history_button()
     win._auto_rules = []
     win.auto_reply_act.setChecked(False)
     win._sent_count = 0
     win.update_counts()
-    # U82: restoring defaults must also restore the data-first proportions, and
+    # restoring defaults must also restore the data-first proportions, and
     # they are re-measured so a maximised window gives the log every spare pixel
     win._custom_split_sizes = False
     win._split_room_done = True
     QTimer.singleShot(0, win._give_data_area_the_room)
-    win.quick_panel.set_folded(False)      # U88/U106: defaults = panel shown again
+    win.quick_panel.set_folded(False)      # /defaults = panel shown again
     if hasattr(win, "_quick_panel_act"):
         win._quick_panel_act.setChecked(True)
-    win._sync_panel_btn(False)   # U161: keep the toggle button in step with the reset
+    win._sync_panel_btn(False)   # keep the toggle button in step with the reset
     win.quick_panel.reload_from_config()   # seeds the default rows when config is gone
     win._update_params_summary()
 
 def reset_settings(win: MainWindow) -> None:
     "reset settings"
-    """Restore factory defaults after backing the current config up (U76)."""
+    """Restore factory defaults after backing the current config up."""
     box = QMessageBox(win)
     box.setWindowTitle(tr("cfg.reset.title"))
     box.setText(tr("cfg.reset.text"))
@@ -189,7 +189,7 @@ def reset_settings(win: MainWindow) -> None:
     win._apply_defaults()
     save_config({"language": "system", "theme": "system"})
     # the full path is long enough to crowd the status bar, so it lives in the
-    # tooltip while the message stays short (U82)
+    # tooltip while the message stays short
     win.statusBar().setToolTip(tr("cfg.reset.done.tip", path=backup or "-"))
     win._notify(tr("cfg.reset.done"), "info", ms=8000)
 

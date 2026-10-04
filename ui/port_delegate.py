@@ -1,4 +1,4 @@
-"""U172: the port dropdown shows the full device name while the box stays short.
+"""the port dropdown shows the full device name while the box stays short.
 
 Kept in its own module so both ``ui.regions`` (which builds the combo) and
 ``ui.connection_controller`` (which fills it) can use it without importing each

@@ -221,7 +221,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 - **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快速发送（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包
 - **待开发**：33 项（协议解析层、波形显示、小工具箱、多串口、终端模式等；完整清单在开发任务文档里）
 
-**下一个开发任务（仅此一项）**：声明式协议解析（B4-P1）—— 免脚本的字段化解析：帧头 / 字段长度 / 数据类型（含 float、大小端）/ 校验规则，内置 Modbus RTU、AT、NMEA 模板；先做纯解析内核 + 单测，再接字段面板。
+**下一个开发任务（仅此一项）**：声明式协议解析（）—— 免脚本的字段化解析：帧头 / 字段长度 / 数据类型（含 float、大小端）/ 校验规则，内置 Modbus RTU、AT、NMEA 模板；先做纯解析内核 + 单测，再接字段面板。
 
 ## 路线图
 
@@ -254,7 +254,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.8.8** | 换行不再需要设置：发送框与接收区一律自动换行（两处开关移除）；接收区「清空」由分裂按钮收敛为单一按钮——一次清空显示 + 计数，删掉下拉菜单与设置里的重复入口 | ✅ 已完成 |
 | **v1.8.9** | 发送区三处收敛：快速发送的 ASCII 行跟随发送区行尾；快速发送行任意模式下都能选中并删除（按钮改为「删除」）；HEX 模式下换行/转义控件改为可见但禁用并给出说明 | ✅ 已完成 |
 | **v1.9.0** | 数据通路修复与提速（ASCII 视角保留 \t \n \r、行模型单一来源、接收循环不再空转、计数合批、日志批量写盘，1 Mbps 单批 p95 67.65→2.27 ms）+ 快速发送四项（序列轮数、点击即选中删除、深色选中底色收敛、设置按钮图标化）+ 发送区四项（动作列 411→200px、文本框 364→575px、次级按钮改描边、转义与发送文件收进「发送设置」下拉按钮、接收区「更多」样式统一） | ✅ 已完成 |
-| **v1.9.1** | UI 审查 L1 修复（点击目标统一 ≥24px、连接中/打开失败状态可见、动态行可达名补齐、控件高度收敛到 24/28/32 三档），并包含内部流程改进 | ✅ 已完成 |
+| **v1.9.1** | UI 审查修复（点击目标统一 ≥24px、连接中/打开失败状态可见、动态行可达名补齐、控件高度收敛到 24/28/32 三档） | ✅ 已完成 |
 | **v1.9.2** | 安装器可选：可自选安装目录（修掉 Inno 默认隐藏目录页）与日志默认目录；应用按“便携版 → 配置 → 安装器选择 → 默认”解析日志目录，不可写自动回退 | ✅ 已完成 |
 | **v1.9.3** | 快速发送选中模型修正：勾选框只在序列模式下显示；序列模式下勾选=选中（可直接删）；非序列模式点行选中（Ctrl/Shift 多选）；删除按钮不可用时给出说明 tooltip | ✅ 已完成 |
 | **v1.9.4** | 删除动作可诊断化：没选中就点删除时明确提示“没有选中任何行”；并按“按下时锁定的选中行”兜底，避免按下瞬间丢失高亮导致静默失效 | ✅ 已完成 |
@@ -262,7 +262,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.9.6** | 快速发送循环次数默认改为 ∞；修复循环次数上下箭头点不动、数字被裁的问题（宽度算错）；spinbox/combo 保留 28px 下限；README 术语与乱码修正 | ✅ 已完成 |
 | **v1.9.7** | “不限次数”改为显式 ∞ 开关（序列轮数与发送区循环次数均为 1..N + ∞ 勾选），不再用 0 当无限；发送区芯片在不限时显示 ∞ | ✅ 已完成 |
 | **v1.9.8** | “将发送 N 字节”提示移到「递增」右侧并改为信息色；动作列收窄、宽度让给输入框；修复 ∞ 字被裁（固定 24px 小于字形 34px）；20 张 README 截图按新布局重生 | ✅ 本次发布 |
-| **下一步** | **声明式协议解析（B4-P1）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
+| **下一步** | **声明式协议解析（）**：免脚本的字段化解析（帧头 / 字段类型 / 校验 + Modbus RTU / AT / NMEA 模板） | 🚧 下一项 |
 
 ## 快速开始
 
@@ -289,7 +289,7 @@ pytest tests/ -v
 main.py                  # entry point
 app/protocol.py          # HEX/ASCII, CRC16/CRC32/SUM8 checksums, Modbus frames
 app/serial_worker.py     # serial QThread (timestamped receive)
-app/framing.py           # frame assembly: merges USB-fragmented chunks (U57)
+app/framing.py           # frame assembly: merges USB-fragmented chunks
 app/config.py            # settings persistence (config.json)
 ui/main_window.py        # main window
 ui/quick_send_panel.py   # quick send panel
@@ -446,7 +446,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 - **Done**: the full serial I/O path (HEX/ASCII, framing, timestamps, checksums, logging, send history, auto-reply, auto-reconnect), quick send (sequences, repeat, `{i}` auto-increment, named commands with notes), receive enhancements (keyword highlight, view filter, column HEX, copy semantics), Chinese + English UI with dark/light themes, and the Windows installer and portable zip
 - **To do**: 33 items (protocol decoding layer, waveform view, toolbox, multi-port, terminal mode and more - the full list lives in the development task document)
 
-**Next development task (only this one)**: declarative protocol decoding (B4-P1) - script-free field parsing: frame headers / field lengths / data types (incl. float and endianness) / checksum rules, with built-in Modbus RTU, AT and NMEA templates; the pure parsing core first, with unit tests, then the field panel.
+**Next development task (only this one)**: declarative protocol decoding - script-free field parsing: frame headers / field lengths / data types (incl. float and endianness) / checksum rules, with built-in Modbus RTU, AT and NMEA templates; the pure parsing core first, with unit tests, then the field panel.
 
 ### Roadmap
 
@@ -479,7 +479,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.8.8** | Wrapping needs no setting any more (send box and receive pane always wrap; both switches removed); the receive Clear split button became one plain button that clears the display and the counters together (its dropdown and the duplicate Settings entry are gone) | ✅ Done |
 | **v1.8.9** | Three send-area refinements: quick-send ASCII rows follow the line ending; quick-send rows select and delete in any mode (the button reads "Delete"); in HEX mode the line-ending / escape controls stay visible but off, with the reason in the tooltip | ✅ Done |
 | **v1.9.0** | Data-path correctness and speed (the ASCII view keeps \t \n \r, one row model for pane and store, no busy-sleep in the read loop, coalesced counters, batched log writes - 1 Mbps batch p95 67.65 -> 2.27 ms) + four quick-send refinements (sequence rounds, click-to-select delete, quieter dark selection, icon-only Settings) + four send-area refinements (action column 411 -> 200 px, payload box 364 -> 575 px, outlined secondary buttons, escapes and send-file folded into the send-settings dropdown button, receive More button matched to the row) | ✅ Done |
-| **v1.9.1** | The UI review L1 batch (24 px pointer-target floor, CONNECTING and open-failure states, accessible names on the dynamic rows, control heights down to 24/28/32) plus internal process improvements | ✅ Done |
+| **v1.9.1** | The UI review batch (24 px pointer-target floor, CONNECTING and open-failure states, accessible names on the dynamic rows, control heights down to 24/28/32) | ✅ Done |
 | **v1.9.2** | The installer lets you choose the install folder (Inno hid the destination page by default) and the default log folder; the log folder resolves portable -> config -> installer choice -> default, with an unwritable fallback | ✅ Done |
 | **v1.9.3** | Quick-send selection model fixed: the row tick shows only in sequence mode (and there a tick selects, so a ticked row can be deleted); outside the mode the click highlight selects (Ctrl/Shift for several); a disabled Delete explains itself in its tooltip | ✅ Done |
 | **v1.9.4** | The delete action is diagnosable: pressing Delete with nothing armed now says "nothing selected"; it also honours what was armed when the button went down, so a press that drops the highlight cannot silently do nothing | ✅ Done |
@@ -487,7 +487,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.9.6** | The quick-send loop count defaults to ∞; its steppers work again (the width was computed too tightly, clipping the number and the arrows); spin boxes and combos keep a 28 px floor; README wording and a corrupted character fixed | ✅ Done |
 | **v1.9.7** | "Unlimited" became an explicit ∞ switch for both the sequence rounds and the send-area repeat count (plain 1..N fields), instead of treating a count of 0 as endless; the send-area chip shows ∞ while the switch is on | ✅ Done |
 | **v1.9.8** | The "will send N bytes" hint moved next to Increment in the info colour; the action column narrowed and handed the width to the input box; the ∞ glyph is no longer clipped (24 px pinned vs a 34 px glyph); the 20 README shots were regenerated | ✅ This release |
-| **Next** | **Declarative protocol decoding (B4-P1)**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
+| **Next** | **Declarative protocol decoding**: script-free field parsing (frame header / field types / checksum + Modbus RTU / AT / NMEA templates) | 🚧 Next up |
 
 ### Quick start
 

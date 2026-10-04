@@ -1,4 +1,4 @@
-"""Colour tokens for the QSS themes (U132 batch 1: value-preserving extraction).
+"""Colour tokens for the QSS themes (batch 1: value-preserving extraction).
 
 Batch 1 keeps every rendered colour exactly as it was: one token per literal, named
 after the role it plays today. Role splits (for example separating "disabled text"
@@ -26,6 +26,12 @@ DARK_TOKENS: dict[str, str] = {
     "border_hover": "#83839f",
     "border_hover_rail": "#83839f",
     "focus_border": "#33404f",
+    #: Keyboard-focus ring. Deliberately quiet: the data panes are where the eye has to
+    #: stay, and the brand accent measured 12.98:1 against #16161f - brighter than every
+    #: other element in that area (normal border 1.61:1, focus tint 1.70:1, selection
+    #: 1.76:1). This value keeps the >=3:1 non-text contrast the standard asks for at
+    #: 4.30:1, i.e. the quietest colour that still counts as a visible indicator.
+    "focus_ring": "#5f7f9f",
     "text_primary": "#d4d4d4",
     "text_strong": "#e0e0e0",
     "text_secondary": "#cfcfcf",
@@ -33,7 +39,7 @@ DARK_TOKENS: dict[str, str] = {
     "chip_text": "#a9a9bd",
     "accent": "#8be9fd",
     "selection_bg": "#4a6a9a",
-    "selection_bg_text": "#33415c",     # U187: text panes want a much quieter selection
+    "selection_bg_text": "#33415c",     # text panes want a much quieter selection
     "selection_text": "#ffffff",
     "invalid": "#ff4136",
     "danger_disabled": "#8a8a8a",
@@ -67,6 +73,12 @@ LIGHT_TOKENS: dict[str, str] = {
     "border_hover_rail": "#7a7a80",
     "border_secondary": "#c9c9d1",
     "focus_bg": "#eaf2fb",
+    #: Keyboard-focus ring, the light twin of the dark token. Deliberately NOT the accent:
+    #: the accent measured 6.20:1 against #f5f5f7, and the parameter chip's hover border is
+    #: the accent itself - using it for focus would make "focused" and "hovered" the same
+    #: picture (rule D5). This value measures 4.73:1 on the base and 3.42:1 on the filled
+    #: "More" button, i.e. the >=3:1 a non-text indicator needs, and stays quiet.
+    "focus_ring": "#4a6f9c",
     "text_primary": "#1f1f1f",
     "text_strong": "#111111",
     "text_secondary": "#44444c",
@@ -74,7 +86,7 @@ LIGHT_TOKENS: dict[str, str] = {
     "chip_text": "#55556a",
     "accent": "#1e5aa8",
     "selection_bg": "#cfe0f5",
-    "selection_bg_text": "#cfe0f5",     # U187: same quiet blue on white
+    "selection_bg_text": "#cfe0f5",     # same quiet blue on white
     "invalid": "#ff4136",
     "danger_disabled": "#707070",
     "danger_hover": "#c62828",
@@ -96,7 +108,7 @@ LIGHT_TOKENS: dict[str, str] = {
 #: Measured (tests/test_text_colours.py): hue distance to the accent >= 18 deg,
 #: saturation below the accent's, contrast on the pane >= 4.5:1.
 TEXT_COLOURS: dict[str, dict[str, str]] = {
-    # U125 colour convergence: the echo is a NEUTRAL cool gray-blue, not a second
+    # colour convergence: the echo is a NEUTRAL cool gray-blue, not a second
     # brand colour - the accent (interaction) and the data colours (rx/echo/meta)
     # must not compete. Verified by tests/test_text_colours.py (hue >= 18 deg from
     # the accent, saturation <= the accent's, contrast on the pane >= 4.5:1).
@@ -114,5 +126,5 @@ FONT_TOKENS: dict[str, str] = {
     "fs_action": "15px",    # the round delete glyph
     "ff_mono": 'Consolas, "Courier New", monospace',
     "fw_title": "bold",
-    "fw_medium": "500",     # U163e/T2: group titles sit between body (400) and bold
+    "fw_medium": "500",     # e/T2: group titles sit between body (400) and bold
 }

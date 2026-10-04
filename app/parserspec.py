@@ -1,4 +1,4 @@
-"""Declarative parse schema (B4-P1): field/frame specs + JSON round-trip.
+"""Declarative parse schema: field/frame specs + JSON round-trip.
 
 The kernel is Qt-free on purpose: a spec is data, so it can be stored next to a project,
 diffed, and unit-tested without a window (same rule as app/framing.py).
@@ -27,6 +27,45 @@ CHECKSUM_SIZES = {"none": 0, "sum8": 1, "xor8": 1, "bcc": 1,
                   "crc16-modbus": 2, "crc16-ccitt": 2, "crc32": 4}
 
 LENGTH_MODES = ("fixed", "field", "delimiter")
+
+
+class SpecFormatError(ValueError):
+    """A spec could not be read from JSON/dict form.
+
+    Subclasses ``ValueError`` on purpose: a caller loading a user-supplied spec only has to
+    catch one type. Before this existed the same bad input raised ``AttributeError`` (top
+    level not an object), ``TypeError`` (a field list that is not a list) or ``ValueError``
+    (a number that is not one) depending on which key was wrong - measurably, not by guess.
+    """
+
+
+def _obj(value: Any, what: str) -> dict[str, Any]:
+    """``value`` as a dict, or a SpecFormatError naming the shape that arrived."""
+    if not isinstance(value, dict):
+        raise SpecFormatError("%s must be a JSON object, got %s" % (what, type(value).__name__))
+    return value
+
+
+def _num(value: Any, what: str, cast=int):
+    """A number from a number or numeric string; anything else is a SpecFormatError."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise SpecFormatError("%s must be a number, got %s" % (what, type(value).__name__))
+    try:
+        return cast(value)
+    except (TypeError, ValueError) as exc:
+        raise SpecFormatError("%s must be a number, got %r" % (what, value)) from exc
+
+
+def _opt_int(value: Any, what: str):
+    """An optional integer: ``None`` stays ``None``, anything else must be a number."""
+    return None if value is None else _num(value, what)
+
+
+def _seq(value: Any, what: str) -> list:
+    """A list *or* tuple, as a list. ``asdict()`` keeps tuples, so both are legal input."""
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    raise SpecFormatError("%s must be a JSON array, got %s" % (what, type(value).__name__))
 
 
 @dataclass(frozen=True)
@@ -122,22 +161,34 @@ def effective_endian(frame: FrameSpec, fld: FieldSpec) -> str:
 # JSON round-trip
 # ---------------------------------------------------------------------------
 
-def _bits_from_json(raw: list[dict[str, Any]]) -> tuple[BitField, ...]:
-    return tuple(BitField(name=str(b["name"]), start=int(b["start"]),
-                          width=int(b.get("width", 1))) for b in raw)
+def _bits_from_json(raw: Any) -> tuple[BitField, ...]:
+    if raw is None:
+        return ()
+    out = []
+    for i, item in enumerate(_seq(raw, "bits")):
+        item = _obj(item, "bits[%d]" % i)
+        if "name" not in item or "start" not in item:
+            raise SpecFormatError("bits[%d] needs both 'name' and 'start'" % i)
+        out.append(BitField(name=str(item["name"]),
+                            start=_num(item["start"], "bits[%d].start" % i),
+                            width=_num(item.get("width", 1), "bits[%d].width" % i)))
+    return tuple(out)
 
 
-def _field_from_json(raw: dict[str, Any]) -> FieldSpec:
+def _field_from_json(raw: Any) -> FieldSpec:
+    raw = _obj(raw, "each entry of 'fields'")
+    if not isinstance(raw.get("name"), str) or not isinstance(raw.get("type"), str):
+        raise SpecFormatError("every field needs 'name' and 'type' as strings")
     return FieldSpec(
         name=str(raw["name"]),
         type=str(raw["type"]),
-        byte_offset=raw.get("byte_offset"),
-        length=raw.get("length"),
+        byte_offset=_opt_int(raw.get("byte_offset"), "byte_offset"),
+        length=_opt_int(raw.get("length"), "length"),
         length_field=raw.get("length_field"),
-        length_scale=int(raw.get("length_scale", 1)),
+        length_scale=_num(raw.get("length_scale", 1), "length_scale"),
         endian=raw.get("endian"),
-        scale=float(raw.get("scale", 1.0)),
-        bias=float(raw.get("bias", 0.0)),
+        scale=_num(raw.get("scale", 1.0), "scale", float),
+        bias=_num(raw.get("bias", 0.0), "bias", float),
         unit=str(raw.get("unit", "")),
         bits=_bits_from_json(raw.get("bits", [])),
         text=bool(raw.get("text", False)),
@@ -148,28 +199,30 @@ def _field_from_json(raw: dict[str, Any]) -> FieldSpec:
 
 def spec_from_dict(raw: dict[str, Any]) -> FrameSpec:
     """Build a FrameSpec from a plain dict (the shape stored in config/JSON files)."""
-    chk = raw.get("checksum") or {}
+    raw = _obj(raw, "spec")
+    fields = _seq(raw.get("fields", []), "fields")
+    chk = _obj(raw.get("checksum") or {}, "checksum")
     return FrameSpec(
         name=str(raw.get("name", "unnamed")),
-        fields=tuple(_field_from_json(f) for f in raw.get("fields", [])),
+        fields=tuple(_field_from_json(f) for f in fields),
         endian=str(raw.get("endian", "be")),
         header=bytes(raw.get("header", b"")) if isinstance(raw.get("header"), (bytes, bytearray))
         else str(raw.get("header", "")).encode("latin-1"),
         trailer=bytes(raw.get("trailer", b"")) if isinstance(raw.get("trailer"), (bytes, bytearray))
         else str(raw.get("trailer", "")).encode("latin-1"),
         length_mode=str(raw.get("length_mode", "fixed")),
-        frame_size=raw.get("frame_size"),
-        length_offset=raw.get("length_offset"),
-        length_width=int(raw.get("length_width", 1)),
+        frame_size=_opt_int(raw.get("frame_size"), "frame_size"),
+        length_offset=_opt_int(raw.get("length_offset"), "length_offset"),
+        length_width=_num(raw.get("length_width", 1), "length_width"),
         length_endian=str(raw.get("length_endian", "be")),
-        length_adjust=int(raw.get("length_adjust", 0)),
-        min_frame_size=int(raw.get("min_frame_size", 0)),
-        max_frame_size=int(raw.get("max_frame_size", 4096)),
+        length_adjust=_num(raw.get("length_adjust", 0), "length_adjust"),
+        min_frame_size=_num(raw.get("min_frame_size", 0), "min_frame_size"),
+        max_frame_size=_num(raw.get("max_frame_size", 4096), "max_frame_size"),
         delimiter=str(raw.get("delimiter", "")).encode("latin-1"),
         checksum=ChecksumSpec(
             kind=str(chk.get("kind", "none")),
-            cover_start=int(chk.get("cover_start", 0)),
-            cover_end=chk.get("cover_end"),
+            cover_start=_num(chk.get("cover_start", 0), "checksum.cover_start"),
+            cover_end=_opt_int(chk.get("cover_end"), "checksum.cover_end"),
             size=chk.get("size"),
             endian=str(chk.get("endian", "le")),
             as_text=bool(chk.get("as_text", False)),
@@ -190,8 +243,17 @@ def spec_to_dict(spec: FrameSpec) -> dict[str, Any]:
 
 
 def spec_from_json(text: str) -> FrameSpec:
-    """Parse a FrameSpec from its JSON form (see spec_to_json)."""
-    return spec_from_dict(json.loads(text))
+    """Parse a FrameSpec from its JSON form (see spec_to_json).
+
+    Every malformed input - invalid JSON, a top-level value that is not an object, wrong
+    types inside, even a pathologically nested document - comes back as ``SpecFormatError``
+    so a caller has exactly one failure mode to handle.
+    """
+    try:
+        raw = json.loads(text)
+    except (ValueError, RecursionError) as exc:      # RecursionError: 深嵌套 JSON
+        raise SpecFormatError("spec is not valid JSON: %s" % exc) from exc
+    return spec_from_dict(raw)
 
 
 def spec_to_json(spec: FrameSpec, indent: int = 2) -> str:

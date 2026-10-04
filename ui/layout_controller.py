@@ -89,8 +89,9 @@ from ui.connection_controller import ensure_port, notify, on_opened_changed, on_
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_threshold_ms, ts_prefix, update_input_placeholder
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
-                        SPLIT_MANUAL, _fixed_row, build_connection_row,
-                        build_data_panes, build_send_group, build_status_bar)
+                        SPLIT_MANUAL, TX_PANE_MIN_H, _fixed_row,
+                        build_connection_row, build_data_panes, build_send_group,
+                        build_status_bar)
 from app.i18n import hex_error_message, tr
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
 from app.shortcuts import HELP_ROWS as SHORTCUT_ROWS
@@ -105,13 +106,15 @@ LEGACY_SPLIT_DEFAULTS = {
     "v_split_sizes": ([420, 260], DATA_FIRST_V),
     "split_sizes": ([820, 340], DATA_FIRST_H),
 }
-QUICK_PANEL_MIN_W = 332   # the quick-send rows need this (U69)
-TX_PANE_MIN_H = 120       # 2026-10-02: the send pane is ~2 button rows; data gets the rest
+QUICK_PANEL_MIN_W = 332   # the quick-send rows need this
+#: Absolute guard for the window height, used only if the measured layout hint is
+#: degenerate (before the first layout pass). The real floor is what the panes need.
+MIN_WINDOW_H = 260
 def fit_minimum_width(win: MainWindow) -> None:
     "fit minimum width"
     try:
         need = win._tx_group.layout().minimumSize().height() + 10
-        win._tx_group.setMinimumHeight(max(120, need))
+        win._tx_group.setMinimumHeight(max(TX_PANE_MIN_H, need))
     except (AttributeError, TypeError):
         pass
     """Window floor = the connection bar (spans the window) or both panes side by side.
@@ -120,7 +123,7 @@ def fit_minimum_width(win: MainWindow) -> None:
     follows the actual font, DPI scale and translation - a hard-coded value is
     only right for the machine it was measured on.
     """
-    win._lock_control_widths()          # U101: before measuring, pin the labels
+    win._lock_control_widths()          # before measuring, pin the labels
     # let the layouts recompute with the current font and translation first, or
     # measurements taken right after a language switch use the old label widths
     for lay in win._control_rows():
@@ -129,7 +132,7 @@ def fit_minimum_width(win: MainWindow) -> None:
     if central is not None:
         central.activate()
     win._fit_pane_minimums()
-    # U101: the left column (both panes, stacked vertically) must be able to hold
+    # the left column (both panes, stacked vertically) must be able to hold
     # its own rows, or dragging the horizontal divider clips them. A vertical
     # splitter's width floor is the widest pane, not the sum - and neither pane's
     # cached hint is reliable at this point, so take the measured floors directly.
@@ -138,16 +141,22 @@ def fit_minimum_width(win: MainWindow) -> None:
     win._left_column.setMinimumWidth(max(360, pane_need + pad))
     rows = win._control_rows()
     connect_need = win._row_need(rows[0]) if rows else 0
-    # U120: a folded panel costs nothing now - the rail only exists on hover
+    # a folded panel costs nothing now - the rail only exists on hover
     panel_min = (0 if win.quick_panel.is_folded() else
                  max(QUICK_PANEL_MIN_W, win.quick_panel.minimumSizeHint().width()))
     pair_need = (win._rx_group.minimumWidth() + panel_min + win._splitter.handleWidth()
                  + max(0, win.width() - win._splitter.width()))
     win.setMinimumWidth(max(980, connect_need, pair_need))
+    # The height floor is derived the same way, from the live layout: the panes' own
+    # minimums plus the connection row and the status bar are the only things the user
+    # must be able to see. A remembered number (it used to be a hard-coded 600 px) only
+    # ever kept the window taller than its content - 2026-10-04 report, "the minimum
+    # window is still too big".
+    win.setMinimumHeight(max(MIN_WINDOW_H, win.minimumSizeHint().height()))
 
 def fit_pane_minimums(win: MainWindow) -> None:
     "fit pane minimums"
-    """Hard width floor per pane so a divider drag can never squeeze its rows (U81).
+    """Hard width floor per pane so a divider drag can never squeeze its rows.
 
     Pushing the constraint onto the panes (instead of only computing one global
     window minimum) means every splitter position stays safe: the splitter cannot
@@ -171,7 +180,7 @@ def fit_pane_minimums(win: MainWindow) -> None:
 
 def lock_control_widths(win: MainWindow) -> None:
     "lock control widths"
-    """Text controls never shrink below their label (U101).
+    """Text controls never shrink below their label.
 
     Qt already refuses to go under minimumSizeHint for most widgets, but an
     explicit minimum or a nested layout can still squeeze one; locking the width to
@@ -190,9 +199,9 @@ def lock_control_widths(win: MainWindow) -> None:
             continue
         wdg.setMinimumWidth(max(wdg.minimumWidth(), wdg.sizeHint().width()))
         if isinstance(wdg, (QPushButton, QCheckBox)):
-            # U101: height stays put as well - a button must not grow with the row
+            # height stays put as well - a button must not grow with the row
             wdg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-    # U189 (Andy): the More menu is a plain QToolButton, whose own sizeHint is a few
+    # the More menu is a plain QToolButton, whose own sizeHint is a few
     # pixels taller than the QPushButtons beside it; pin it to the row's button height.
     more = getattr(win, "more_btn", None)
     ref = getattr(win, "save_log_btn", None)
@@ -212,7 +221,7 @@ def lock_control_widths(win: MainWindow) -> None:
                 continue
             if wdg.isVisible():
                 # 2026-10-03: inputs keep a 28 px floor - 24 px squeezes a spin box's arrows
-                # until the number is clipped and the steppers stop responding (Andy).
+                # until the number is clipped and the steppers stop responding.
                 floor = 28 if isinstance(wdg, (QSpinBox, QComboBox)) else 24
                 wdg.setMinimumHeight(max(floor, wdg.minimumHeight()))
                 if 24 < wdg.height() < 28 and floor == 24:
@@ -220,7 +229,7 @@ def lock_control_widths(win: MainWindow) -> None:
 
 def fit_tx_edit_height(win: MainWindow) -> None:
     "fit tx edit height"
-    """U111/U119/U121: the input owns the send pane's vertical space.
+    """//the input owns the send pane's vertical space.
 
     At the default pane height that is one line; when the user drags the divider,
     when the window grows, or when HEX mode hides the line-ending row, the freed
@@ -241,14 +250,14 @@ def fit_tx_edit_height(win: MainWindow) -> None:
         # neither depends on the input's own height, so this cannot oscillate
         # measure the bottom of the fixed rows themselves - the action column's
         # container stretches, so its own geometry would report the row's bottom
-        # U129: the options row sits above the input, the action toolbar below it
-        # U192: send_file_btn lives inside the settings chip now (its own window), so
+        # the options row sits above the input, the action toolbar below it
+        # send_file_btn lives inside the settings chip now (its own window), so
         # the probes stay on widgets that are actually in this row.
         above_probes = [win.tx_settings_btn, win.inc_chip, win.nl_combo]
         bottoms = [w.mapTo(win._tx_group, w.rect().bottomLeft()).y()
                    for w in above_probes if w.isVisible()]
         above = (max(bottoms) if bottoms else 0) + 6
-        # 2026-10-02 (Andy): the actions sit BESIDE the input now (a column on the
+        # 2026-10-02: the actions sit BESIDE the input now (a column on the
         # right), so nothing sits below it - only the caption above the box and the
         # group margins come off the height.
         cap_lbl = getattr(win, "_tx_content_lbl", None)
@@ -256,7 +265,7 @@ def fit_tx_edit_height(win: MainWindow) -> None:
             and cap_lbl.isVisible() else 0
         avail = win._tx_group.height() - above - caption - 8
         cap = 26 * line + chrome
-        # 2026-10-02 (Andy): the pane is compact, so the box must never demand more
+        # 2026-10-02: the pane is compact, so the box must never demand more
         # height than its row has. A minimum derived from the pane's current height goes
         # stale the moment the divider moves (the audit's squeezed state caught a 7 px
         # overhang). The floor is therefore constant - one line - and the box fills the
@@ -268,7 +277,7 @@ def fit_tx_edit_height(win: MainWindow) -> None:
 
 def give_data_area_the_room(win: MainWindow) -> None:
     "give data area the room"
-    """First run: hand every spare pixel to the receive pane (U79).
+    """First run: hand every spare pixel to the receive pane.
 
     The send pane and the quick-send column start at their minimum sizes, so
     the data display area gets the maximum room by default. Once the user
@@ -285,7 +294,7 @@ def give_data_area_the_room(win: MainWindow) -> None:
 
 def control_rows(win: MainWindow) -> list:
     "control rows"
-    """Every horizontal control row whose width must fit (U81)."""
+    """Every horizontal control row whose width must fit."""
     rows = []
     central = win.centralWidget()
     top = central.layout().itemAt(0)
@@ -307,13 +316,13 @@ def row_need(win: MainWindow, layout: QLayout) -> int:
 
     Qt's own layout minimum accounts for the items' minimums, the layout's
     internal spacing and its contents margins; adding them up by hand missed a
-    few pixels per combo box and left rows slightly too narrow (U81).
+    few pixels per combo box and left rows slightly too narrow.
     """
     return int(layout.minimumSize().width())
 
 def widest_row(win: MainWindow) -> tuple:
     "widest row"
-    """(need, row widget) of the widest control row (U81)."""
+    """(need, row widget) of the widest control row."""
     best = (0, None)
     for lay in win._control_rows():
         wid = lay.parentWidget()
@@ -324,7 +333,7 @@ def widest_row(win: MainWindow) -> tuple:
 
 def saved_sizes(win: MainWindow, key: str, default: list) -> list:
     "saved sizes"
-    """Restore a persisted splitter size list, falling back to the default (U35)."""
+    """Restore a persisted splitter size list, falling back to the default."""
     value = load_config().get(key)
     legacy, upgraded = LEGACY_SPLIT_DEFAULTS.get(key, (None, default))
     if isinstance(value, list) and len(value) == len(default):
@@ -333,7 +342,7 @@ def saved_sizes(win: MainWindow, key: str, default: list) -> list:
         except (TypeError, ValueError):
             return list(default)
         # a stored list that is exactly the old default was never dragged by
-        # the user, so upgrading it to the new default is safe (U79)
+        # the user, so upgrading it to the new default is safe
         if legacy is not None and sizes == list(legacy):
             return list(upgraded)
         return sizes
@@ -341,6 +350,6 @@ def saved_sizes(win: MainWindow, key: str, default: list) -> list:
 
 def fit_settings_btn(win: MainWindow) -> None:
     "fit settings btn"
-    """Size the Settings control (U188: icon-only, so it is the gear plus padding)."""
+    """Size the Settings control (icon-only, so it is the gear plus padding)."""
     win._settings_btn.setMinimumWidth(max(30, win._settings_btn.iconSize().width() + 16))
     win._settings_btn.setMinimumHeight(28)

@@ -1,4 +1,4 @@
-# Build-time version pins (2026-10-03, U204).
+# Build-time version pins (2026-10-03, ).
 #
 # Why: the CI workflow installed PySide6/pyserial from loose ">=" ranges in
 # requirements.txt and installed the newest pyinstaller, so the same commit could produce

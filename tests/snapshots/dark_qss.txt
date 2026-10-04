@@ -1,14 +1,17 @@
 
 QMainWindow { background: #1e1e2e; }
 QDialog { background: #1e1e2e; }
-QLabel#payloadHint { font-size: 12px; color: #8be9fd; }   /* U201: the live byte count reads as info, not as body text */
+QLabel#payloadHint { font-size: 12px; color: #8be9fd; }   /* the live byte count reads as info, not as body text */
 QFrame#vSep { background: #3a3a4a; }
 QWidget { color: #d4d4d4; font-size: 13px; }
 QGroupBox {
     border: 1px solid #3a3a4a;
     border-radius: 6px;
-    margin-top: 8px;
-    padding-top: 2px;
+    /* no title band: the panes carry no caption any more, and Qt reserves the band from
+       margin/padding (measured 16 px per pane, 2026-10-04). The ::title rule below stays
+       for any future titled box. */
+    margin-top: 0px;
+    padding-top: 0px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -26,7 +29,7 @@ QPushButton {
 QPushButton:hover { background: #4a4a5a; }
 QPushButton:pressed { background: #2a2a3a; }
 QPushButton:disabled { color: #989898; background: #2a2a35; }
-/* U191 (Andy): "secondary" must read as quieter, not as disabled - a grey fill is the
+/* "secondary" must read as quieter, not as disabled - a grey fill is the
    app's disabled language. Outlined instead; :disabled below still greys it out. */
 QPushButton[secondary="true"] { background: transparent; border: 1px solid #4a4a5a; color: #cfcfcf; }
 QPushButton[secondary="true"]:hover { background: #3a3a4a; border-color: #83839f; color: #d4d4d4; }
@@ -37,10 +40,12 @@ QComboBox, QLineEdit {
     padding: 3px 8px;
 }
 QComboBox:hover, QLineEdit:hover { border-color: #8be9fd; }
-/* U122: a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
+/* a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
    which is distinguishable from :hover on the same controls */
-QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid #8be9fd; background: #33404f; }
-QPushButton:focus, QToolButton:focus { border: 1px solid #8be9fd; }
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid #5f7f9f; background: #33404f; }
+QPushButton:focus, QToolButton:focus { border: 1px solid #5f7f9f; }
+/* text keeps the accent (needs 4.5:1 as text); only the *ring* went quiet (3:1 is
+   enough for a non-text indicator, and 12.98:1 in the data area was stealing attention) */
 QCheckBox:focus { color: #8be9fd; }
 QLabel#statusCounters { font-family: Consolas, "Courier New", monospace; }
 QComboBox::drop-down { border: none; border-left: 1px solid #4a4a5a; width: 22px; }
@@ -74,7 +79,7 @@ QPlainTextEdit {
     color: #e0e0e0;
     font-family: Consolas, "Courier New", monospace;
     font-size: 13px;
-    selection-background-color: #33415c;   /* U187: quiet selection in dark */
+    selection-background-color: #33415c;   /* quiet selection in dark */
     selection-color: #e0e0e0;
 }
 QCheckBox { spacing: 6px; }
@@ -95,30 +100,42 @@ QPushButton#qsDel { color: #8a8a8a; background: transparent; border: none; font-
 QPushButton#qsDel:hover { color: #ff938c; background: #3a3a4a; border-radius: 4px; }
 QToolButton#paramsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: #8be9fd; }
-/* U110: the settings entry is an app-level control - icon + text, a real border,
+/* Qt resolves conflicting properties by selector specificity (stylesheet-syntax.qdoc:301-308),
+   so an object-name rule outranks the generic QToolButton:focus - every object-named tool
+   button needs its own focus line, otherwise the ring never paints (measured 2026-10-04). */
+QToolButton#paramsBtn:focus { border: 1px solid #5f7f9f; }
+/* the settings entry is an app-level control - icon + text, a real border,
    a 32 px hit target and three states, separated from the connection parameters */
-QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }   /* U188: icon only */
+QToolButton#settingsBtn { color: #d4d4d4; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }   /* icon only */
 QToolButton#settingsBtn:hover { background: #3a3a4a; border-color: #83839f; }
+QToolButton#settingsBtn:focus { border: 1px solid #5f7f9f; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: #2f2f3d; border-color: #8be9fd; }
 QFrame#connDivider { background: #4a4a5a; max-width: 1px; border: none; }
 /* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
-/* U118/U121: the property chip (row properties, send options) */
+/* /the property chip (row properties, send options) */
 QToolButton#qsChip { color: #a9a9bd; background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
 QToolButton#qsChip:hover { color: #d4d4d4; border-color: #83839f; background: #3a3a4a; }
+QToolButton#qsChip:focus { border: 1px solid #5f7f9f; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
-/* U120: the quick-send panel toggle beside Settings */
+/* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid #4a4a5a; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: #3a3a4a; border-color: #83839f; }
-QToolButton#panelToggle:checked { background: #2f2f3d; border-color: #8be9fd; }
-QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #4a4a5a; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsRail:hover { background: #3a3a4a; border-color: #83839f; border-left-color: #83839f; }
+/* press feedback only - the button has no checked state any more, so it can never sit
+   there looking "selected" while the panel is open (2026-10-04 report) */
+QToolButton#panelToggle:pressed { background: #2f2f3d; border-color: #8be9fd; }
+/* an object-name rule outranks the generic QToolButton:focus, so the ring needs its own
+   line here - without it the keyboard focus indicator never painted (measured) */
+QToolButton#panelToggle:focus { border: 1px solid #5f7f9f; }
+QWidget#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid #4a4a5a; border-radius: 0px; padding: 6px 2px; }
+QWidget#qsRail:hover { background: #3a3a4a; border-color: #83839f; border-left-color: #83839f; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
-/* U189 (Andy): the receive "More" menu sits in the control row, so it has to look
+/* the receive "More" menu sits in the control row, so it has to look
    like the buttons next to it - same border, radius and weight as QPushButton. */
 QToolButton#moreBtn { color: #d4d4d4; background: #3a3a4a; border: 1px solid #4a4a5a; border-radius: 4px; padding: 5px 8px; }
 QToolButton#moreBtn:hover { background: #4a4a5a; }
+QToolButton#moreBtn:focus { border: 1px solid #5f7f9f; }
 QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_dark.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
-/* U190: the repeat toggle lives in the two-row action column; a tighter padding keeps
+/* the repeat toggle lives in the two-row action column; a tighter padding keeps
    that column at or under 200 px without touching the other buttons. */
 QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #5a5a6a; border-radius: 3px; background: #16161f; }
@@ -137,11 +154,12 @@ QScrollBar::handle:horizontal { background: #4a4a5c; min-width: 30px; border-rad
 QScrollBar::handle:horizontal:hover { background: #83839f; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: transparent; }   /* U80: corner badge */
-QLabel#qsTitle { color: #d4d4d4; font-weight: bold; background: transparent; }   /* U167: panel header level */
-QFrame#qsTitleBar { background: #8be9fd; border-radius: 1px; }   /* U167: accent bar */
+QLabel#seqOrd { color: #8be9fd; font-size: 9px; font-weight: bold; background: transparent; }   /* corner badge */
+QLabel#qsTitle { color: #d4d4d4; font-weight: bold; background: transparent; }   /* panel header level */
+QFrame#qsTitleBar { background: #8be9fd; border-radius: 1px; }   /* accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* U186: the click highlight must differ from a grey hover */
-QLabel#qsSeqSent { color: #cfcfcf; font-size: 12px; }   /* U185: one step below body */
+QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* the click highlight must differ from a grey hover */
+QLabel#qsSeqSent { color: #cfcfcf; font-size: 12px; }   /* one step below body */
+QLabel#qsArmed { color: #cfcfcf; font-size: 12px; }     /* fixed-width armed count */
 QFrame#qsRow[sending="true"] { background: rgba(210, 210, 225, 0.18); border: 1px solid #8be9fd; }   /* S3: the row being sent right now */
-QFrame#qsRow:hover { background: #3a3a4a; }   /* U163-I3: row hover feedback */
+QFrame#qsRow:hover { background: #3a3a4a; }   /* row hover feedback */

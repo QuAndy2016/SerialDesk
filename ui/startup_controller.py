@@ -106,7 +106,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
 HISTORY_MAX = 50
-LOG_DIR = log_dir()   # U34: per-user (or portable) logs, not next to the bundle
+LOG_DIR = log_dir()   # per-user (or portable) logs, not next to the bundle
 def init_worker(win: MainWindow) -> None:
     "init worker"
     """Create the serial worker and connect its signals."""
@@ -126,8 +126,8 @@ def init_state(win: MainWindow) -> None:
     """Session state: counters, display flags and the wall-clock offset."""
     win._stats = SessionStats()      # refactor step 1: counters live in app/stats.py
     win._fitting_tx = False
-    win._line_is_tx = False   # U59: is the current display line a TX echo?
-    win._cap_warned = False   # U45: warn once when the display cap is reached
+    win._line_is_tx = False   # is the current display line a TX echo?
+    win._cap_warned = False   # warn once when the display cap is reached
     win._last_ts: float | None = None
     win._clock_offset = time.time() - time.monotonic()
     _inc_saved = load_config().get("increment", {})
@@ -142,7 +142,7 @@ def init_language_and_log(win: MainWindow) -> None:
     win._log_fp = None            # kept for compatibility; see _log_sink below
     win._log_started = 0.0
     win._log_bytes = 0
-    _cfg0 = load_config()                       # U75: configurable auto-save
+    _cfg0 = load_config()                       # configurable auto-save
     win._log_max_bytes = max(1, int(_cfg0.get("autosave_max_mb", 2) or 2)) * 1024 * 1024
     win._log_max_seconds = max(1, int(_cfg0.get("autosave_max_minutes", 30) or 30)) * 60
     win._log_quota_bytes = max(0, int(_cfg0.get("log_quota_mb", 0) or 0)) * 1024 * 1024
@@ -155,8 +155,8 @@ def init_timers(win: MainWindow) -> None:
     """The timers and the frame assembler that drive sending and reception."""
     win._send_history: list[str] = []
     win._history_meta: dict = {}   # v0.10.0: text -> {"fmt", "b", "ts"}
-    win._history_dlg = None        # U87: lazily created non-modal popup
-    win._recall_index = -1         # U87: Ctrl+Up/Down position in the history
+    win._history_dlg = None        # lazily created non-modal popup
+    win._recall_index = -1         # Ctrl+Up/Down position in the history
     win._recall_draft = ""
     win._sent_count = 0
     win._repeat_timer = QTimer(win)
@@ -169,8 +169,8 @@ def init_timers(win: MainWindow) -> None:
     win._meter_timer = QTimer(win)          # P2: receive-throughput read-out
     win._meter_timer.timeout.connect(win._refresh_meter)
     win._meter_timer.start(500)
-    win._cfg_save_timer = QTimer(win)     # U52: debounced config persistence
-    # U57: merge USB-fragmented chunks before deciding a line break
+    win._cfg_save_timer = QTimer(win)     # debounced config persistence
+    # merge USB-fragmented chunks before deciding a line break
     _settle = float(load_config().get("rx_settle_ms", DEFAULT_SETTLE_MS) or DEFAULT_SETTLE_MS)
     win._frames = FrameAssembler(settle_ms=_settle)
     win._frame_timer = QTimer(win)
@@ -185,12 +185,12 @@ def init_timers(win: MainWindow) -> None:
 def build_everything(win: MainWindow) -> None:
     "build everything"
     """Build every region once the state exists (UI, menu, shortcuts, checks)."""
-    win._build_settings_button()   # U72: the connect row hosts this button
+    win._build_settings_button()   # the connect row hosts this button
     win._build_ui()
     win._build_menu()
-    win._init_update_check()                          # U127
-    QApplication.instance().installEventFilter(win)   # U120: hover the right edge
-    if load_config().get("quick_panel_collapsed"):     # U88: restore the folded state
+    win._init_update_check()                          # 
+    QApplication.instance().installEventFilter(win)   # hover the right edge
+    if load_config().get("quick_panel_collapsed"):     # restore the folded state
         win._on_quick_panel_collapsed(True)
     win._apply_accessible_names()
     win._setup_tab_order()
@@ -200,7 +200,7 @@ def build_everything(win: MainWindow) -> None:
 def restore_settings(win: MainWindow) -> None:
     "restore settings"
     """Apply the persisted settings: auto-save, history, rules, theme, reconnect."""
-    win._autosave_dlg = AutoSaveDialog(win)              # U75
+    win._autosave_dlg = AutoSaveDialog(win)              # 
     win._autosave_dlg.settingsChanged.connect(win._apply_autosave_settings)
     _cfg = load_config()
     win._autosave_dlg.set_values(
@@ -210,14 +210,14 @@ def restore_settings(win: MainWindow) -> None:
         quota_mb=int(_cfg.get("log_quota_mb", 0) or 0),
         folder=win._log_dir)
 
-    # send history (T5) from config
+    # send history from config
     _hcfg = load_config()
     win._send_history = [str(h) for h in _hcfg.get("send_history", [])
                           if str(h).strip()][:HISTORY_MAX]
     win._history_meta = win._prune_history_meta(_hcfg.get("history_meta"))
     win._update_history_button()
 
-    # auto-reply rules (T10) from config
+    # auto-reply rules from config
     cfg = load_config()
     win._auto_rules = [r for r in cfg.get("auto_reply", []) if isinstance(r, dict)]
     win._reply_buf = b""

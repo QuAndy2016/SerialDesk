@@ -107,7 +107,7 @@ if TYPE_CHECKING:
     from ui.main_window import MainWindow
 def undo_delete(win: MainWindow) -> None:
     "undo delete"
-    """Undo the last destructive action: a deleted row or a cleared pane (U58/U42)."""
+    """Undo the last destructive action: a deleted row or a cleared pane."""
     kind, payload = win._undo_kind, win._undo_payload
     win._undo_kind = ""
     win._undo_payload = None
@@ -138,7 +138,7 @@ def clear_undo(win: MainWindow) -> None:
 
 def on_row_deleted(win: MainWindow, payloads: list[str]) -> None:
     "on row deleted"
-    """Offer a short undo window for the deleted quick-send rows (U58/U118)."""
+    """Offer a short undo window for the deleted quick-send rows."""
     if isinstance(payloads, dict):
         payloads = [payloads]
     win._undo_payload = [dict(p) for p in payloads]
@@ -151,7 +151,7 @@ def on_row_deleted(win: MainWindow, payloads: list[str]) -> None:
 def on_repeat_toggled(win: MainWindow, checked: bool):
     "on repeat toggled"
     if checked and not win._ensure_port():
-        win.repeat_btn.blockSignals(True)     # U61: no repeat loop without a port
+        win.repeat_btn.blockSignals(True)     # no repeat loop without a port
         win.repeat_btn.setChecked(False)
         win.repeat_btn.blockSignals(False)
         win.repeat_btn.setText(tr("tx.repeat"))
@@ -159,7 +159,7 @@ def on_repeat_toggled(win: MainWindow, checked: bool):
     win.repeat_btn.setText(tr("tx.repeat.stop") if checked else tr("tx.repeat"))
     if checked:
         win._sent_count = 0
-        win._repeat_count = 0          # U171: each start counts from zero
+        win._repeat_count = 0          # each start counts from zero
         win.update_counts()
         win._repeat_timer.start(win._repeat_value())
     else:
@@ -168,21 +168,22 @@ def on_repeat_toggled(win: MainWindow, checked: bool):
 
 def repeat_count(win: MainWindow) -> int:
     "repeat count"
-    """U171: how many repeats to send (0 = keep going until stopped)."""
+    """how many repeats to send (0 = keep going until stopped)."""
     try:
         if getattr(win, "repeat_endless", None) is not None and win.repeat_endless.isChecked():
             return 0            # 2026-10-03: unlimited is the switch, not a magic count
         return max(1, min(9999, int(win.repeat_times.value())))
     except (AttributeError, ValueError):
         # 2026-10-03 (review): 0 means "keep sending", so a read failure must not land
-        # there. "I cannot tell" is read as one send - the same choice _seq_loops_value
+        # there. "I cannot tell" is read as one send - the same choice the quick-send
+        # panel's rounds chip makes
         # makes for the sequence rounds.
         return 1
 
 
 def on_repeat_tick(win: MainWindow) -> None:
     "on repeat tick"
-    """U171: one repeat step - send once, and stop once the count is reached."""
+    """one repeat step - send once, and stop once the count is reached."""
     win.on_send()
     target = repeat_count(win)
     if target <= 0:
@@ -215,9 +216,9 @@ def stop_repeat(win: MainWindow):
 
 def echo_tx(win: MainWindow, data: bytes) -> None:
     "echo tx"
-    """Mirror sent bytes into the receive pane as a '->' line (U26).
+    """Mirror sent bytes into the receive pane as a '->' line.
 
-    U178: TX is always captured now; the row's view filter (all / RX only / TX only)
+    TX is always captured now; the row's view filter (all / RX only / TX only)
     is the single visibility control, so the old "Echo TX" checkbox is gone.
     """
     if win._file_timer.isActive():
@@ -227,36 +228,36 @@ def echo_tx(win: MainWindow, data: bytes) -> None:
     win._emit_rx_text(win._ts_prefix(time.monotonic()) + MARK_TX, tx=True, meta=True)
     win._emit_rx_text(win._format_rx(data), tx=True)
     win._line_is_tx = True
-    win._scroll_rx_bottom()          # U43
+    win._scroll_rx_bottom()          # 
 
 def scroll_rx_bottom(win: MainWindow) -> None:
     "scroll rx bottom"
-    """Follow the newest line unless the user paused auto-scroll (U43)."""
+    """Follow the newest line unless the user paused auto-scroll."""
     if win.autoscroll_check.isChecked():
         bar = win.rx_view.verticalScrollBar()
         bar.setValue(bar.maximum())
 
 def pause_autoscroll(win: MainWindow, _action: int = 0) -> None:
     "pause autoscroll"
-    """Manual scrolling means the user is reading: stop following (U43)."""
+    """Manual scrolling means the user is reading: stop following."""
     if win.autoscroll_check.isChecked():
         win.autoscroll_check.setChecked(False)
 
 def rx_separator(win: MainWindow) -> str:
     "rx separator"
-    """Separator used when a HEX group continues an existing line (U59)."""
+    """Separator used when a HEX group continues an existing line."""
     return "" if win.rx_fmt_combo.currentIndex() in (RX_ASCII, RX_COLUMN_HEX) else " "
 
 def on_autoscroll_toggled(win: MainWindow, checked: bool) -> None:
     "on autoscroll toggled"
-    """Remember the auto-scroll preference (U75)."""
+    """Remember the auto-scroll preference."""
     config = load_config()
     config["autoscroll"] = bool(checked)
     save_config(config)
 
 def on_timestamp_toggled(win: MainWindow, checked: bool) -> None:
     "on timestamp toggled"
-    """Remember the timestamp preference (U96)."""
+    """Remember the timestamp preference."""
     config = load_config()
     config["timestamp_on"] = bool(checked)
     save_config(config)
@@ -316,7 +317,7 @@ def check_auto_reply(win: MainWindow, data: bytes) -> None:
 
 def on_pause_toggled(win: MainWindow, checked: bool) -> None:
     "on pause toggled"
-    """Freeze the receive view; data keeps flowing to the log (U160)."""
+    """Freeze the receive view; data keeps flowing to the log."""
     win._rx_paused = bool(checked)
     if bool(checked):
         win._rx_pause_buf = []
@@ -336,7 +337,7 @@ def _frag_kind(frag) -> int:
 
 def _rx_copy_text(win: MainWindow, *, selection_only: bool = False,
                   current_line: bool = False) -> str:
-    """Rebuild receive text for the clipboard without timestamps/markers (U162).
+    """Rebuild receive text for the clipboard without timestamps/markers.
 
     Walks the document fragment by fragment and keeps only payload fragments
     (kinds 0/1); the dim timestamp + direction fragments (kind 2) are dropped,
@@ -384,7 +385,7 @@ def _rx_copy_text(win: MainWindow, *, selection_only: bool = False,
 
 
 def _rx_copy_raw(win: MainWindow) -> None:
-    """Copy exactly what is shown - timestamps and markers included (U162)."""
+    """Copy exactly what is shown - timestamps and markers included."""
     cursor = win.rx_view.textCursor()
     text = (cursor.selectedText().replace("\u2029", "\n") if cursor.hasSelection()
             else win.rx_view.toPlainText())
@@ -394,7 +395,7 @@ def _rx_copy_raw(win: MainWindow) -> None:
 
 def _copy_rx(win: MainWindow, *, selection_only: bool = False,
              current_line: bool = False) -> None:
-    """Copy payload text (no timestamps/markers) and confirm it (U162)."""
+    """Copy payload text (no timestamps/markers) and confirm it."""
     QApplication.clipboard().setText(
         _rx_copy_text(win, selection_only=selection_only, current_line=current_line))
     win._notify(tr("rx.copied_line") if current_line else tr("rx.copied_clean"),
@@ -403,7 +404,7 @@ def _copy_rx(win: MainWindow, *, selection_only: bool = False,
 
 def open_rx_context_menu(win: MainWindow, pos) -> None:
     "open rx context menu"
-    """Receive-pane right-click: clean / line / raw copy (U162)."""
+    """Receive-pane right-click: clean / line / raw copy."""
     menu = QMenu(win.rx_view)
     copy_sel = menu.addAction(tr("menu.copy_sel_clean"))
     copy_sel.setEnabled(win.rx_view.textCursor().hasSelection())
@@ -420,12 +421,12 @@ def open_rx_context_menu(win: MainWindow, pos) -> None:
 
 def update_counts(win: MainWindow):
     "update counts"
-    """U124: the single status-bar counter (sends, TX bytes, RX bytes)."""
+    """the single status-bar counter (sends, TX bytes, RX bytes)."""
     win.sent_lbl.setText(tr("tx.counter", n=win._sent_count,
                              tx=win.tx_bytes, rx=win.rx_bytes))
 
 
-COUNTS_REFRESH_MS = 100     # 2026-10-03 (data-path P1): coalesce counter refreshes
+COUNTS_REFRESH_MS = 100     # 2026-10-03: coalesce counter refreshes
 
 
 def schedule_counts(win: MainWindow) -> None:
@@ -447,23 +448,23 @@ def schedule_counts(win: MainWindow) -> None:
 
 def update_params_summary(win: MainWindow) -> None:
     "update params summary"
-    """One-line summary of the low-frequency settings (U35-P3)."""
+    """One-line summary of the low-frequency settings."""
     parity = ["N", "O", "E", "M", "S"][max(0, min(4, win.parity_combo.currentIndex()))]
     data = win.dbits_combo.currentText()
     stop = win.stopbits_combo.currentText()
     flow = win.flow_combo.currentText()
     enc = win.encoding_combo.currentText()
     text = f"{data}{parity}{stop} · {flow} · {enc}"
-    if len(text) > 16:                      # U78: elide instead of widening the row
+    if len(text) > 16:                      # elide instead of widening the row
         text = text[:15] + "…"
     win.params_summary.setText(text + " ▾")
 
-FIND_HIGHLIGHT_CAP = 10000  # U160: cap on how many matches get a background colour
+FIND_HIGHLIGHT_CAP = 10000  # cap on how many matches get a background colour
 
 
 def _collect_find_matches(win: MainWindow, text: str, case_sensitive: bool = False,
                           start: int = 0, end: int | None = None) -> list:
-    """Matches of `text` in the receive pane as (start, end) positions (U160/U181/P2).
+    """Matches of `text` in the receive pane as (start, end) positions.
 
     `start`/`end` let the incremental refresh scan only the newly received tail.
     """
@@ -486,13 +487,13 @@ def _collect_find_matches(win: MainWindow, text: str, case_sensitive: bool = Fal
 
 
 def find_case_sensitive(win: MainWindow) -> bool:
-    """U181: whether the receive search distinguishes case."""
+    """whether the receive search distinguishes case."""
     box = getattr(win, "find_case_check", None)
     return bool(box.isChecked()) if box is not None else False
 
 
 def _apply_find_highlights(win: MainWindow, matches: list, current: int) -> None:
-    """Highlight every match, the current one stronger (U160)."""
+    """Highlight every match, the current one stronger."""
     colours = theme.find_colors()
     selections = []
     for i, (start, end) in enumerate(matches[:FIND_HIGHLIGHT_CAP]):
@@ -515,9 +516,9 @@ def _apply_find_highlights(win: MainWindow, matches: list, current: int) -> None
 
 def on_find_text_changed(win: MainWindow) -> None:
     "on find text changed"
-    """Highlight every match while typing (U160/U181).
+    """Highlight every match while typing.
 
-    U181: this no longer moves the cursor to the first match - the bar is a
+    this no longer moves the cursor to the first match - the bar is a
     persistent highlight box now, and scrolling the pane on every keystroke made
     it unusable for reading. Jumping stays on Enter / the prev-next buttons.
     """
@@ -565,7 +566,7 @@ def refresh_find_highlights(win: MainWindow) -> None:
 
 def on_find_case_toggled(win: MainWindow, checked: bool) -> None:
     "on find case toggled"
-    """U181: remember the case switch and re-run the search."""
+    """remember the case switch and re-run the search."""
     config = load_config()
     config["find_case"] = bool(checked)
     save_config(config)
@@ -574,7 +575,7 @@ def on_find_case_toggled(win: MainWindow, checked: bool) -> None:
 
 def update_find_count(win: MainWindow) -> None:
     "update find count"
-    """Refresh the n/N label after an index move (U160)."""
+    """Refresh the n/N label after an index move."""
     total = len(win._find_matches)
     if total == 0:
         win.find_count_lbl.setText("0/0" if win.find_edit.text() else "")
@@ -586,9 +587,9 @@ def update_find_count(win: MainWindow) -> None:
 
 def toggle_find_bar(win: MainWindow, show: bool | None = None) -> None:
     "toggle find bar"
-    """Show/hide the receive find bar and remember it (U41/U160/U181).
+    """Show/hide the receive find bar and remember it.
 
-    U181: the bar is a persistent highlight box - it defaults to visible and its
+    the bar is a persistent highlight box - it defaults to visible and its
     state is persisted, so the keyword highlighter is always one keystroke away.
     """
     visible = (not win._find_bar.isVisible()) if show is None else show
@@ -606,7 +607,7 @@ def toggle_find_bar(win: MainWindow, show: bool | None = None) -> None:
 
 def find_next(win: MainWindow, forward: bool = True) -> None:
     "find next"
-    """Jump to the next/previous match in the receive pane (U41/U160)."""
+    """Jump to the next/previous match in the receive pane."""
     text = win.find_edit.text()
     matches = getattr(win, "_find_matches", None)
     if matches is None or text != getattr(win, "_find_query", None):
@@ -635,7 +636,7 @@ def find_next(win: MainWindow, forward: bool = True) -> None:
 
 def esc_action(win: MainWindow) -> None:
     "esc action"
-    """Esc: leave the find bar, else stop repeat/sequence (U39)."""
+    """Esc: leave the find bar, else stop repeat/sequence."""
     if win._find_bar.isVisible():
         win._toggle_find_bar(False)
         return
@@ -644,17 +645,17 @@ def esc_action(win: MainWindow) -> None:
 
 def setup_shortcuts(win: MainWindow) -> None:
     "setup shortcuts"
-    """Daily-flow keyboard shortcuts (U39)."""
+    """Daily-flow keyboard shortcuts."""
     for seq, handler in (
         ("Ctrl+Return", win.on_send),
         ("Ctrl+L", win._on_clear_and_counters),
         ("Ctrl+S", win.on_save_log_quick),
         ("Ctrl+K", lambda: win.tx_edit.setFocus()),
         ("F5", win.toggle_open),
-        ("Ctrl+B", win._toggle_quick_panel),          # U88: fold/unfold the panel
-        ("Ctrl+,", win._settings_btn.showMenu),        # U110: the platform convention
-        ("Ctrl+Up", lambda: win._recall_history(1)),    # U87: older command
-        ("Ctrl+Down", lambda: win._recall_history(-1)),  # U87: newer command
+        ("Ctrl+B", win._toggle_quick_panel),          # fold/unfold the panel
+        ("Ctrl+,", win._settings_btn.showMenu),        # the platform convention
+        ("Ctrl+Up", lambda: win._recall_history(1)),    # older command
+        ("Ctrl+Down", lambda: win._recall_history(-1)),  # newer command
         ("Ctrl+F", lambda: win._toggle_find_bar(True)),
         ("Esc", win._esc_action),
     ):
@@ -662,7 +663,7 @@ def setup_shortcuts(win: MainWindow) -> None:
 
 def apply_accessible_names(win: MainWindow) -> None:
     "apply accessible names"
-    """U122: screen readers need a name per control; the tooltip is the best source."""
+    """screen readers need a name per control; the tooltip is the best source."""
     names = ("port_combo", "refresh_btn", "baud_combo", "open_btn", "rx_fmt_combo",
              "params_summary", "_settings_btn", "_panel_btn", "split_combo",
              "split_ms_edit", "header_edit", "ts_check",
@@ -699,16 +700,16 @@ def apply_accessible_names(win: MainWindow) -> None:
 
 def setup_tab_order(win: MainWindow) -> None:
     "setup tab order"
-    """Explicit Tab order along the five zones (U54, per the U53 grouping spec)."""
+    """Explicit Tab order along the five zones (, per the grouping spec)."""
     names = ["port_combo", "refresh_btn", "baud_combo", "open_btn",
              "split_combo", "split_ms_edit", "header_edit", "rx_filter_combo", "ts_check",
              "autoscroll_check",
              "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
-             "nl_combo", "escape_check",   # U121: the two pickers live in a popup
+             "nl_combo", "escape_check",   # the two pickers live in a popup
              "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
              "send_file_btn"]
     widgets = [w for w in (getattr(win, n, None) for n in names) if w is not None]
     for first, second in zip(widgets, widgets[1:]):
-        # U129: a widget inside a popup menu has its own window; Qt refuses the pair
+        # a widget inside a popup menu has its own window; Qt refuses the pair
         if first.window() is second.window():
             QWidget.setTabOrder(first, second)

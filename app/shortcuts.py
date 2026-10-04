@@ -1,7 +1,7 @@
 """The shortcut table - one source of truth for registration and for the help dialog.
 
 The window registers the handlers; this module owns the keys and their labels, so
-the help can never drift from reality (the review battery checks they agree).
+the help can never drift from reality (a test checks that the two agree).
 """
 
 from __future__ import annotations

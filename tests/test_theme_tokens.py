@@ -1,4 +1,4 @@
-"""U132 batch 1: colours moved into ui/tokens.py must not change a single byte.
+"""batch 1: colours moved into ui/tokens.py must not change a single byte.
 
 The snapshot files hold the sheets exactly as they were before the extraction, so a
 regression here means the theme changed when it was only supposed to be re-written.

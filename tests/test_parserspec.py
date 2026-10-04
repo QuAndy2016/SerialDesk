@@ -1,6 +1,8 @@
-"""Declarative schema (B4-P1): JSON round-trip and validation."""
+"""Declarative schema: JSON round-trip and validation."""
 
 from __future__ import annotations
+
+import json
 
 import pytest
 
@@ -9,6 +11,7 @@ from app.parserspec import (
     ChecksumSpec,
     FieldSpec,
     FrameSpec,
+    SpecFormatError,
     checksum_size,
     spec_from_dict,
     spec_from_json,
@@ -93,3 +96,71 @@ def test_json_text_is_readable_and_stable():
                                  header=b"$", delimiter=b"\r\n"))
     assert '$' in text and "\\r\\n" in text        # latin-1 bytes stay readable
     assert spec_from_json(text).header == b"$"
+
+
+class TestMalformedSpecIsOneFailureMode:
+    """A spec file is user input, so every bad shape must fail the same documented way.
+
+    Measured before the guards existed: the same class of mistake raised ``AttributeError``
+    (top level not an object), ``TypeError`` (a field list that is not a list) or
+    ``ValueError`` (a number that is not one) depending on which key was wrong. A caller
+    could not handle that with one ``except``.
+    """
+
+    BAD_JSON = [
+        ("invalid json", "{not json"),
+        ("truncated json", '{"name": "x", "fields": ['),
+        ("top level array", "[1, 2, 3]"),
+        ("top level string", '"hello"'),
+        ("top level number", "7"),
+        ("top level null", "null"),
+        ("fields not a list", '{"fields": 7}'),
+        ("field entry not an object", '{"fields": [1]}'),
+        ("field missing type", '{"fields": [{"name": "a"}]}'),
+        ("field name not a string pair", '{"fields": [{"name": [], "type": "u8"}]}'),
+        ("length_width is text", '{"length_width": "abc"}'),
+        ("length_width is null", '{"length_width": null}'),
+        ("frame_size is a list", '{"frame_size": [1]}'),
+        ("checksum is a list", '{"checksum": [1]}'),
+        ("checksum cover_start is text", '{"checksum": {"cover_start": "x"}}'),
+        ("bits not a list", '{"fields": [{"name": "a", "type": "bits", "bits": 3}]}'),
+        ("bit missing start", '{"fields": [{"name": "a", "type": "bits", "bits": [{"name": "f"}]}]}'),
+    ]
+
+    @pytest.mark.parametrize("what, text", BAD_JSON, ids=[c[0] for c in BAD_JSON])
+    def test_bad_json_raises_spec_format_error(self, what, text):
+        with pytest.raises(SpecFormatError):
+            spec_from_json(text)
+
+    def test_spec_format_error_is_a_value_error(self):
+        # One except clause has to cover a spec that cannot be read.
+        assert issubclass(SpecFormatError, ValueError)
+
+    @pytest.mark.parametrize("bad", [None, [], "x", 7, ("a",)])
+    def test_bad_dict_raises_spec_format_error(self, bad):
+        with pytest.raises(SpecFormatError):
+            spec_from_dict(bad)
+
+    def test_pathologically_nested_document_is_mapped_to_spec_format_error(self, monkeypatch):
+        # Deterministic stand-in for a document deep enough to blow the recursion limit:
+        # whatever the parser raises for that, the caller must still see SpecFormatError.
+        def too_deep(_text):
+            raise RecursionError("maximum recursion depth exceeded")
+
+        monkeypatch.setattr("app.parserspec.json.loads", too_deep)
+        with pytest.raises(SpecFormatError):
+            spec_from_json("{}")
+
+    def test_actually_nested_document_never_raises_an_unexpected_type(self):
+        text = '{"a": ' + "[" * 3000 + "]" * 3000 + "}"
+        try:
+            spec_from_json(text)
+        except SpecFormatError:
+            pass
+        except Exception as exc:                     # noqa: BLE001 - that is the assertion
+            pytest.fail("unexpected %s: %s" % (type(exc).__name__, exc))
+
+    def test_oversized_field_list_is_loaded_not_refused(self):
+        # Growth must stay linear and safe: 5000 fields is a legal, if silly, spec.
+        text = json.dumps({"fields": [{"name": "f%d" % i, "type": "u8"} for i in range(5000)]})
+        assert len(spec_from_json(text).fields) == 5000

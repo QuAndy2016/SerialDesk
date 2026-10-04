@@ -24,10 +24,27 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Pinned via constraints.txt so the bundle is the same on every build (U204);
+          # Pinned via constraints.txt so the bundle is the same on every build;
           # constraints cap versions without installing anything on their own.
           pip install -r requirements.txt -c constraints.txt
           pip install pyinstaller -c constraints.txt
+
+      # Runs BEFORE the build, so a red test never reaches the installer or a release.
+      # Offscreen + UTF-8 because the UI tests build real widgets headlessly.
+      - name: Run the test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: '1'
+        run: python -m pytest -q
+
+      # Dependency check (SSDF PW: reuse well-secured components). Deliberately not part of
+      # the local gate: pip-audit resolves against PyPI/OSV, which did not finish on a slow
+      # link (measured: 226 s with no output, and 80 s with only warnings), while a CI runner
+      # reaches the advisory services quickly. Audits the pinned build set from constraints.txt.
+      - name: Audit dependencies
+        run: |
+          pip install pip-audit
+          python -m pip_audit --vulnerability-service osv --no-deps -r constraints.txt
 
       - name: Get version
         id: ver
@@ -61,10 +78,10 @@ jobs:
             --exclude-module PySide6.QtPdf `
             main.py
 
-      # U34: the PySide6 runtime ships pieces this app never touches; dropping them
+      # the PySide6 runtime ships pieces this app never touches; dropping them
       # cuts the download roughly in half (QML/Quick/PDF engines, the software
       # OpenGL fallback and Qt's own translations).
-      - name: Slim the bundle (U34)
+      - name: Slim the bundle
         shell: pwsh
         run: |
           $dir = "dist\SerialDesk_v${{ steps.ver.outputs.version }}"
@@ -122,8 +139,8 @@ jobs:
           "$hash  $name-win64.zip" | Set-Content -Path "dist\$name-win64.zip.sha256" -Encoding ASCII
           Write-Host "Packaged dist\$name-win64.zip"
 
-      - name: Build the Windows installer (Inno Setup, U34)
-        # 2026-10-03 (U194): build it on every push so a broken .iss is caught before a
+      - name: Build the Windows installer (Inno Setup, )
+        # 2026-10-03: build it on every push so a broken .iss is caught before a
         # release - the installer compile only ran on tags, so edits went unverified.
         # Only "Publish GitHub Release" below stays tag-only.
         shell: pwsh

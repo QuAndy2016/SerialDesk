@@ -1,6 +1,6 @@
 """Serial worker: background QThread doing read loop, emits (timestamp, data).
 
-U52/U64 design notes - the GUI thread never performs serial I/O:
+/design notes - the GUI thread never performs serial I/O:
 - Outgoing frames are handed over through a bounded queue (`send()` only enqueues).
 - Writes carry a `write_timeout`, so a driver that never completes the transfer
   (e.g. hardware flow control waiting for CTS) raises instead of blocking forever.
@@ -33,8 +33,8 @@ RX_BATCH_MAX = 4096         # bytes; push a batch to the UI at this size
 RX_BATCH_MS = 10.0          # ms; or once the stream has been quiet this long
 SIGNAL_POLL_INTERVAL = 0.2  # seconds between modem-status reads
 MAX_TX_QUEUE = 64           # frames; protects memory if the port stops draining
-MAX_TX_PER_TICK = 2         # frames written per loop turn (keeps RX alive, U64)
-MAX_RECONNECT_ATTEMPTS = 60  # give up after ~2 minutes of retries (T14)
+MAX_TX_PER_TICK = 2         # frames written per loop turn (keeps RX alive, )
+MAX_RECONNECT_ATTEMPTS = 60  # give up after ~2 minutes of retries
 
 
 def list_serial_ports() -> list:
@@ -52,11 +52,11 @@ class SerialWorker(QThread):
     received = Signal(float, bytes)   # (time.monotonic(), raw bytes)
     log = Signal(str)                 # info/error lines
     opened = Signal(bool)             # True when opened, False when closed/error
-    error = Signal(str)               # user-facing open/IO failure text (U37)
-    send_error = Signal(str, str)     # (kind, detail) - kind: timeout/closed/queue/io (U52)
-    disconnected = Signal(str)        # unexpected loss, no reconnect possible (T14)
-    reconnecting = Signal(int)        # attempt number (T14)
-    reconnected = Signal()            # came back on its own (T14)
+    error = Signal(str)               # user-facing open/IO failure text
+    send_error = Signal(str, str)     # (kind, detail) - kind: timeout/closed/queue/io
+    disconnected = Signal(str)        # unexpected loss, no reconnect possible
+    reconnecting = Signal(int)        # attempt number
+    reconnected = Signal()            # came back on its own
 
     def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
@@ -67,8 +67,8 @@ class SerialWorker(QThread):
         self._sig_cache = {"open": False, "cts": False, "dsr": False,
                            "dcd": False, "ri": False}
         self._sig_lock = threading.Lock()
-        self._rtscts = False        # hardware flow control enabled? (U65)
-        self._tx_degraded = False   # a write timed out: refuse more sends until reopen (U65)
+        self._rtscts = False        # hardware flow control enabled?
+        self._tx_degraded = False   # a write timed out: refuse more sends until reopen
         self._auto_reconnect = False   # T14
         self._user_closed = True       # True = the user closed it; never auto-reopen
         self._device, self._baud, self._open_kwargs = "", 115200, {}
@@ -89,7 +89,7 @@ class SerialWorker(QThread):
                 rtscts=kwargs.get("rtscts", False),
                 xonxoff=kwargs.get("xonxoff", False),
                 timeout=READ_TIMEOUT,
-                write_timeout=WRITE_TIMEOUT,   # U52: never block forever on write
+                write_timeout=WRITE_TIMEOUT,   # never block forever on write
             )
         except (serial.SerialException, OSError, ValueError, TypeError) as exc:  # surface any serial error
             self.log.emit(f"open failed: {exc}")
@@ -97,7 +97,7 @@ class SerialWorker(QThread):
             self.opened.emit(False)
             return False
         self._rtscts = bool(kwargs.get("rtscts", False))
-        self._tx_degraded = False          # a fresh open clears the degraded state (U65)
+        self._tx_degraded = False          # a fresh open clears the degraded state
         self._device, self._baud, self._open_kwargs = device, baudrate, dict(kwargs)
         self._user_closed = False          # T14: an open is a user action
         self._running = True
@@ -108,7 +108,7 @@ class SerialWorker(QThread):
         return True
 
     def close_port(self):
-        """Ask the worker to stop. Never touches the port from this thread (U64)."""
+        """Ask the worker to stop. Never touches the port from this thread."""
         self._running = False
         self._user_closed = True           # T14: stop any reconnect loop
         with self._tx_lock:
@@ -130,7 +130,7 @@ class SerialWorker(QThread):
             self.send_error.emit("closed", "")
             return False
         if self._tx_degraded:
-            # U65: a write already timed out - do not walk back into the driver
+            # a write already timed out - do not walk back into the driver
             self.send_error.emit("degraded", "")
             return False
         with self._tx_lock:
@@ -141,11 +141,11 @@ class SerialWorker(QThread):
         return True
 
     def set_auto_reconnect(self, enabled: bool) -> None:
-        """Enable/disable automatic reopening after an unexpected loss (T14)."""
+        """Enable/disable automatic reopening after an unexpected loss."""
         self._auto_reconnect = bool(enabled)
 
     def queued_frames(self) -> int:
-        """Number of frames waiting to be written (diagnostics, U52)."""
+        """Number of frames waiting to be written (diagnostics, )."""
         with self._tx_lock:
             return len(self._tx_queue)
 
@@ -153,7 +153,7 @@ class SerialWorker(QThread):
         """True while the serial port is open."""
         return self._port is not None and self._port.is_open
 
-    # -- modem control lines (T9) -------------------------------------------
+    # -- modem control lines -------------------------------------------
 
     def set_dtr(self, value: bool) -> None:
         """Drive the DTR output line."""
@@ -173,7 +173,7 @@ class SerialWorker(QThread):
                 self.log.emit(f"rts failed: {exc}")
 
     def signals(self) -> dict:
-        """Cached modem status lines (U52: no serial I/O on the calling thread)."""
+        """Cached modem status lines (no serial I/O on the calling thread)."""
         with self._sig_lock:
             return dict(self._sig_cache)
 
@@ -209,7 +209,7 @@ class SerialWorker(QThread):
             self._sig_cache = state
 
     def _drain_tx(self) -> None:
-        """Write at most MAX_TX_PER_TICK frames, then let the read loop run (U64).
+        """Write at most MAX_TX_PER_TICK frames, then let the read loop run.
 
         Draining without a limit starves the receive path (RX stays 0) whenever a
         device stops accepting writes.
@@ -228,7 +228,7 @@ class SerialWorker(QThread):
             self.send_error.emit("closed", "")
             return
         if self._rtscts:
-            # U65: with hardware flow control, a low CTS means the driver would
+            # with hardware flow control, a low CTS means the driver would
             # block inside WriteFile until the peer raises it - drop instead.
             try:
                 if not port.cts:
@@ -245,8 +245,8 @@ class SerialWorker(QThread):
         except serial.SerialTimeoutException as exc:
             # driver never accepted the bytes (buffer full / CTS never asserted)
             with self._tx_lock:
-                self._tx_queue.clear()      # U64: drop the stale backlog
-            self._tx_degraded = True        # U65: stop feeding a stuck driver
+                self._tx_queue.clear()      # drop the stale backlog
+            self._tx_degraded = True        # stop feeding a stuck driver
             self.log.emit(f"send timeout: {exc}")
             self.send_error.emit("timeout", str(exc))
         except (serial.SerialException, OSError) as exc:  # any other write failure is surfaced
@@ -254,7 +254,7 @@ class SerialWorker(QThread):
             self.log.emit(f"send failed: {exc}")
             self.send_error.emit("io", str(exc))
 
-    # -- reconnect (T14) -------------------------------------------------------
+    # -- reconnect -------------------------------------------------------
 
     def _try_reopen(self) -> bool:
         """Re-create the port with the original settings (worker thread only)."""
@@ -280,7 +280,7 @@ class SerialWorker(QThread):
         return True
 
     def _handle_disconnect(self, reason: str) -> None:
-        """Lost the port: report it, then reconnect if the user asked for it (T14)."""
+        """Lost the port: report it, then reconnect if the user asked for it."""
         self._flush_rx_batch()             # 2026-10-03: hand over what was already read
         with self._tx_lock:
             self._tx_queue.clear()
@@ -369,7 +369,7 @@ class SerialWorker(QThread):
                 self.log.emit(f"read error: {exc}")
                 self._handle_disconnect(str(exc))    # T14: try to come back
                 continue
-        # the worker closes its own handle on the way out (U64)
+        # the worker closes its own handle on the way out
         self._flush_rx_batch()
         self._close_port_safely()
         with self._sig_lock:

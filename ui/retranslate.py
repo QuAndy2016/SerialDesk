@@ -25,7 +25,7 @@ def retranslate_ui(win: MainWindow) -> None:
 
 
 def _retranslate_menus(win: MainWindow) -> None:
-    win._settings_btn.setAccessibleName(tr("menu.settings"))   # U188: icon-only control
+    win._settings_btn.setAccessibleName(tr("menu.settings"))   # icon-only control
     win._settings_btn.setToolTip(tr("menu.settings.tip"))
     win._theme_menu.setTitle(tr("theme.menu"))
     win._lang_menu.setTitle(tr("menu.language"))
@@ -49,7 +49,7 @@ def _retranslate_connection(win: MainWindow) -> None:
     win.open_btn.setText(tr("port.close") if win.worker.is_open() else tr("port.open"))
     win._rx_fmt_lbl.setText(tr("rxfmt.label"))
     win.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
-    win._rx_group.setTitle(tr("group.rx"))
+    win._rx_group.setAccessibleName(tr("group.rx"))   # the pane has no visible caption
     win._split_lbl.setText(tr("split.label"))
     win._reload_combo(win.split_combo, [
         tr("split.off"), tr("split.auto"), tr("split.manual"), tr("split.header"),
@@ -103,7 +103,7 @@ def _retranslate_receive_options(win: MainWindow) -> None:
     win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
     win.pause_check.setText(tr("rx.pause"))
     win.pause_check.setToolTip(tr("rx.pause.tip"))
-    # U164: the More menu and the actions that mirror the hidden switches
+    # the More menu and the actions that mirror the hidden switches
     win.more_btn.setText(tr("btn.more"))
     win.more_btn.setToolTip(tr("btn.more.tip"))
     win.more_btn.setAccessibleName(tr("btn.more"))
@@ -136,7 +136,7 @@ def _retranslate_send(win: MainWindow) -> None:
     win._repeat_lbl.setText(tr("tx.interval.label"))
     if hasattr(win, "_tx_content_lbl"):
         win._tx_content_lbl.setText(tr("tx.content.label"))
-    win.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # U86 (set by the format below)
+    win.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # (set by the format below)
     win.tx_size_lbl.setToolTip(tr("tx.payload.tip"))
     win._reset_act.setText(tr("cfg.reset"))
     win._autosave_act.setText(tr("as.menu"))
@@ -162,7 +162,7 @@ def _retranslate_status(win: MainWindow) -> None:
     win._reload_combo(win.nl_combo, [tr("tx.nl.none"), tr("tx.nl.cr"), tr("tx.nl.lf"),
                                      tr("tx.nl.crlf")])
     win.nl_combo.setToolTip(tr("tx.newline.tip"))
-    win._tx_group.setTitle(tr("group.tx"))
+    win._tx_group.setAccessibleName(tr("group.tx"))   # the pane has no visible caption
     win._tx_fmt_lbl.setText(tr("txfmt.label"))
     win.tx_fmt_combo.setToolTip(tr("txfmt.tip"))
     win._crc_lbl.setText(tr("crc.label"))
@@ -172,6 +172,7 @@ def _retranslate_status(win: MainWindow) -> None:
     win.send_btn.setText(tr("btn.send"))
     win.quick_panel.retranslate()
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))
+    win.rx_view.setAccessibleName(tr("rx.view.name"))   # a screen reader needs a name, not just a hint
     win.update_counts()
     win._notify(tr("status.opened") if win.worker.is_open() else tr("status.idle"))
     if win.worker.is_open():

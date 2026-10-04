@@ -52,7 +52,7 @@ def test_append_without_open_is_a_noop(tmp_path):
 
 
 def test_prune_log_dir_drops_oldest_until_under_quota(tmp_path):
-    # E4/U163d: the folder quota removes the oldest segments first
+    # E4/d: the folder quota removes the oldest segments first
     import os
     from app.log_sink import prune_log_dir
     for i in range(3):

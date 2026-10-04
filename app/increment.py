@@ -1,4 +1,4 @@
-"""Send auto-increment: {i} placeholders substituted at send time (U180).
+"""Send auto-increment: {i} placeholders substituted at send time.
 
 Pure functions (no Qt) so the substitution and the counter rules can be tested
 directly; the caller owns the counter value.

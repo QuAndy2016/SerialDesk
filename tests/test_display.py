@@ -48,7 +48,7 @@ def test_long_line_tooltip_only_for_very_long_lines():
 
 
 def test_fragment_filter_keeps_the_markers_of_the_shown_side():
-    # U176/U177: 0=RX payload, 1=TX payload, 2=RX mark, 3=TX mark
+    # /0=RX payload, 1=TX payload, 2=RX mark, 3=TX mark
     from app.display import fragment_visible, kind_is_meta, kind_is_tx
     assert [kind_is_tx(k) for k in (0, 1, 2, 3)] == [False, True, False, True]
     assert [kind_is_meta(k) for k in (0, 1, 2, 3)] == [False, False, True, True]

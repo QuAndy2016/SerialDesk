@@ -105,7 +105,7 @@ if TYPE_CHECKING:
     from ui.main_window import MainWindow
 def show_about(win: MainWindow) -> None:
     "show about"
-    """About box: version, runtime versions and the project link (U44)."""
+    """About box: version, runtime versions and the project link."""
     import PySide6
     import serial as _serial
 
@@ -124,7 +124,7 @@ def show_about(win: MainWindow) -> None:
 
 def show_shortcuts(win: MainWindow) -> None:
     "show shortcuts"
-    """U123: the shortcut list the app never showed anywhere."""
+    """the shortcut list the app never showed anywhere."""
     rows = "\n".join("%-12s %s" % (key, tr(label))
                       for key, label in win.SHORTCUT_HELP)
     box = QMessageBox(win)
@@ -136,7 +136,7 @@ def show_shortcuts(win: MainWindow) -> None:
 
 def diagnostics_text(win: MainWindow) -> str:
     "diagnostics text"
-    """U123/E3: what a bug report needs, in one copyable block."""
+    """/E3: what a bug report needs, in one copyable block."""
     import platform
     import sys
     import PySide6
@@ -157,8 +157,8 @@ def diagnostics_text(win: MainWindow) -> str:
 
 def show_port_settings(win: MainWindow) -> None:
     "show port settings"
-    """Show the port-settings dialog (U35-P3), reflecting the current lock state."""
-    win._port_dlg.set_port_open(win.worker.is_open())   # U73
+    """Show the port-settings dialog, reflecting the current lock state."""
+    win._port_dlg.set_port_open(win.worker.is_open())   # 
     win._port_dlg.show()
     win._port_dlg.raise_()
     win._port_dlg.activateWindow()
@@ -176,7 +176,7 @@ def edit_rules(win: MainWindow) -> None:
 
 def first_run_hint(win: MainWindow) -> None:
     "first run hint"
-    """One restrained hint on the very first launch (U48)."""
+    """One restrained hint on the very first launch."""
     cfg = load_config()
     if cfg.get("first_run_done"):
         return

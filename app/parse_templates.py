@@ -1,4 +1,4 @@
-"""Built-in declarative templates (B4-P1): Modbus RTU, AT, NMEA 0183.
+"""Built-in declarative templates: Modbus RTU, AT, NMEA 0183.
 
 Sources checked 2026-10-03 (per the project rule: find the existing, authoritative
 definition before writing one):
@@ -138,7 +138,7 @@ def bit_field_example() -> FrameSpec:
 
 
 def template_names() -> list[str]:
-    """Names of the templates shipped with P1 (for a picker in B4-P2)."""
+    """Names of the templates shipped with P1 (for a picker in )."""
     return ["modbus-rtu", "at", "nmea-0183", "status-bits"]
 
 

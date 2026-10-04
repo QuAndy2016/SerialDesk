@@ -101,7 +101,7 @@ if TYPE_CHECKING:
     from ui.main_window import MainWindow
 def on_reconnect_toggled(win: MainWindow, checked: bool) -> None:
     "on reconnect toggled"
-    """Persist and apply the auto-reconnect preference (T14)."""
+    """Persist and apply the auto-reconnect preference."""
     win.worker.set_auto_reconnect(checked)
     config = load_config()
     config["auto_reconnect"] = bool(checked)
@@ -110,7 +110,7 @@ def on_reconnect_toggled(win: MainWindow, checked: bool) -> None:
 
 def update_port_tooltip(win: MainWindow) -> None:
     "update port tooltip"
-    """Full device description of the selected port, in the tooltip (U83)."""
+    """Full device description of the selected port, in the tooltip."""
     idx = win.port_combo.currentIndex()
     full = win.port_combo.itemData(idx, Qt.ItemDataRole.ToolTipRole) if idx >= 0 else None
     if full:
@@ -134,7 +134,7 @@ def notify(win: MainWindow, msg: str, level: str = 'info', ms: int | None = None
 
 def recolor_status_light(win: MainWindow) -> None:
     "recolor status light"
-    """Re-apply the connection indicator colour (theme-aware, U38)."""
+    """Re-apply the connection indicator colour (theme-aware, )."""
     cols = theme.status_colors()
     key = "ok" if win.worker.is_open() else ("idle" if win.port_combo.count() == 0 else "err")
     win.status_light.setStyleSheet(
@@ -142,7 +142,7 @@ def recolor_status_light(win: MainWindow) -> None:
 
 def ensure_port(win: MainWindow) -> bool:
     "ensure port"
-    """Guard send actions: nothing is sent, echoed or counted while closed (U61)."""
+    """Guard send actions: nothing is sent, echoed or counted while closed."""
     if win.worker.is_open():
         return True
     win._notify(tr("err.tx.closed"), "error")
@@ -150,7 +150,7 @@ def ensure_port(win: MainWindow) -> bool:
 
 def on_worker_error(win: MainWindow, text: str) -> None:
     "on worker error"
-    """Turn a serial open/IO failure into an actionable message (U37)."""
+    """Turn a serial open/IO failure into an actionable message."""
     low = text.lower()
     if "access is denied" in low or "permission" in low or "denied" in low:
         key = "err.open.denied"
@@ -173,7 +173,7 @@ def poll_signals(win: MainWindow) -> None:
 
 def signals_html(win: MainWindow, sig: dict) -> str:
     "signals html"
-    """Coloured 高/低 text for CTS/DSR/DCD/RI (U32: never colour alone)."""
+    """Coloured 高/低 text for CTS/DSR/DCD/RI (never colour alone)."""
     cols = theme.status_colors()
     tips = {"cts": "sig.cts.tip", "dsr": "sig.dsr.tip",
             "dcd": "sig.dcd.tip", "ri": "sig.ri.tip"}
@@ -188,7 +188,7 @@ def signals_html(win: MainWindow, sig: dict) -> str:
     return "&nbsp;&nbsp;".join(parts)
 
 def _fit_port_popup(win: MainWindow) -> None:
-    """U172: the closed box shows "COM5"; widen the popup so the full name fits."""
+    """the closed box shows "COM5"; widen the popup so the full name fits."""
     combo = win.port_combo
     fm = combo.fontMetrics()
     widest = 0
@@ -204,7 +204,7 @@ def refresh_ports(win: MainWindow):
     win.port_combo.blockSignals(True)
     win.port_combo.clear()
     for dev, desc in list_serial_ports():
-        # U83/U172: the closed box keeps the short name (never truncated); the full
+        # /the closed box keeps the short name (never truncated); the full
         # description goes to the tooltip and to the widened dropdown popup.
         win.port_combo.addItem(dev, dev)
         if desc:
@@ -270,7 +270,7 @@ def on_opened_changed(win: MainWindow, opened: bool):
         win._notify(tr("status.opened"))
         for combo in win._param_combos:
             combo.setEnabled(False)
-        win._port_dlg.set_port_open(True)     # U73: explain the lock
+        win._port_dlg.set_port_open(True)     # explain the lock
     else:
         win.open_btn.setText(tr("port.open"))
         win.status_light.setText(tr("status.disconnected"))
@@ -279,10 +279,10 @@ def on_opened_changed(win: MainWindow, opened: bool):
         win._stop_repeat()
         win._abort_file_send()
         win.quick_panel.stop_sequence()
-        win._flush_rx_frames()   # flush the tail frame on close (U57)
+        win._flush_rx_frames()   # flush the tail frame on close
         win.refresh_timer.start()
         for combo in win._param_combos:
             combo.setEnabled(True)
-        win._port_dlg.set_port_open(False)    # U73
+        win._port_dlg.set_port_open(False)    # 
         if not win.worker.is_open():
             win._notify(tr("status.closed"))

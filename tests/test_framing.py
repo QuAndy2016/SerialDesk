@@ -1,4 +1,4 @@
-"""Unit tests for app.framing (U57: USB-fragment aware frame assembly)."""
+"""Unit tests for app.framing (USB-fragment aware frame assembly)."""
 
 import sys
 from pathlib import Path

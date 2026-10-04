@@ -1,4 +1,4 @@
-"""Serial-port parameter dialog (U35-P3).
+"""Serial-port parameter dialog.
 
 Data bits, parity, stop bits, flow control, encoding and the modem signal lines
 are configured once and then rarely touched, so they live here instead of eating
@@ -32,7 +32,7 @@ STOPBITS_ITEMS = ["1", "1.5", "2"]
 
 
 class PortSettingsDialog(QDialog):
-    """Modeless dialog holding the low-frequency port settings (U35-P3)."""
+    """Modeless dialog holding the low-frequency port settings."""
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -41,7 +41,7 @@ class PortSettingsDialog(QDialog):
 
         root = QVBoxLayout(self)
 
-        # U73: a port that is already open locks the wire-format settings - say so
+        # a port that is already open locks the wire-format settings - say so
         # instead of leaving four controls looking broken.
         self.hint_lbl = QLabel(tr("portset.free"))
         self.hint_lbl.setWordWrap(True)
@@ -121,7 +121,7 @@ class PortSettingsDialog(QDialog):
         root.addLayout(in_row)
 
     def set_port_open(self, opened: bool) -> None:
-        """Lock the wire-format controls while the port is open, and explain why (U73)."""
+        """Lock the wire-format controls while the port is open, and explain why."""
         self._port_open = bool(opened)
         for combo in (self.dbits_combo, self.parity_combo, self.stopbits_combo, self.flow_combo):
             combo.setEnabled(not opened)

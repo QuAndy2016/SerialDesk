@@ -1,4 +1,4 @@
-"""Session counters (refactor step 1) - the bug this replaces was U103."""
+"""Session counters (refactor step 1) - the bug this replaces was ."""
 
 from app.stats import SessionStats
 

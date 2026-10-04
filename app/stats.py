@@ -2,7 +2,7 @@
 
 Why this exists: the counters that drive the status bar used to live as three
 attributes on the window and were updated from seven places - which is how the
-"sent N times" and "TX bytes" numbers drifted apart (U103). One object, one
+"sent N times" and "TX bytes" numbers drifted apart. One object, one
 entry point per counter, and it can be tested without a QApplication.
 """
 
@@ -32,7 +32,7 @@ class SessionStats:
         """Every path that puts bytes on the wire adds bytes here.
 
         `count_send` is False for transfers that are not a user send (file chunks,
-        auto-replies) - they still count as traffic, but not as a send (U103).
+        auto-replies) - they still count as traffic, but not as a send.
         """
         self.tx_bytes += max(0, int(count))
         if count_send:

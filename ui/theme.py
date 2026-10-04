@@ -22,14 +22,17 @@ if TYPE_CHECKING:
 _DARK_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* U201: the live byte count reads as info, not as body text */
+QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* the live byte count reads as info, not as body text */
 QFrame#vSep { background: $border_muted; }
 QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
     border: 1px solid $border_muted;
     border-radius: 6px;
-    margin-top: 8px;
-    padding-top: 2px;
+    /* no title band: the panes carry no caption any more, and Qt reserves the band from
+       margin/padding (measured 16 px per pane, 2026-10-04). The ::title rule below stays
+       for any future titled box. */
+    margin-top: 0px;
+    padding-top: 0px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -47,7 +50,7 @@ QPushButton {
 QPushButton:hover { background: $border_strong; }
 QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
-/* U191 (Andy): "secondary" must read as quieter, not as disabled - a grey fill is the
+/* "secondary" must read as quieter, not as disabled - a grey fill is the
    app's disabled language. Outlined instead; :disabled below still greys it out. */
 QPushButton[secondary="true"] { background: transparent; border: 1px solid $border_strong; color: $text_secondary; }
 QPushButton[secondary="true"]:hover { background: $border_muted; border-color: $border_hover; color: $text_primary; }
@@ -58,10 +61,12 @@ QComboBox, QLineEdit {
     padding: 3px 8px;
 }
 QComboBox:hover, QLineEdit:hover { border-color: $accent; }
-/* U122: a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
+/* a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
    which is distinguishable from :hover on the same controls */
-QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $accent; background: $focus_border; }
-QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $focus_ring; background: $focus_border; }
+QPushButton:focus, QToolButton:focus { border: 1px solid $focus_ring; }
+/* text keeps the accent (needs 4.5:1 as text); only the *ring* went quiet (3:1 is
+   enough for a non-text indicator, and 12.98:1 in the data area was stealing attention) */
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
@@ -95,7 +100,7 @@ QPlainTextEdit {
     color: $text_strong;
     font-family: $ff_mono;
     font-size: $fs_body;
-    selection-background-color: $selection_bg_text;   /* U187: quiet selection in dark */
+    selection-background-color: $selection_bg_text;   /* quiet selection in dark */
     selection-color: $text_strong;
 }
 QCheckBox { spacing: 6px; }
@@ -116,30 +121,42 @@ QPushButton#qsDel { color: $danger_disabled; background: transparent; border: no
 QPushButton#qsDel:hover { color: $danger_hover; background: $border_muted; border-radius: 4px; }
 QToolButton#paramsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: $accent; }
-/* U110: the settings entry is an app-level control - icon + text, a real border,
+/* Qt resolves conflicting properties by selector specificity (stylesheet-syntax.qdoc:301-308),
+   so an object-name rule outranks the generic QToolButton:focus - every object-named tool
+   button needs its own focus line, otherwise the ring never paints (measured 2026-10-04). */
+QToolButton#paramsBtn:focus { border: 1px solid $focus_ring; }
+/* the settings entry is an app-level control - icon + text, a real border,
    a 32 px hit target and three states, separated from the connection parameters */
-QToolButton#settingsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }   /* U188: icon only */
+QToolButton#settingsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_dark.png); qproperty-iconSize: 14px 14px; }   /* icon only */
 QToolButton#settingsBtn:hover { background: $border_muted; border-color: $border_hover; }
+QToolButton#settingsBtn:focus { border: 1px solid $focus_ring; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: $surface_pressed; border-color: $accent; }
 QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
 /* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
-/* U118/U121: the property chip (row properties, send options) */
+/* /the property chip (row properties, send options) */
 QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $border_muted; }
+QToolButton#qsChip:focus { border: 1px solid $focus_ring; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
-/* U120: the quick-send panel toggle beside Settings */
+/* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: $border_muted; border-color: $border_hover; }
-QToolButton#panelToggle:checked { background: $surface_pressed; border-color: $accent; }
-QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_dark.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsRail:hover { background: $border_muted; border-color: $border_hover_rail; border-left-color: $border_hover; }
+/* press feedback only - the button has no checked state any more, so it can never sit
+   there looking "selected" while the panel is open (2026-10-04 report) */
+QToolButton#panelToggle:pressed { background: $surface_pressed; border-color: $accent; }
+/* an object-name rule outranks the generic QToolButton:focus, so the ring needs its own
+   line here - without it the keyboard focus indicator never painted (measured) */
+QToolButton#panelToggle:focus { border: 1px solid $focus_ring; }
+QWidget#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; }
+QWidget#qsRail:hover { background: $border_muted; border-color: $border_hover_rail; border-left-color: $border_hover; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
-/* U189 (Andy): the receive "More" menu sits in the control row, so it has to look
+/* the receive "More" menu sits in the control row, so it has to look
    like the buttons next to it - same border, radius and weight as QPushButton. */
 QToolButton#moreBtn { color: $text_primary; background: $border_muted; border: 1px solid $border_strong; border-radius: 4px; padding: 5px 8px; }
 QToolButton#moreBtn:hover { background: $border_strong; }
+QToolButton#moreBtn:focus { border: 1px solid $focus_ring; }
 QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_dark.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
-/* U190: the repeat toggle lives in the two-row action column; a tighter padding keeps
+/* the repeat toggle lives in the two-row action column; a tighter padding keeps
    that column at or under 200 px without touching the other buttons. */
 QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid $check_border_off; border-radius: 3px; background: $surface_input; }
@@ -158,14 +175,15 @@ QScrollBar::handle:horizontal { background: $scroll_handle; min-width: 30px; bor
 QScrollBar::handle:horizontal:hover { background: $border_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
-QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* U167: panel header level */
-QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* U167: accent bar */
+QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* corner badge */
+QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* panel header level */
+QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* U186: the click highlight must differ from a grey hover */
-QLabel#qsSeqSent { color: $text_secondary; font-size: $fs_small; }   /* U185: one step below body */
+QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* the click highlight must differ from a grey hover */
+QLabel#qsSeqSent { color: $text_secondary; font-size: $fs_small; }   /* one step below body */
+QLabel#qsArmed { color: $text_secondary; font-size: $fs_small; }     /* fixed-width armed count */
 QFrame#qsRow[sending="true"] { background: rgba(210, 210, 225, 0.18); border: 1px solid $accent; }   /* S3: the row being sent right now */
-QFrame#qsRow:hover { background: $border_muted; }   /* U163-I3: row hover feedback */
+QFrame#qsRow:hover { background: $border_muted; }   /* row hover feedback */
 """
 
 def _render(template: str, tokens: dict[str, str]) -> str:
@@ -176,14 +194,15 @@ def _render(template: str, tokens: dict[str, str]) -> str:
 _LIGHT_QSS_TEMPLATE = """
 QMainWindow { background: $bg_base; }
 QDialog { background: $bg_base; }
-QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* U201: the live byte count reads as info, not as body text */
+QLabel#payloadHint { font-size: $fs_small; color: $accent; }   /* the live byte count reads as info, not as body text */
 QFrame#vSep { background: $border_sep; }
 QWidget { color: $text_primary; font-size: $fs_body; }
 QGroupBox {
     border: 1px solid $border_muted;
     border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 6px;
+    /* no title band - see the dark sheet */
+    margin-top: 0px;
+    padding-top: 0px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -201,7 +220,7 @@ QPushButton {
 QPushButton:hover { background: $surface_soft; }
 QPushButton:pressed { background: $surface_pressed_alt; }
 QPushButton:disabled { color: $text_disabled; background: $surface_disabled; }
-/* U191 (Andy): see the dark theme - outlined, not a grey fill. */
+/* see the dark theme - outlined, not a grey fill. */
 QPushButton[secondary="true"] { background: transparent; border: 1px solid $border_secondary; color: $text_secondary; }
 QPushButton[secondary="true"]:hover { background: $surface_soft; border-color: $border_hover; color: $text_primary; }
 QComboBox, QLineEdit {
@@ -211,9 +230,9 @@ QComboBox, QLineEdit {
     padding: 3px 8px;
 }
 QComboBox:hover, QLineEdit:hover { border-color: $accent; }
-/* U122: see the dark theme */
-QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $accent; background: $focus_bg; }
-QPushButton:focus, QToolButton:focus { border: 1px solid $accent; }
+/* see the dark theme */
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border: 1px solid $focus_ring; background: $focus_bg; }
+QPushButton:focus, QToolButton:focus { border: 1px solid $focus_ring; }
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
 QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
@@ -245,7 +264,7 @@ QPlainTextEdit {
     color: $text_strong;
     font-family: $ff_mono;
     font-size: $fs_body;
-    selection-background-color: $selection_bg_text;   /* U187: same quiet blue light/dark */
+    selection-background-color: $selection_bg_text;   /* same quiet blue light/dark */
     selection-color: $text_strong;
 }
 QCheckBox { spacing: 6px; }
@@ -266,28 +285,34 @@ QPushButton#qsDel { color: $danger_disabled; background: transparent; border: no
 QPushButton#qsDel:hover { color: $danger_hover; background: $surface_soft; border-radius: 4px; }
 QToolButton#paramsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 8px; }
 QToolButton#paramsBtn:hover { border-color: $accent; }
-/* U110: see the dark theme */
-QToolButton#settingsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_light.png); qproperty-iconSize: 14px 14px; }   /* U188: icon only */
+QToolButton#paramsBtn:focus { border: 1px solid $focus_ring; }
+/* see the dark theme */
+QToolButton#settingsBtn { color: $text_primary; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 4px 6px; margin: 0 0 0 8px; qproperty-icon: url(__ASSETS__/gear_light.png); qproperty-iconSize: 14px 14px; }   /* icon only */
 QToolButton#settingsBtn:hover { background: $surface_hover; border-color: $border_hover; }
+QToolButton#settingsBtn:focus { border: 1px solid $focus_ring; }
 QToolButton#settingsBtn:pressed, QToolButton#settingsBtn:checked { background: $surface_pressed; border-color: $accent; }
 QFrame#connDivider { background: $border_strong; max-width: 1px; border: none; }
 /* B3: the quick-send head fold button was removed (it duplicated the panel toggle beside Settings) */
-/* U118/U121: the property chip (row properties, send options) */
+/* /the property chip (row properties, send options) */
 QToolButton#qsChip { color: $chip_text; background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 2px 8px; font-size: $fs_small; }
 QToolButton#qsChip:hover { color: $text_primary; border-color: $border_hover; background: $surface_hover; }
+QToolButton#qsChip:focus { border: 1px solid $focus_ring; }
 QToolButton#qsChip::menu-indicator { image: none; width: 0px; }
-/* U120: the quick-send panel toggle beside Settings */
+/* the quick-send panel toggle beside Settings */
 QToolButton#panelToggle { background: transparent; border: 1px solid $border_strong; border-radius: 4px; padding: 3px 6px; margin: 0 4px 0 0; qproperty-iconSize: 14px 14px; }
 QToolButton#panelToggle:hover { background: $surface_hover; border-color: $border_hover; }
-QToolButton#panelToggle:checked { background: $surface_pressed; border-color: $accent; }
-QToolButton#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; qproperty-icon: url(__ASSETS__/arrow_right_light.png); qproperty-iconSize: 14px 14px; }
-QToolButton#qsRail:hover { background: $surface_hover; border-color: $border_hover_rail; border-left-color: $border_hover; }
+/* press feedback only - see the dark sheet for why there is no :checked state */
+QToolButton#panelToggle:pressed { background: $surface_pressed; border-color: $accent; }
+QToolButton#panelToggle:focus { border: 1px solid $focus_ring; }
+QWidget#qsRail { background: transparent; border: 1px solid transparent; border-left: 1px solid $border_strong; border-radius: 0px; padding: 6px 2px; }
+QWidget#qsRail:hover { background: $surface_hover; border-color: $border_hover_rail; border-left-color: $border_hover; }
 QToolButton#settingsBtn::menu-indicator { image: none; width: 0px; }
-/* U189 (Andy): the receive "More" menu matches the buttons beside it. */
+/* the receive "More" menu matches the buttons beside it. */
 QToolButton#moreBtn { color: $text_primary; background: $surface_1; border: 1px solid $border_strong; border-radius: 4px; padding: 5px 8px; }
 QToolButton#moreBtn:hover { background: $surface_soft; }
+QToolButton#moreBtn:focus { border: 1px solid $focus_ring; }
 QToolButton#moreBtn::menu-indicator { image: url(__ASSETS__/arrow_down_light.png); subcontrol-origin: padding; subcontrol-position: right center; width: 8px; height: 8px; right: 4px; }
-/* U190: see the dark theme - the repeat toggle keeps the action column compact. */
+/* see the dark theme - the repeat toggle keeps the action column compact. */
 QPushButton#repeatBtn { padding: 5px 6px; }
 QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid $check_border_off; border-radius: 3px; background: $surface_1; }
 QCheckBox::indicator:hover { border-color: $accent; }
@@ -305,14 +330,15 @@ QScrollBar::handle:horizontal { background: $scroll_handle; min-width: 30px; bor
 QScrollBar::handle:horizontal:hover { background: $scroll_handle_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
-QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* U80: corner badge */
-QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* U167: panel header level */
-QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* U167: accent bar */
+QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* corner badge */
+QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* panel header level */
+QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
-QFrame#qsRow[selected="true"] { background: rgba(30, 90, 168, 0.12); border: 1px solid rgba(30, 90, 168, 0.45); }   /* U186: click highlight, clearly not a hover */
-QLabel#qsSeqSent { color: $text_secondary; font-size: $fs_small; }   /* U185: one step below body */
+QFrame#qsRow[selected="true"] { background: rgba(30, 90, 168, 0.12); border: 1px solid rgba(30, 90, 168, 0.45); }   /* click highlight, clearly not a hover */
+QLabel#qsSeqSent { color: $text_secondary; font-size: $fs_small; }   /* one step below body */
+QLabel#qsArmed { color: $text_secondary; font-size: $fs_small; }     /* fixed-width armed count */
 QFrame#qsRow[sending="true"] { background: rgba(70, 70, 100, 0.14); border: 1px solid $accent; }   /* S3: the row being sent right now */
-QFrame#qsRow:hover { background: $surface_hover; }   /* U163-I3: row hover feedback */
+QFrame#qsRow:hover { background: $surface_hover; }   /* row hover feedback */
 """
 
 DARK_QSS = _render(_DARK_QSS_TEMPLATE, {**DARK_TOKENS, **FONT_TOKENS})
@@ -369,7 +395,7 @@ def apply_theme(app: QApplication, dark: bool | None = None) -> bool:
 
 
 def text_color() -> str:
-    """Receive-pane text colour (U62: dark theme softened from #e0e0e0, which glared)."""
+    """Receive-pane text colour (dark theme softened from #e0e0e0, which glared)."""
     return TEXT_COLOURS["dark" if resolved_dark() else "light"]["rx"]
 
 
@@ -379,7 +405,7 @@ def tx_color() -> str:
 
 
 def meta_color() -> str:
-    """Timestamp + direction marker colour: dimmer than the payload (U62)."""
+    """Timestamp + direction marker colour: dimmer than the payload."""
     return TEXT_COLOURS["dark" if resolved_dark() else "light"]["meta"]
 
 
@@ -428,7 +454,7 @@ def watch_system_theme(app: QApplication, callback: Callable[[str], None]) -> No
 
 
 def status_colors() -> dict:
-    """State-light colours per theme (U38; all values WCAG AA >= 4.5:1 measured).
+    """State-light colours per theme (; all values WCAG AA >= 4.5:1 measured).
 
     Keys: ok (connected) / err (not connected) / idle (port not open).
     """
@@ -438,7 +464,7 @@ def status_colors() -> dict:
 
 
 def level_color(level: str) -> str:
-    """Status-bar message colour for a notification level (U30/U36).
+    """Status-bar message colour for a notification level.
 
     error -> red, warn -> amber, anything else -> current theme text colour.
     """
@@ -451,7 +477,7 @@ def level_color(level: str) -> str:
 
 
 def apply_native_dark(widget: QWidget, dark: bool) -> None:
-    """Match the OS window frame to the app theme (U51).
+    """Match the OS window frame to the app theme.
 
     Windows: DWMWA_USE_IMMERSIVE_DARK_MODE (attribute 20 on Win10 1809+, 19 on
     earlier builds) turns the native title bar dark. Qt 6.8+: setColorScheme

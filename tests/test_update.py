@@ -1,4 +1,4 @@
-"""U127: version handling for the update check (pure functions, no network)."""
+"""version handling for the update check (pure functions, no network)."""
 
 from app.update import is_newer, parse_version
 

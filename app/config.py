@@ -9,7 +9,7 @@ import sys
 
 
 def data_dir() -> str:
-    """Where SerialDesk keeps config.json and logs/ (U34).
+    """Where SerialDesk keeps config.json and logs/.
 
     - frozen build with a ``portable.txt`` next to the exe -> that folder, so a
       "green"/portable copy still writes nothing outside its own directory;
@@ -95,10 +95,10 @@ CONFIG_PATH = os.path.join(data_dir(), "config.json")
 
 
 def migrate_legacy_config() -> str | None:
-    """One-off migration for the data-root move (U102).
+    """One-off migration for the data-root move.
 
-    Before U34 the frozen build read and wrote ``config.json`` next to the
-    executable; U34 moved the data root to ``%APPDATA%/SerialDesk`` (or to the
+    Before the frozen build read and wrote ``config.json`` next to the
+    executable; moved the data root to ``%APPDATA%/SerialDesk`` (or to the
     portable folder). Upgrading users would silently lose their settings, so on
     the first run of a new build: if the new location has no config and an old
     file still sits beside the exe, copy it over. Returns the migrated path, or
@@ -128,7 +128,7 @@ def migrate_config(data: dict) -> dict:
     """Bring an on-disk config up to CONFIG_VERSION (idempotent, pure-ish).
 
     Every migration step is one `if version < N` block, so older files keep
-    working after a field changes shape (review finding M2 / E2).
+    working after a field changes shape .
     """
     version = int(data.get("config_version", 0) or 0)
     if version < 1:
@@ -160,7 +160,7 @@ def save_config(data: dict, merge: bool = True) -> bool:
     Merges into whatever is on disk by default. Callers that persist a single key (the
     panel's folded flag, for instance) used to replace the whole file, silently
     dropping every other setting - folding the quick-send panel wiped the theme, the
-    language, the log directory and the auto-save settings (U109).
+    language, the log directory and the auto-save settings.
     """
     try:
         payload = dict(data)

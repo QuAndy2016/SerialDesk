@@ -1,4 +1,4 @@
-"""Send-history popup: recall, delete and clear sent commands (U87; v0.10.0 P0+P1).
+"""Send-history popup: recall, delete and clear sent commands (; v0.10.0 P0+P1).
 
 Non-modal on purpose: the main window stays usable while the list is open, and a
 double-click (or Enter) puts the entry straight back into the send box.
@@ -107,13 +107,13 @@ class HistoryDialog(QDialog):
     """List of recently sent commands, newest first."""
 
     fill_requested = Signal(str)     # put this text back in the send box
-    delete_requested = Signal(list)  # drop the entries at these rows (U183: batch)
+    delete_requested = Signal(list)  # drop the entries at these rows (batch)
     clear_requested = Signal()       # forget everything
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle(tr("tx.history.title"))
-        self.setModal(False)                 # never block the main window (U87)
+        self.setModal(False)                 # never block the main window
         self.setMinimumSize(440, 330)
 
         self._meta: dict = {}
@@ -153,7 +153,7 @@ class HistoryDialog(QDialog):
     def _build_list(self, layout: QVBoxLayout) -> None:
         """The monospace history list and the empty-state label."""
         self.list = QListWidget()
-        # U183: multi-select (Ctrl / Shift click, Ctrl+A) so entries can be deleted
+        # multi-select (Ctrl / Shift click, Ctrl+A) so entries can be deleted
         # as a batch; Ctrl+A is handled by the shortcut above (QListWidget has none).
         self.list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         mono = QFont()
@@ -291,7 +291,7 @@ class HistoryDialog(QDialog):
                       if self.list.item(i).isSelected() and not self.list.item(i).isHidden())
 
     def _select_all_visible(self) -> None:
-        """U183: Ctrl+A selects what is on screen - never the filtered-out rows."""
+        """Ctrl+A selects what is on screen - never the filtered-out rows."""
         self.list.clearSelection()
         for i in range(self.list.count()):
             item = self.list.item(i)
@@ -312,7 +312,7 @@ class HistoryDialog(QDialog):
             self.close()                        # match the double-click behaviour (P1.8)
 
     def _delete_selected(self) -> None:
-        """U183: drop every visible selected row in one batch."""
+        """drop every visible selected row in one batch."""
         rows = self._selected_rows()
         if rows:
             self.delete_requested.emit(rows)

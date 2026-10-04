@@ -102,7 +102,7 @@ def build_menu(win: MainWindow) -> None:
 
 
 def _build_panel_entry(win: MainWindow) -> None:
-    """U88: the panel can be folded away, so it needs an entry outside itself."""
+    """the panel can be folded away, so it needs an entry outside itself."""
     menu = win._settings_menu
     win._quick_panel_act = QAction(tr("menu.quick_panel"), win)
     win._quick_panel_act.setCheckable(True)
@@ -111,7 +111,7 @@ def _build_panel_entry(win: MainWindow) -> None:
         lambda: win._on_quick_panel_collapsed(not win._quick_panel_act.isChecked()))
     menu.addAction(win._quick_panel_act)
     menu.addSeparator()
-    menu.addSection(tr("menu.sec.appearance"))    # U110: give the menu structure
+    menu.addSection(tr("menu.sec.appearance"))    # give the menu structure
 
 
 def _build_theme_menu(win: MainWindow) -> None:
@@ -144,7 +144,7 @@ def _build_theme_menu(win: MainWindow) -> None:
 
 
 def _build_language_menu(win: MainWindow) -> None:
-    """Language submenu (U19) - sibling of the theme submenu inside Settings."""
+    """Language submenu - sibling of the theme submenu inside Settings."""
     win._lang_menu = win._settings_menu.addMenu(tr("menu.language"))
     win._lang_group = QActionGroup(win)
     win._lang_group.setExclusive(True)
@@ -162,7 +162,7 @@ def _build_language_menu(win: MainWindow) -> None:
 
 
 def _build_config_menu(win: MainWindow) -> None:
-    """Config import / export (T15)."""
+    """Config import / export."""
     win._settings_menu.addSection(tr("menu.sec.config"))
     win._cfg_menu = win._settings_menu.addMenu(tr("cfg.menu"))
 
@@ -189,7 +189,7 @@ def _build_io_section(win: MainWindow) -> None:
     win._autosave_act.triggered.connect(win._show_autosave_settings)
     menu.addAction(win._autosave_act)
 
-    # U98: the auto-reply switch and its rules belong with the settings, not in
+    # the auto-reply switch and its rules belong with the settings, not in
     # the middle of the send row next to the file button where they used to sit.
     win.auto_reply_act = QAction(tr("rb.enable"), win, checkable=True)
     win.auto_reply_act.setToolTip(tr("rb.enable.tip"))
@@ -208,7 +208,7 @@ def _build_io_section(win: MainWindow) -> None:
     win._reconnect_act.toggled.connect(win._on_reconnect_toggled)
     menu.addAction(win._reconnect_act)
 
-    win._shortcuts_act = QAction(tr("menu.shortcuts"), win)   # U123
+    win._shortcuts_act = QAction(tr("menu.shortcuts"), win)   # 
     win._shortcuts_act.triggered.connect(win._show_shortcuts)
     menu.addAction(win._shortcuts_act)
 
@@ -218,7 +218,7 @@ def _build_io_section(win: MainWindow) -> None:
 
 
 def _build_danger_section(win: MainWindow) -> None:
-    """U110/D: the destructive entry lives at the very bottom, under its own heading."""
+    """/D: the destructive entry lives at the very bottom, under its own heading."""
     win._settings_menu.addSeparator()
     win._settings_menu.addSection(tr("menu.sec.danger"))
     win._reset_act = QAction(tr("cfg.reset"), win)

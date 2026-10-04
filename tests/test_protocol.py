@@ -160,7 +160,7 @@ class TestModbusFrames:
         assert not ok
 
 class TestHexLaxParsing:
-    """U36/D2: 0x prefix plus space/comma/dash separators, with precise errors."""
+    """/D2: 0x prefix plus space/comma/dash separators, with precise errors."""
 
     def test_0x_prefix_spaced(self):
         assert hex_str_to_bytes("0x01 0x02") == bytes([0x01, 0x02])

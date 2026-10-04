@@ -104,7 +104,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
 class _UpdateProbe(QObject):
-    """U127: carries the worker thread's answer back onto the GUI thread."""
+    """carries the worker thread's answer back onto the GUI thread."""
 
     found = Signal(str)          # a newer tag exists (startup or manual)
     checked = Signal(bool, str)  # manual probe done: (ok, tag_or_reason)
@@ -136,7 +136,7 @@ def init_update_check(win: MainWindow) -> None:
     win._update_probe.found.connect(win._on_update_found)
     win._update_probe.checked.connect(win._on_update_checked)   # N10 manual probe
 
-    win._update_act = QAction(tr("update.menu", v=""), win)   # U127
+    win._update_act = QAction(tr("update.menu", v=""), win)   # 
     win._update_act.setVisible(False)
     win._update_act.triggered.connect(
         lambda: QDesktopServices.openUrl(QUrl(update_check.RELEASES_PAGE)))

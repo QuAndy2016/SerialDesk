@@ -1,4 +1,4 @@
-"""Log-saving settings dialog (U75; renamed from auto-save in U97).
+"""Log-saving settings dialog (; renamed from auto-save in ).
 
 Two groups, because the folder is shared while the rest is auto-save specific:
 
@@ -43,7 +43,7 @@ def _heading(label: QLabel) -> QLabel:
 
 
 class AutoSaveDialog(QDialog):
-    """Modeless log-saving settings; every change applies immediately (U75)."""
+    """Modeless log-saving settings; every change applies immediately."""
 
     settingsChanged = Signal()
 
@@ -54,7 +54,7 @@ class AutoSaveDialog(QDialog):
 
         root = QVBoxLayout(self)
 
-        self.target_lbl = _heading(QLabel(tr("as.group.target")))   # U97: save location
+        self.target_lbl = _heading(QLabel(tr("as.group.target")))   # save location
         root.addWidget(self.target_lbl)
 
         form = QFormLayout()
@@ -69,7 +69,7 @@ class AutoSaveDialog(QDialog):
         form.addRow(self._dir_lbl, dir_row)
         root.addLayout(form)
 
-        self.auto_lbl = _heading(QLabel(tr("as.group.auto")))       # U97: auto-save
+        self.auto_lbl = _heading(QLabel(tr("as.group.auto")))       # auto-save
         root.addWidget(self.auto_lbl)
 
         self.enable_check = QCheckBox(tr("as.enable"))
@@ -89,7 +89,7 @@ class AutoSaveDialog(QDialog):
         self.max_min_edit.textChanged.connect(lambda *_: self.settingsChanged.emit())
         form.addRow(self._min_lbl, self.max_min_edit)
 
-        self._quota_lbl = QLabel(tr("as.quota_mb"))    # U163d: folder total cap
+        self._quota_lbl = QLabel(tr("as.quota_mb"))    # d: folder total cap
         self.quota_mb_edit = QLineEdit("0")
         self.quota_mb_edit.setValidator(QIntValidator(0, 1000000, self))
         self.quota_mb_edit.textChanged.connect(lambda *_: self.settingsChanged.emit())

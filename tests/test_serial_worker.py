@@ -1,4 +1,4 @@
-"""Unit tests for app.serial_worker (U52/U64 hang-prevention invariants)."""
+"""Unit tests for app.serial_worker (/hang-prevention invariants)."""
 
 import os
 import sys
@@ -59,7 +59,7 @@ class TestSendQueue:
 
 class TestDrainIsBounded:
     def test_drain_writes_at_most_max_per_tick(self):
-        """A stuck device must not starve the read/signal path (U64)."""
+        """A stuck device must not starve the read/signal path."""
         w = SerialWorker()
         port = FakePort()
         w._port = port
@@ -83,7 +83,7 @@ class TestDrainIsBounded:
 
 class TestCloseNeverBlocks:
     def test_close_port_does_not_touch_the_handle_when_thread_runs(self):
-        """Closing from the GUI must not block: the worker closes its own port (U64)."""
+        """Closing from the GUI must not block: the worker closes its own port."""
         w = SerialWorker()
         port = FakePort()
         w._port = port
@@ -97,7 +97,7 @@ class TestCloseNeverBlocks:
 
 
 class TestFlowControlGuard:
-    """U65: never walk into a driver write that can block on CTS."""
+    """never walk into a driver write that can block on CTS."""
 
     def test_write_skipped_when_cts_is_low(self):
         w = SerialWorker()
@@ -281,7 +281,7 @@ class BatchPort:
 
 
 class TestReceiveBatching:
-    """2026-10-03 (data-path P1): fewer cross-thread hops, and no busy sleep."""
+    """2026-10-03: fewer cross-thread hops, and no busy sleep."""
 
     def test_chunks_are_coalesced_into_one_signal(self):
         from app.serial_worker import SerialWorker

@@ -81,6 +81,7 @@ from ui.autosave_dialog import AutoSaveDialog
 from ui.history_dialog import HistoryDialog
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import RAIL_W, QuickSendPanel
+from ui.tx_input import TxInputEdit
 from ui.retranslate import retranslate_ui
 from app.i18n import hex_error_message, tr
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
@@ -100,22 +101,28 @@ BAUDRATES = [
 ]
 DATA_FIRST_H = [880, 332]
 DATA_FIRST_V = [560, 170]
-RECEIVE_MAX_LINES = 20000   # receive-pane display cap (U45)
+RECEIVE_MAX_LINES = 20000   # receive-pane display cap
+#: Pane floors (px). The receive pane holds its options row, the highlight row and about
+#: two lines of data; the send pane is its two button rows. Both were padded well above
+#: what the rows need, which set the window's minimum height (2026-10-04 report).
+RX_PANE_MIN_H = 110
+RX_VIEW_MIN_H = 44          # ~2 lines of the mono face: the log can be dragged this low
+TX_PANE_MIN_H = 120
 SPLIT_AUTO = 1
 SPLIT_HEADER = 3
 SPLIT_MANUAL = 2
-SPLIT_FIXED = 4        # B3: byte-stream split modes (params in the U50 slot)
+SPLIT_FIXED = 4        # B3: byte-stream split modes (params in the slot)
 SPLIT_DELIMITED = 5
 SPLIT_TLV = 6
 def _fixed_row(layout: QLayout) -> QWidget:
-    """Wrap a control row so it keeps its natural height (U70).
+    """Wrap a control row so it keeps its natural height.
 
     A nested layout handed straight to a vertical box absorbs spare space and
     centres its widgets, which made the split row drift downwards whenever the
     receive group grew. A holder with a Fixed vertical policy pins it to the top.
     """
     holder = QWidget()
-    layout.setContentsMargins(0, 2, 0, 2)   # U92: drop Qt's default 9 px top/bottom, which
+    layout.setContentsMargins(0, 2, 0, 2)   # drop Qt's default 9 px top/bottom, which
     holder.setLayout(layout)                #      made every control row 18 px taller than
     holder.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     return holder                            #      the widgets inside it needed
@@ -131,10 +138,10 @@ def build_connection_row(win: MainWindow, root: QWidget) -> None:
 
 def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     """Port label, port list, refresh, baud rate and the open/close button."""
-    win._port_lbl = QLabel(tr("port.label"))     # U100: these two were English-only
+    win._port_lbl = QLabel(tr("port.label"))     # these two were English-only
     bar.addWidget(win._port_lbl)
     win.port_combo = QComboBox()
-    win.port_combo.setMinimumWidth(100)   # U172: the closed box only shows "COMx"
+    win.port_combo.setMinimumWidth(100)   # the closed box only shows "COMx"
     win.port_combo.view().setItemDelegate(PortItemDelegate(win.port_combo.view()))
     bar.addWidget(win.port_combo)
 
@@ -149,7 +156,7 @@ def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win.baud_combo.setEditable(True)
     win.baud_combo.setCurrentText("115200")
     win.baud_combo.setToolTip(tr("baud.tip"))
-    win.baud_combo.setMinimumWidth(112)          # U49/U78: 1000000/3000000 still fit
+    win.baud_combo.setMinimumWidth(112)          # /1000000/3000000 still fit
     win.baud_combo.setMinimumContentsLength(7)
     win.baud_combo.lineEdit().textChanged.connect(win._check_baud)
     bar.addWidget(win.baud_combo)
@@ -166,13 +173,13 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._rx_fmt_lbl = QLabel(tr("rxfmt.label"))
     bar.addWidget(win._rx_fmt_lbl)
     win.rx_fmt_combo = QComboBox()
-    win.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII", "HEX cols"])   # U163c: column hexdump
+    win.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII", "HEX cols"])   # c: column hexdump
     win.rx_fmt_combo.setCurrentIndex(RX_HEX)
     win.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
     bar.addWidget(win.rx_fmt_combo)
 
     bar.addSpacing(12)
-    # U84 (revised): the wire-format summary and its dialog opener are one compact
+    # (revised): the wire-format summary and its dialog opener are one compact
     # control - label plus button cost ~245 px and no label needed shortening.
     win.params_summary = QToolButton()
     win.params_summary.setObjectName("paramsBtn")
@@ -183,25 +190,30 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     bar.addWidget(win.params_summary)
 
     bar.addSpacing(10)
-    conn_div = QFrame()                     # U110: app-level entry, set apart
+    conn_div = QFrame()                     # app-level entry, set apart
     conn_div.setObjectName("connDivider")
     conn_div.setFrameShape(QFrame.Shape.VLine)
     conn_div.setFixedWidth(1)
     bar.addWidget(conn_div)
-    bar.addWidget(win._settings_btn)   # U72: same line as Port / Baud / Open
-    # U120: folding used to leave a 28 px rail on screen. The toggle is a fixed,
+    bar.addWidget(win._settings_btn)   # same line as Port / Baud / Open
+    # folding used to leave a 28 px rail on screen. The toggle is a fixed,
     # always-visible control next to Settings now (spatial mapping: it sits on the
     # same edge as the panel it drives), and the rail only appears on hover.
     win._panel_btn = QToolButton()
     win._panel_btn.setObjectName("panelToggle")
-    win._panel_btn.setCheckable(True)
-    win._panel_btn.setChecked(True)
     win._panel_btn.setMinimumSize(32, 32)
     win._panel_btn.setToolTip(tr("menu.quick_panel.tip"))
-    win._panel_btn.clicked.connect(
-        lambda: win._on_quick_panel_collapsed(not win._panel_btn.isChecked()))
-    win._sync_panel_btn(False)   # U161: initial icon so the button is not blank on first open
-    # U114-D4: one control height across the connection row
+    # A command button, not a checkable toggle (2026-10-04 user report: the button used to
+    # paint a "selected" grey fill with an accent border the whole time the panel was open,
+    # i.e. forever - the resting state looked like a selection). Its icon already flips
+    # (left = panel open, right = folded), and per W3C APG a control whose label/icon
+    # changes with the state is a command button, not a toggle
+    # (w3c-aria-practices .../button-pattern.html:32,34; "both the appearance and role of a
+    # widget match the function", :42). The menu entry keeps its checkmark - that IS the
+    # standard way to show a view is on (uxguide/cmd-menus.md:257).
+    win._panel_btn.clicked.connect(lambda: win._toggle_quick_panel())
+    win._sync_panel_btn(False)   # initial icon so the button is not blank on first open
+    # one control height across the connection row
     for _w in (win.port_combo, win.refresh_btn, win.baud_combo, win.open_btn,
                win.rx_fmt_combo, win.params_summary, win._settings_btn):
         _w.setMinimumHeight(32)
@@ -215,7 +227,7 @@ def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
 
 
 def _mount_parameter_dialog(win: MainWindow) -> None:
-    """U35-P3: the parameter widgets now live in their own dialog.
+    """the parameter widgets now live in their own dialog.
 
     The main window keeps the same attribute names so the rest of the code needs
     no change.
@@ -246,14 +258,14 @@ def build_status_bar(win: MainWindow) -> None:
                  win.nl_combo.currentIndexChanged,
                  win.escape_check.toggled,
                  win.encoding_combo.currentIndexChanged):
-        _sig.connect(win._update_payload_size)      # U74: live payload size
+        _sig.connect(win._update_payload_size)      # live payload size
     win._update_payload_size()
 
     win.status_light = QLabel(tr("status.disconnected"))
     win.status_light.setStyleSheet(
         f"color: {theme.status_colors()['idle']}; font-weight: bold; padding-right: 8px;")
     win.statusBar().addPermanentWidget(win.status_light)
-    # U58: 3 s undo affordance for a deleted quick-send row
+    # 3 s undo affordance for a deleted quick-send row
     win._undo_payload: dict | None = None
     win._undo_kind = ""
     win._cleared_fragments: list | None = None
@@ -270,17 +282,22 @@ def build_status_bar(win: MainWindow) -> None:
 
 def build_send_group(win: MainWindow) -> None:
     """Send group: payload options, the input box and the action toolbar."""
-    win._tx_group = QGroupBox(tr("group.tx"))
+    # No title: the band above the frame cost 16 px of height and repeated what the
+    # content already says, and the two panes are separated by the splitter handle -
+    # the official guide prefers a separator over a heavyweight group box
+    # (uxguide/ctrl-group-boxes.md:27,52). The name stays for screen readers.
+    win._tx_group = QGroupBox()
+    win._tx_group.setAccessibleName(tr("group.tx"))
     tx_layout = QVBoxLayout(win._tx_group)
     tx_layout.setContentsMargins(8, 2, 8, 6)
     tx_layout.setSpacing(4)
 
-    # U74: payload options above, the input owning the middle with the primary
+    # payload options above, the input owning the middle with the primary
     # Send button beside it, then the repeat controls and the file row. The old
     # layout squeezed the input to ~134 px (a control column ate ~83% of the
     # width) and capped its height at 90 px, so the send area looked like a toy.
     _build_payload_options(win, tx_layout)
-    # 2026-10-02 (Andy): input box on the left, the action buttons in a column on
+    # 2026-10-02: input box on the left, the action buttons in a column on
     # the right - "send on the right is easier to operate".
     tx_layout.addWidget(_build_input_and_actions(win), 1)
 
@@ -290,7 +307,7 @@ def _build_payload_options(win: MainWindow, tx_layout: QVBoxLayout) -> None:
     mod_group = _build_text_decorations(win)
     tx_fmt_row = QHBoxLayout()
     _build_format_chip(win, tx_fmt_row)
-    _build_increment_chip(win, tx_fmt_row)     # U180
+    _build_increment_chip(win, tx_fmt_row)     # 
     _build_file_send(win, tx_fmt_row)
     tx_fmt_row.addStretch(1)
     tx_fmt_row.addWidget(mod_group)
@@ -301,7 +318,7 @@ def _build_payload_options(win: MainWindow, tx_layout: QVBoxLayout) -> None:
 
 
 def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
-    """U121: one "HEX / none" chip opening a popup, instead of two labelled combos."""
+    """one "HEX / none" chip opening a popup, instead of two labelled combos."""
     win.tx_settings_btn = QToolButton()
     win.tx_settings_btn.setObjectName("qsChip")
     win.tx_settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -326,7 +343,7 @@ def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     win.checksum_combo.setToolTip(tr("crc.tip"))
     _fh.addWidget(win.checksum_combo)
     _fcol.addLayout(_fh)
-    # U192 (Andy): the escape switch and "send file" are low frequency, so they moved
+    # the escape switch and "send file" are low frequency, so they moved
     # off the send row and into this chip - the row keeps its high-frequency controls.
     _fh2 = QHBoxLayout()
     _fh2.setSpacing(6)
@@ -352,7 +369,7 @@ def _build_format_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
 
 
 def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
-    """U180: send auto-increment - the {i} chip and its settings popover.
+    """send auto-increment - the {i} chip and its settings popover.
 
     The chip only carries settings; the substitution and counter live in
     app/increment.py + ui/send_controller.py, so the send path stays the single
@@ -428,7 +445,7 @@ def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
     menu.addAction(holder)
     win.inc_chip.setMenu(menu)
     tx_fmt_row.addWidget(win.inc_chip)
-    # U201 (Andy): the byte hint sits right of Increment - it describes the payload the
+    # the byte hint sits right of Increment - it describes the payload the
     # input box holds. The app stylesheet drives the font, so the smaller size is asked
     # for by object name (QLabel#payloadHint) instead of a QFont QSS would override.
     win.tx_size_lbl = QLabel("")
@@ -438,13 +455,13 @@ def _build_increment_chip(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
 
 
 def _build_text_decorations(win: MainWindow) -> QWidget:
-    """U98/U112/U192: the line-ending picker, kept visible (disabled) in HEX mode."""
+    """//the line-ending picker, kept visible (disabled) in HEX mode."""
     group = QWidget()
     win._tx_mod_group = group
     mod_row = QHBoxLayout(group)
     mod_row.setContentsMargins(0, 0, 0, 0)
     mod_row.setSpacing(10)
-    # U112: the old "append CRLF" checkbox spoke escape notation. It is now a picker
+    # the old "append CRLF" checkbox spoke escape notation. It is now a picker
     # over the actual line endings, named the way the rest of the field names them.
     win._nl_lbl = QLabel(tr("tx.newline.label"))
     mod_row.addWidget(win._nl_lbl)
@@ -457,25 +474,25 @@ def _build_text_decorations(win: MainWindow) -> QWidget:
     win.nl_combo.setToolTip(tr("tx.newline.tip"))
     win.nl_combo.currentIndexChanged.connect(win._persist_newline)
     mod_row.addWidget(win.nl_combo)
-    # U192 (Andy): the escape switch moved into the send-settings chip, so this group
+    # the escape switch moved into the send-settings chip, so this group
     # is the line-ending picker only. escape_check is created there and is still
     # addressed by name everywhere (retranslate / format change / tab order).
     return group
 
 
 def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
-    """U99/U192: the entry lives in the settings chip now; the row keeps the progress
+    """/the entry lives in the settings chip now; the row keeps the progress
     feedback and a visible cancel button while a transfer is running."""
     tx_fmt_row.addSpacing(18)
     win.file_progress = QProgressBar()
     win.file_progress.setRange(0, 100)
     win.file_progress.setValue(0)
     win.file_progress.setMaximumWidth(120)
-    win.file_progress.hide()          # U108: idle progress bar read as a divider
+    win.file_progress.hide()          # idle progress bar read as a divider
     tx_fmt_row.addWidget(win.file_progress)
     win.file_info_lbl = QLabel("")
     tx_fmt_row.addWidget(win.file_info_lbl, 1)
-    # U192: with the entry inside the chip, "cancel send" needs a visible home of its
+    # with the entry inside the chip, "cancel send" needs a visible home of its
     # own - it appears only while a file is being sent.
     win.file_cancel_btn = QPushButton(tr("btn.cancel_send"))
     win.file_cancel_btn.setToolTip(tr("btn.cancel_send"))
@@ -486,7 +503,7 @@ def _build_file_send(win: MainWindow, tx_fmt_row: QHBoxLayout) -> None:
 
 
 def _build_payload_box(win: MainWindow) -> QWidget:
-    """The left half of the send row: just the payload box (2026-10-02, Andy).
+    """The left half of the send row: just the payload box (2026-10-02, ).
 
     The area is two bands only - the settings row on top, then this row split left
     (input) / right (actions). A caption line here added a third band and pushed the
@@ -496,27 +513,32 @@ def _build_payload_box(win: MainWindow) -> QWidget:
     col = QVBoxLayout(box)
     col.setContentsMargins(0, 0, 0, 0)
     col.setSpacing(0)
-    win.tx_edit = QPlainTextEdit()
-    # 2026-10-02 (Andy): the pane is compact, so the input must be able to shrink to
+    # Enter runs the command (the default button is Send) instead of inserting a line
+    # break, and a space that would land after the data is ignored - see ui/tx_input.py
+    # for the two official rules behind it.
+    win.tx_edit = TxInputEdit()
+    win.tx_edit.submitted.connect(win.on_send)
+    win.tx_edit.rejected.connect(lambda key: win._notify(tr(key), "warn", ms=2500))
+    # 2026-10-02: the pane is compact, so the input must be able to shrink to
     # whatever its row gets. QPlainTextEdit's implicit minimumSizeHint (~4 lines) is
     # bigger than the row on the Windows runner's fonts and caused the audit to report
     # a 66 px box inside 61 px container. An Ignored vertical policy tells the layout
     # to take the sizeHint out of the minimum; the box still expands into spare height.
     from PySide6.QtWidgets import QSizePolicy
     win.tx_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
-    # U130 -> 2026-10-02 (Andy): the send box always wraps - the "wrap input" switch was
+    # -> 2026-10-02: the send box always wraps - the "wrap input" switch was
     # removed, long payloads wrap with a vertical scrollbar by default.
     win.tx_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-    win._update_input_placeholder()   # U86: keep the format-specific hint
-    win.tx_edit.setToolTip(tr("tx.placeholder"))   # U114-D6: the examples live here
+    win._update_input_placeholder()   # keep the format-specific hint
+    win.tx_edit.setToolTip(tr("tx.placeholder"))   # the examples live here
     win.tx_edit.textChanged.connect(win._check_hex_input)
-    win.tx_edit.textChanged.connect(win._fit_tx_edit_height)   # U111: compact by default
+    win.tx_edit.textChanged.connect(win._fit_tx_edit_height)   # compact by default
     col.addWidget(win.tx_edit, 1)
     return box
 
 
 def _build_input_and_actions(win: MainWindow) -> QWidget:
-    """Left: the payload box. Right: send / history / repeat (2026-10-02, Andy).
+    """Left: the payload box. Right: send / history / repeat (2026-10-02, ).
 
     "Send on the right is easier to operate": the buttons and the repeat controls
     form a column on the right edge of the send pane, with the input beside it.
@@ -526,7 +548,7 @@ def _build_input_and_actions(win: MainWindow) -> QWidget:
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(10)
     row.addWidget(_build_payload_box(win), 1)
-    tx_sep = QFrame()                        # U98: input area | action area
+    tx_sep = QFrame()                        # input area | action area
     tx_sep.setObjectName("vSep")
     tx_sep.setFrameShape(QFrame.Shape.VLine)
     tx_sep.setFixedWidth(1)
@@ -536,10 +558,10 @@ def _build_input_and_actions(win: MainWindow) -> QWidget:
 
 
 def _build_action_column(win: MainWindow) -> QWidget:
-    """Two compact rows of actions beside the input (2026-10-02, Andy).
+    """Two compact rows of actions beside the input (2026-10-02, ).
 
     The send pane used to be as tall as a three-button column plus two field rows.
-    Andy asked for about two button rows so the data area above keeps the space:
+     asked for about two button rows so the data area above keeps the space:
     row 1 = Send + History (+ the payload hint), row 2 = repeat toggle + interval +
     count, everything compact and side by side.
     """
@@ -557,37 +579,37 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.send_btn.setMaximumWidth(96)
     win.send_btn.setToolTip(tr("sc.send.tip"))
     top_row.addWidget(win.send_btn)
-    # U87: the history is a popup now, so it costs one compact button beside the
+    # the history is a popup now, so it costs one compact button beside the
     # primary action instead of a whole row of its own.
     win.history_btn = QPushButton(tr("tx.history.btn", n=0))
     win.history_btn.setToolTip(tr("tx.history.btn.tip", n=0))
     win.history_btn.setMinimumWidth(72)
     win.history_btn.setMaximumWidth(104)
-    win.history_btn.setProperty("secondary", True)   # U98: a reference, not a peer
+    win.history_btn.setProperty("secondary", True)   # a reference, not a peer
     win.history_btn.setEnabled(False)
     win.history_btn.clicked.connect(win._show_history)
     top_row.addWidget(win.history_btn)
     top_row.addStretch(1)
-    # U201 (Andy): the payload hint moved next to Increment (see _build_increment_chip),
+    # the payload hint moved next to Increment (see _build_increment_chip),
     # so this column is no longer stretched by it and its width goes to the input box.
     act_col.addLayout(top_row)
 
     bottom_row = QHBoxLayout()
     bottom_row.setSpacing(6)
-    # U98: "Repeat send" starts and stops a process, so it is a toggle button that
+    # "Repeat send" starts and stops a process, so it is a toggle button that
     # reads "Stop repeat" while running - a checkbox stood in for an action before.
     win.repeat_btn = QPushButton(tr("tx.repeat"))
-    win.repeat_btn.setObjectName("repeatBtn")   # U190: compact, keeps the row ≤200 px
+    win.repeat_btn.setObjectName("repeatBtn")   # compact, keeps the row ≤200 px
     win.repeat_btn.setCheckable(True)
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
     win.repeat_btn.setMinimumWidth(64)
     win.repeat_btn.setMaximumWidth(96)
     win.repeat_btn.toggled.connect(win._on_repeat_toggled)
     bottom_row.addWidget(win.repeat_btn)
-    # U190 (Andy): interval + count moved into one chip. As two labelled fields this
+    # interval + count moved into one chip. As two labelled fields this
     # row was wider than the Send/History row above, so the whole action column was
     # stretched to this row's width and pushed the input box narrow.
-    # U31: the unit still lives in the label. U171: 0 (the infinity sign) keeps going.
+    # the unit still lives in the label. 0 (the infinity sign) keeps going.
     win._repeat_lbl = QLabel(tr("tx.interval.label"))
     win.repeat_ms = QLineEdit("1000")
     win.repeat_ms.setValidator(QIntValidator(10, 60000, win))
@@ -642,11 +664,12 @@ def build_data_panes(win: MainWindow, root: QWidget) -> None:
     splitter = QSplitter()
 
     left = QWidget()
-    win._left_column = left      # U101: its floor is measured, not hard-coded
+    win._left_column = left      # its floor is measured, not hard-coded
     left_layout = QVBoxLayout(left)
 
     # receive group -----------------------------------------------------
-    win._rx_group = QGroupBox(tr("group.rx"))
+    win._rx_group = QGroupBox()                 # no title band: see build_send_group
+    win._rx_group.setAccessibleName(tr("group.rx"))
     rx_group = win._rx_group
     rx_layout = QVBoxLayout(rx_group)
     rx_layout.setContentsMargins(8, 2, 8, 6)   # controls hug the top of the group
@@ -660,11 +683,11 @@ def build_data_panes(win: MainWindow, root: QWidget) -> None:
 
     splitter.addWidget(left)
     _build_quick_panel(win, splitter)
-    splitter.setCollapsible(0, False)           # U63: same, after the panes exist
+    splitter.setCollapsible(0, False)           # same, after the panes exist
     splitter.setCollapsible(1, False)
     win._splitter = splitter
-    splitter.setChildrenCollapsible(False)                  # U63: no zero-width panes
-    left.setMinimumWidth(360)   # U63 floor; _fit_minimum_width() raises it to fit the rows
+    splitter.setChildrenCollapsible(False)                  # no zero-width panes
+    left.setMinimumWidth(360)   # floor; _fit_minimum_width() raises it to fit the rows
     splitter.setSizes(win._saved_sizes("split_sizes", DATA_FIRST_H))
 
     root.addWidget(splitter, 1)
@@ -676,7 +699,7 @@ def _build_options_row(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     _build_split_controls(win, rx_opts)
     _build_display_switches(win, rx_opts)
     rx_layout.addWidget(_fixed_row(rx_opts))
-    # U95: the slot only exists for manual/header mode; set that before the log view
+    # the slot only exists for manual/header mode; set that before the log view
     # is created, so the initial state must not run the full change handler.
     win.split_slot.setVisible(win.split_combo.currentIndex() >= SPLIT_MANUAL)
 
@@ -724,7 +747,7 @@ def _build_byte_split_pages(win: MainWindow) -> tuple[QWidget, QWidget, QWidget]
 
 
 def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
-    """Split-mode combo and the fixed-width slot that follows the mode (U50)."""
+    """Split-mode combo and the fixed-width slot that follows the mode."""
     win._split_lbl = QLabel(tr("split.label"))
     rx_opts.addWidget(win._split_lbl)
     win.split_combo = QComboBox()
@@ -736,17 +759,17 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.split_combo.currentIndexChanged.connect(win._on_split_mode_changed)
     rx_opts.addWidget(win.split_combo)
 
-    # U50: one fixed-width slot whose content follows the split mode
+    # one fixed-width slot whose content follows the split mode
     win.split_ms_edit = QLineEdit("10")
     win.split_ms_edit.setValidator(QIntValidator(0, 60000, win))
     win.split_ms_edit.setMaximumWidth(104)
     win.split_ms_edit.setToolTip(tr("split.ms.tip"))
 
-    win.header_edit = QLineEdit()      # U94: never pre-fill a value the user did not type
+    win.header_edit = QLineEdit()      # never pre-fill a value the user did not type
     win.header_edit.setPlaceholderText(tr("header.placeholder.hex"))
     win.header_edit.setToolTip(tr("header.tip"))
     win.header_edit.textChanged.connect(win._on_header_changed)
-    win._update_input_placeholder()   # U94: hint follows the send format
+    win._update_input_placeholder()   # hint follows the send format
 
     win.split_hint_lbl = QLabel(tr("split.auto.hint"))
     win.split_hint_lbl.setEnabled(False)
@@ -759,27 +782,27 @@ def _build_split_controls(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.split_slot.addWidget(win.split_hint_lbl)   # 0 auto / off
     win.split_slot.addWidget(win.split_ms_edit)    # 1 manual
     win.split_slot.addWidget(win.header_edit)      # 2 by header
-    win.split_slot.addWidget(fixed_page)           # 3 fixed length (B3)
-    win.split_slot.addWidget(delim_page)           # 4 start/end delimiters (B3)
-    win.split_slot.addWidget(tlv_page)             # 5 length-prefixed / TLV (B3)
+    win.split_slot.addWidget(fixed_page)           # 3 fixed length
+    win.split_slot.addWidget(delim_page)           # 4 start/end delimiters
+    win.split_slot.addWidget(tlv_page)             # 5 length-prefixed / TLV
     rx_opts.addWidget(win.split_slot)
 
 
 def _link_checkbox(box: QCheckBox, action: QAction) -> None:
-    """Mirror a checkbox's state onto a menu action, in both directions (U164)."""
+    """Mirror a checkbox's state onto a menu action, in both directions."""
     action.setChecked(box.isChecked())      # set before wiring: no startup signal
     action.toggled.connect(box.setChecked)
     box.toggled.connect(action.setChecked)
 
 
 def _build_more_controls(win: MainWindow) -> QToolButton:
-    """The hidden switches and the More menu that mirrors them (U164/U179).
+    """The hidden switches and the More menu that mirrors them.
 
-    U179: auto-scroll is high-frequency (toggled while reading the data), so it is
+    auto-scroll is high-frequency (toggled while reading the data), so it is
     a normal row control again; only pause, wrap and the log "save as" stay here.
     """
-    win.autoscroll_check = QCheckBox(tr("rx.autoscroll"), win)   # U43
-    win.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # U75: default on
+    win.autoscroll_check = QCheckBox(tr("rx.autoscroll"), win)   # 
+    win.autoscroll_check.setChecked(bool(load_config().get("autoscroll", True)))   # default on
     win.autoscroll_check.setToolTip(tr("rx.autoscroll.tip"))
     win.autoscroll_check.toggled.connect(win._on_autoscroll_toggled)
 
@@ -793,7 +816,7 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.save_log_as_btn.hide()
 
     win.more_btn = QToolButton()
-    win.more_btn.setObjectName("moreBtn")   # U189: match the buttons beside it
+    win.more_btn.setObjectName("moreBtn")   # match the buttons beside it
     win.more_btn.setText(tr("btn.more"))
     win.more_btn.setToolTip(tr("btn.more.tip"))
     win.more_btn.setAccessibleName(tr("btn.more"))
@@ -812,12 +835,12 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
 
 
 def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
-    """Timestamp / echo switches, the More menu and the log + clear actions (U96/U164)."""
-    # U96: one row, not two. U164: the row must still fit a 1366x768 laptop, so the
+    """Timestamp / echo switches, the More menu and the log + clear actions."""
+    # one row, not two. the row must still fit a 1366x768 laptop, so the
     # low-frequency controls (auto-scroll, pause, wrap, "Save as") keep their state
     # but move into a "More" menu. Their widgets stay alive (hidden) so every piece
     # of code that addresses them - retranslate, tests, config - keeps working.
-    win.rx_filter_combo = QComboBox()                          # U163b: all / RX only / TX only
+    win.rx_filter_combo = QComboBox()                          # b: all / RX only / TX only
     win.rx_filter_combo.addItems([tr("rx.filter.all"), tr("rx.filter.rx"), tr("rx.filter.tx")])
     win.rx_filter_combo.setCurrentIndex(0)
     win.rx_filter_combo.setToolTip(tr("rx.filter.tip"))
@@ -825,7 +848,7 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addWidget(win.rx_filter_combo)
 
     rx_opts.addSpacing(12)
-    win.ts_check = QCheckBox(tr("ts.label"))                   # U96: on/off only
+    win.ts_check = QCheckBox(tr("ts.label"))                   # on/off only
     win.ts_check.setChecked(bool(load_config().get("timestamp_on", True)))
     win.ts_check.setToolTip(tr("ts.tip"))
     win.ts_check.toggled.connect(win._on_timestamp_toggled)
@@ -833,20 +856,22 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
 
     more = _build_more_controls(win)        # creates the hidden switches + the menu
     rx_opts.addSpacing(12)
-    rx_opts.addWidget(win.autoscroll_check)   # U179: high-frequency -> back in the row
+    rx_opts.addWidget(win.autoscroll_check)   # high-frequency -> back in the row
     rx_opts.addSpacing(12)
     rx_opts.addWidget(more)
 
-    rx_opts.addSpacing(18)
+    # The two log actions belong together, so the stretch goes *before* them and they sit
+    # side by side at the row's right end. They used to be split by that stretch: measured
+    # 159 px of empty space between two related buttons (2026-10-04 report).
+    rx_opts.addStretch(1)
     win.save_log_btn = QPushButton(tr("btn.save_log_quick"))
     win.save_log_btn.setToolTip(tr("log.quick.tip"))
     win.save_log_btn.clicked.connect(win.on_save_log_quick)
     rx_opts.addWidget(win.save_log_btn)
 
-    rx_opts.addStretch(1)
-    # U169: 清空 is a split button - one click clears the display (unchanged), and
+    # 清空 is a split button - one click clears the display (unchanged), and
     # the menu exposes the counter actions, which used to be buried in Settings.
-    # 2026-10-02 (Andy): one plain button, one meaning - clear the display AND the
+    # 2026-10-02: one plain button, one meaning - clear the display AND the
     # counters. The split button (clear display / clear+counters / reset counters) was
     # confusing: three entry points, a grey fill and a dropdown glyph that read as a
     # tick. The undo toast still covers an accidental click.
@@ -856,10 +881,10 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addWidget(win.clear_btn)
 
 def _build_status_counters(win: MainWindow) -> None:
-    """Session counters in the status bar (Z4/U124), away from the receive row."""
-    # RX/TX counters live in the status bar (Z4): global state, and it frees
-    # ~140 px of horizontal room for the single receive row (U35-P2).
-    # U124: one counter for the whole session - "TX 12 次 · 39 B | RX 39 B" - in a
+    """Session counters in the status bar, away from the receive row."""
+    # RX/TX counters live in the status bar: global state, and it frees
+    # ~140 px of horizontal room for the single receive row.
+    # one counter for the whole session - "TX 12 次 · 39 B | RX 39 B" - in a
     # monospace face so the numbers cannot shift the layout as they change.
     win.sent_lbl = QLabel(tr("tx.counter", n=0, tx=0, rx=0))
     win.sent_lbl.setObjectName("statusCounters")
@@ -872,7 +897,7 @@ def _build_status_counters(win: MainWindow) -> None:
 
 
 def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
-    """U41: find bar, hidden until Ctrl+F."""
+    """find bar, hidden until Ctrl+F."""
     win._find_bar = QWidget()
     find_row = QHBoxLayout(win._find_bar)
     find_row.setContentsMargins(0, 0, 0, 0)
@@ -880,13 +905,18 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     find_row.addWidget(win._find_lbl)
     win.find_edit = QLineEdit()
     win.find_edit.setPlaceholderText(tr("find.placeholder"))
+    # A text box's width is a visual clue of the expected input, and it should be sized to
+    # the longest likely keyword rather than stretched across the pane - it used to take
+    # 550 px of an 880 px row (2026-10-04 report). Official wording:
+    # uxguide/ctrl-text-boxes.md:255,257,259.
+    win.find_edit.setMaximumWidth(240)
     win.find_edit.returnPressed.connect(lambda: win._find_next(True))
     win.find_edit.textChanged.connect(win._on_find_text_changed)
     find_row.addWidget(win.find_edit, 1)
     win.find_count_lbl = QLabel("")
     win.find_count_lbl.setToolTip(tr("find.count.tip"))
     find_row.addWidget(win.find_count_lbl)
-    win.find_case_check = QCheckBox(tr("find.case"))     # U181
+    win.find_case_check = QCheckBox(tr("find.case"))     # 
     win.find_case_check.setChecked(bool(load_config().get("find_case", False)))
     win.find_case_check.setToolTip(tr("find.case.tip"))
     win.find_case_check.toggled.connect(win._on_find_case_toggled)
@@ -897,6 +927,9 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.find_next_btn = QPushButton(tr("find.next"))
     win.find_next_btn.clicked.connect(lambda: win._find_next(True))
     find_row.addWidget(win.find_next_btn)
+    # the close button stays on the right edge; the stretch keeps the keyword field at its
+    # working width and the buttons at their natural size instead of stretching them
+    find_row.addStretch(1)
     win.find_close_btn = QPushButton("\u00d7")
     win.find_close_btn.setObjectName("qsDel")
     win.find_close_btn.setFixedWidth(28)
@@ -904,46 +937,49 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.find_close_btn.clicked.connect(lambda: win._toggle_find_bar(False))
     find_row.addWidget(win.find_close_btn)
     win._find_bar.setSizePolicy(QSizePolicy.Policy.Preferred,
-                                QSizePolicy.Policy.Fixed)   # U70
-    # U181: the bar is a persistent highlight box now (default on, remembered)
+                                QSizePolicy.Policy.Fixed)   # 
+    # the bar is a persistent highlight box now (default on, remembered)
     win._find_bar.setVisible(bool(load_config().get("find_bar_on", True)))
     rx_layout.addWidget(win._find_bar)
 
 
 def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
-    """The read-only receive view; it absorbs all spare height (U70)."""
+    """The read-only receive view; it absorbs all spare height."""
     win.rx_view = QPlainTextEdit()
     win.rx_view.setReadOnly(True)
-    # 2026-10-03 (data-path P1): the pane is append-only and has no user-visible
+    # 2026-10-03: the pane is append-only and has no user-visible
     # undo (the clear action keeps its own snapshot), so Qt's per-insert undo
     # records are pure cost - they grow with every fragment under a data flood.
     win.rx_view.setUndoRedoEnabled(False)
-    # 2026-10-02 (Andy): the receive pane always soft-wraps now - the switch was removed.
+    # 2026-10-02: the receive pane always soft-wraps now - the switch was removed.
     win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-    win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # U43
-    win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   # U45
-    win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # U123: an empty pane says why
+    win.rx_view.setMinimumHeight(RX_VIEW_MIN_H)   # the divider can drag the log this low
+    win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # 
+    win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   #
+    win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # an empty pane says why
+    win.rx_view.setAccessibleName(tr("rx.view.name"))      # a screen reader needs a name,
+                                                           # not just a placeholder hint
     win.rx_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     win.rx_view.customContextMenuRequested.connect(win._open_rx_context_menu)
-    win.rx_view.viewport().installEventFilter(win)   # U129-A4: long-line hover tooltip
-    rx_layout.addWidget(win.rx_view, 1)   # U70: the view absorbs all spare height
+    win.rx_view.viewport().installEventFilter(win)   # long-line hover tooltip
+    rx_layout.addWidget(win.rx_view, 1)   # the view absorbs all spare height
 
 
 def _build_vertical_splitter(win: MainWindow, rx_group: QGroupBox, left_layout: QVBoxLayout) -> None:
     """Draggable splitter holding the receive group above the send group."""
-    win._v_splitter = QSplitter(Qt.Orientation.Vertical)   # U35-P0: draggable
-    win._v_splitter.setChildrenCollapsible(False)          # U63: never collapse a pane
+    win._v_splitter = QSplitter(Qt.Orientation.Vertical)   # draggable
+    win._v_splitter.setChildrenCollapsible(False)          # never collapse a pane
     win._v_splitter.addWidget(rx_group)
     win._v_splitter.setStretchFactor(0, 3)
-    rx_group.setMinimumHeight(170)                          # U63: keep both panes usable
+    rx_group.setMinimumHeight(RX_PANE_MIN_H)                # rows + ~2 lines of data
 
     win._build_send_group()
     win._v_splitter.addWidget(win._tx_group)
-    win._v_splitter.setStretchFactor(1, 0)   # U111: data first
-    win._v_splitter.splitterMoved.connect(   # U119: the input takes the extra room
+    win._v_splitter.setStretchFactor(1, 0)   # data first
+    win._v_splitter.splitterMoved.connect(   # the input takes the extra room
         lambda *_: QTimer.singleShot(0, win._fit_tx_edit_height))
-    win._tx_group.setMinimumHeight(120)                    # U63/U98/U99/U111
-    win._v_splitter.setCollapsible(0, False)   # U63: flags must be set after
+    win._tx_group.setMinimumHeight(TX_PANE_MIN_H)          # the two button rows
+    win._v_splitter.setCollapsible(0, False)   # flags must be set after
     win._v_splitter.setCollapsible(1, False)   #      the panes are added
     _stored_v = load_config().get("v_split_sizes")
     _stored_h = load_config().get("split_sizes")
@@ -962,4 +998,4 @@ def _build_quick_panel(win: MainWindow, splitter: QSplitter) -> None:
     win.quick_panel.error.connect(lambda m: win._notify(m, "error"))
     win.quick_panel.deleted.connect(win._on_row_deleted)
     splitter.addWidget(win.quick_panel)
-    win.quick_panel.collapsed_changed.connect(win._on_quick_panel_collapsed)   # U88
+    win.quick_panel.collapsed_changed.connect(win._on_quick_panel_collapsed)   # 

@@ -1,4 +1,4 @@
-"""Declarative frame kernel (B4-P1): byte-level assertions for the three templates."""
+"""Declarative frame kernel: byte-level assertions for the three templates."""
 
 from __future__ import annotations
 

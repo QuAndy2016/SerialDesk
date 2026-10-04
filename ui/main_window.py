@@ -90,7 +90,7 @@ from ui.receive_controller import append_header_split, append_rx_group, emit_rx_
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_increment_changed, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entries, reset_increment, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_repeat_chip, refresh_tx_settings_chip, serial_params, split_byte_params, split_threshold_ms, ts_prefix, update_input_placeholder
-from ui.layout_controller import control_rows, fit_minimum_width, fit_pane_minimums, fit_settings_btn, fit_tx_edit_height, give_data_area_the_room, lock_control_widths, row_need, saved_sizes, widest_row
+from ui.layout_controller import MIN_WINDOW_H, control_rows, fit_minimum_width, fit_pane_minimums, fit_settings_btn, fit_tx_edit_height, give_data_area_the_room, lock_control_widths, row_need, saved_sizes, widest_row
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
@@ -112,15 +112,17 @@ def resource_path(rel: str) -> str:
 
 
 
-# U79: by default the data pane gets the room - the send pane and the quick-send
+# by default the data pane gets the room - the send pane and the quick-send
 # column start at their minimum sizes instead of sharing space evenly.
 LEGACY_SPLIT_DEFAULTS = {
     "v_split_sizes": ([420, 260], DATA_FIRST_V),
     "split_sizes": ([820, 340], DATA_FIRST_H),
 }
-QUICK_PANEL_MIN_W = 332   # the quick-send rows need this (U69)
-TX_PANE_MIN_H = 190       # the send pane keeps its rows usable (U63)
-CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
+QUICK_PANEL_MIN_W = 332   # the quick-send rows need this
+#: The window's floor is measured at start-up (ui/layout_controller.fit_minimum_width).
+#: The width guard here only applies until the first layout pass runs.
+MIN_WINDOW_W = 1060
+CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted
 
 
 # -- receive display modes -------------------------------------------------
@@ -129,19 +131,19 @@ CLEAR_UNDO_MAX_LINES = 60000  # above this, clearing is not snapshotted (U42)
 # -- split modes -------------------------------------------------------------
 SPLIT_OFF = 0
 
-# -- timestamp (U96): an on/off switch with a single fixed format ---------------
+# -- timestamp: an on/off switch with a single fixed format ---------------
 TS_PREFIX_TEMPLATE = "[{hms}.{ms:03d}] "      # -> [04:02:10.456]
 
 CHECKSUM_KEYS = ["none", "crc16-modbus", "crc16-ccitt", "crc32", "sum8"]
 
-# -- serial parameters (T1); plain values accepted by pyserial ---------------
+# -- serial parameters; plain values accepted by pyserial ---------------
 BYTESIZE_KEYS = [5, 6, 7, 8]
 PARITY_KEYS = ["N", "O", "E", "M", "S"]
 STOPBITS_KEYS = [1, 1.5, 2]
 FLOW_KEYS = ["none", "xonxoff", "rtscts"]
 HISTORY_MAX = 50
 
-LOG_DIR = log_dir()   # U34: per-user (or portable) logs, not next to the bundle
+LOG_DIR = log_dir()   # per-user (or portable) logs, not next to the bundle
 LOG_MAX_BYTES = 2 * 1024 * 1024
 LOG_MAX_SECONDS = 30 * 60
 from app.display import (MARK_RX, MARK_TX, RX_ASCII, RX_HEX, RX_HEX_ASCII)  # refactor step 1
@@ -152,7 +154,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from PySide6.QtGui import QCloseEvent, QResizeEvent, QShowEvent
-FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
+FILE_CHUNK_BYTES = 4096     # file send chunk size
 FILE_CHUNK_MS = 20          # interval between chunks
 
 
@@ -166,7 +168,7 @@ def _human_bytes(n: int) -> str:
 
 
 class _UpdateProbe(QObject):
-    """U127: carries the worker thread's answer back onto the GUI thread."""
+    """carries the worker thread's answer back onto the GUI thread."""
 
     found = Signal(str)
 
@@ -177,7 +179,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"SerialDesk v{__version__}")
         self.setWindowIcon(QIcon(resource_path("assets/icon.ico")))
         self.resize(1180, 680)
-        self.setMinimumSize(1060, 600)  # U55/U78: the widest control row measures 1059 px
+        # Both floors are replaced by measurements in _fit_minimum_width(); these are only
+        # the guards used before the first layout pass (2026-10-04: the hard-coded 600 px
+        # height kept the window ~300 px taller than its content).
+        self.setMinimumSize(MIN_WINDOW_W, MIN_WINDOW_H)
 
         self._init_worker()
 
@@ -202,59 +207,59 @@ class MainWindow(QMainWindow):
     # -- UI -----------------------------------------------------------------
 
     def _build_settings_button(self) -> None:
-        """Create the Settings button/menu before the row that hosts it (U72)."""
+        """Create the Settings button/menu before the row that hosts it."""
         self._settings_btn = QToolButton()
         self._settings_btn.setObjectName("settingsBtn")
-        # U188 (Andy 2026-10-03): icon only - the gear says it, the tooltip names it,
+        # icon only - the gear says it, the tooltip names it,
         # and the label used to make the control ~50 px wider than its glyph.
         self._settings_btn.setText("")
         self._settings_btn.setToolTip(tr("menu.settings.tip"))
         self._settings_btn.setAccessibleName(tr("menu.settings"))
         self._settings_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._settings_btn.setMinimumHeight(28)        # U188: same height as the row
+        self._settings_btn.setMinimumHeight(28)        # same height as the row
         self._settings_btn.setMinimumWidth(30)
         self._settings_menu = QMenu(self._settings_btn)
         self._settings_btn.setMenu(self._settings_menu)
         self._fit_settings_btn()
-        self.menuBar().hide()   # U72: nothing lives in the menu bar any more
+        self.menuBar().hide()   # nothing lives in the menu bar any more
 
     def _build_menu(self) -> None:
         """Settings menu construction (theme, language, config, panel, update, about, shortcuts). (implementation in ui.menus)."""
         build_menu(self)
 
     def _sync_panel_btn(self, folded: bool | None = None) -> None:
-        """Keep the panel-toggle button in sync with the panel state and theme (U161).
+        """Keep the panel-toggle button in sync with the panel state and theme.
 
-        Sets both the checked state and the arrow icon (left = panel expanded,
-        right = panel folded) so the button is never blank on first paint and it
-        follows theme switches. Called once at build time, on every fold/unfold,
-        and after a theme change.
+        Sets the arrow icon (left = panel expanded, right = panel folded) so the button is
+        never blank on first paint and it follows theme switches. The button carries no
+        checked state: it is a command button, and its painted "on" look used to read as a
+        permanent selection (2026-10-04 report). Called once at build time, on every
+        fold/unfold, and after a theme change.
         """
         if not hasattr(self, "_panel_btn"):
             return
         if folded is None:
             folded = self.quick_panel.is_folded() if hasattr(self, "quick_panel") else False
-        self._panel_btn.setChecked(not folded)
         suffix = "dark" if theme.resolved_dark() else "light"
         name = "arrow_right_%s.png" % suffix if folded else "arrow_left_%s.png" % suffix
         self._panel_btn.setIcon(QIcon(resource_path("assets/" + name)))
 
     def _on_quick_panel_collapsed(self, collapsed: bool) -> None:
-        """Fold the quick-send panel away (or bring it back) and remember it (U88)."""
-        # U106: keep the panel widget alive in its rail state instead of hiding it, so
+        """Fold the quick-send panel away (or bring it back) and remember it."""
+        # keep the panel widget alive in its rail state instead of hiding it, so
         # the folded panel still shows a labelled strip the user can click to come back.
         self.quick_panel.set_folded(collapsed)
         if hasattr(self, "_quick_panel_act"):
             self._quick_panel_act.setChecked(not collapsed)
-        self._sync_panel_btn(collapsed)   # U161: one place owns the button look
+        self._sync_panel_btn(collapsed)   # one place owns the button look
         save_config({"quick_panel_collapsed": bool(collapsed)})
         self._fit_minimum_width()
         self._notify(tr("qs.collapsed") if collapsed else tr("qs.expanded"),
                      "info", ms=5000 if collapsed else 4000)
 
     def _toggle_quick_panel(self) -> None:
-        """Ctrl+B / menu: fold the quick-send panel when it is showing (U88)."""
+        """Ctrl+B / menu: fold the quick-send panel when it is showing."""
         self._on_quick_panel_collapsed(not self.quick_panel.is_folded())
 
     def _toggle_find_bar(self, show: bool | None = None) -> None: return toggle_find_bar(self, show)
@@ -263,7 +268,7 @@ class MainWindow(QMainWindow):
 
     def _esc_action(self) -> None: return esc_action(self)
 
-    # U123: one source of truth for the shortcut list and the help dialog
+    # one source of truth for the shortcut list and the help dialog
     SHORTCUT_HELP = (
         ("Ctrl+Return", "sc.send"), ("Ctrl+L", "sc.clear_rx"), ("Ctrl+S", "sc.save_log"),
         ("Ctrl+K", "sc.focus_input"), ("F5", "sc.toggle_open"), ("Ctrl+B", "sc.panel"),
@@ -288,7 +293,7 @@ class MainWindow(QMainWindow):
     def _on_find_text_changed(self) -> None: return on_find_text_changed(self)
 
     def _on_find_case_toggled(self, checked: bool) -> None:
-        """Qt slot: remember the case switch and re-run the search (U181)."""
+        """Qt slot: remember the case switch and re-run the search."""
         return on_find_case_toggled(self, checked)
 
     def _resume_rx_display(self) -> None: return resume_rx_display(self)
@@ -298,15 +303,15 @@ class MainWindow(QMainWindow):
     def _on_timestamp_toggled(self, checked: bool) -> None: return on_timestamp_toggled(self, checked)
 
     def _on_increment_changed(self, *_args) -> None:
-        """Qt slot: persist increment settings and reset the counter (U180)."""
+        """Qt slot: persist increment settings and reset the counter."""
         return on_increment_changed(self, *_args)
 
     def _reset_increment(self) -> None:
-        """Qt slot: put the increment counter back to its start value (U180)."""
+        """Qt slot: put the increment counter back to its start value."""
         return reset_increment(self)
 
     def _on_clear_and_counters(self) -> None:
-        """Qt slot: clear the pane and zero the counters (U169 split-button menu)."""
+        """Qt slot: clear the pane and zero the counters (split-button menu)."""
         return on_clear_and_counters(self)
 
     def _on_rx_filter_changed(self, index: int) -> None: return on_filter_changed(self, index)
@@ -323,7 +328,7 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None: return show_about(self)
 
-    # -- update check (U127) -------------------------------------------------
+    # -- update check -------------------------------------------------
 
     def _init_update_check(self) -> None: return init_update_check(self)
 
@@ -358,7 +363,7 @@ class MainWindow(QMainWindow):
 
     def retranslate(self) -> None:
         """Re-apply every translated string after a language change (ui.retranslate)."""
-        QTimer.singleShot(0, self._fit_minimum_width)     # U81: labels change size
+        QTimer.singleShot(0, self._fit_minimum_width)     # labels change size
         QTimer.singleShot(150, self._fit_minimum_width)   # second pass once laid out
         retranslate_ui(self)
 
@@ -420,8 +425,8 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj: QObject, event: QEvent):  # noqa: N802 - Qt naming
         """Window-wide event filter.
 
-        - U129-A4: hovering a very long receive line shows its whole text;
-        - U120: while the panel is folded, hovering the right edge brings the rail
+        - hovering a very long receive line shows its whole text;
+        - while the panel is folded, hovering the right edge brings the rail
           back. This logic used to live in a *second* ``eventFilter`` earlier in the
           class, which Python silently overwrote - the rail never came back (found
           while adding the tooltip above).
@@ -441,12 +446,12 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def resizeEvent(self, event: QResizeEvent):  # noqa: N802 - Qt naming
-        """U119: the input follows the pane when the window is resized."""
+        """the input follows the pane when the window is resized."""
         super().resizeEvent(event)
         QTimer.singleShot(0, self._fit_tx_edit_height)
 
     def changeEvent(self, event: QEvent):  # noqa: N802 - Qt naming
-        """U117: a DPI or screen change alters every metric we measured the floors
+        """a DPI or screen change alters every metric we measured the floors
         from, so recompute them instead of letting the panes clip their contents."""
         if event.type() in (QEvent.Type.ScreenChangeInternal,
                             QEvent.Type.DevicePixelRatioChange):
@@ -467,7 +472,7 @@ class MainWindow(QMainWindow):
 
     def _setup_tab_order(self) -> None: return setup_tab_order(self)
 
-    # -- notifications (U30/U36/U37/U38) --------------------------------------
+    # -- notifications --------------------------------------
 
     def _notify(self, msg: str, level: str = 'info', ms: int | None = None) -> None:  # moved to ui/connection_controller.py
         """See ui/connection_controller.py."""
@@ -484,13 +489,13 @@ class MainWindow(QMainWindow):
     def _ensure_port(self) -> bool: return ensure_port(self)
 
     def _on_send_error(self, kind: str, detail: str) -> None:
-        """Report a write that failed on the worker thread (U52: GUI never blocks)."""
+        """Report a write that failed on the worker thread (GUI never blocks)."""
         if kind in ("timeout", "queue", "cts", "degraded"):
-            self._stop_repeat()      # U64: stop the loop instead of hammering a stuck device
+            self._stop_repeat()      # stop the loop instead of hammering a stuck device
         if kind == "timeout":
             self._notify(tr("err.tx.timeout"), "error")
         elif kind == "queue":
-            # 2026-10-03 (P1): a full queue drops the frame - count it, so "did a frame
+            # 2026-10-03: a full queue drops the frame - count it, so "did a frame
             # go missing?" has an answer instead of one transient toast.
             self._tx_dropped = getattr(self, "_tx_dropped", 0) + 1
             key = "err.tx.queue" if self._tx_dropped == 1 else "err.tx.queue.total"
@@ -498,7 +503,7 @@ class MainWindow(QMainWindow):
         elif kind == "closed":
             self._notify(tr("err.tx.closed"), "error")
         elif kind == "cts":
-            self._notify(tr("err.tx.cts"), "warn")     # U65: dropped, not fatal
+            self._notify(tr("err.tx.cts"), "warn")     # dropped, not fatal
         elif kind == "degraded":
             self._notify(tr("err.tx.degraded"), "error")
         else:
@@ -515,7 +520,7 @@ class MainWindow(QMainWindow):
 
     # -- helpers ---------------------------------------------------------------
 
-    # -- config import / export (T15) ----------------------------------------
+    # -- config import / export ----------------------------------------
 
     def on_export_config(self) -> None:
                                         """Qt slot: export the configuration (ui/config_controller)."""
@@ -527,7 +532,7 @@ class MainWindow(QMainWindow):
 
     def _apply_config(self) -> None: return apply_config(self)
 
-    # -- auto reply (T10) ----------------------------------------------------
+    # -- auto reply ----------------------------------------------------
 
     def _on_auto_reply_toggled(self, checked: bool) -> None: return on_auto_reply_toggled(self, checked)
 
@@ -537,13 +542,13 @@ class MainWindow(QMainWindow):
 
     def _recolor_rx_view(self) -> None: return recolor_rx_view(self)
 
-    # -- modem status lines (T9) ---------------------------------------------
+    # -- modem status lines ---------------------------------------------
 
     def _poll_signals(self) -> None: return poll_signals(self)
 
     def _signals_html(self, sig: dict) -> str: return signals_html(self, sig)
 
-    # -- file send (T6) ------------------------------------------------------
+    # -- file send ------------------------------------------------------
 
     def _baud_value(self) -> int: return baud_value(self)
 
@@ -559,7 +564,7 @@ class MainWindow(QMainWindow):
 
     def _abort_file_send(self): return abort_file_send(self)
 
-    # -- receive log to file (T4) -------------------------------------------
+    # -- receive log to file -------------------------------------------
 
     def _log_header_text(self) -> str: return log_header_text(self)
 
@@ -618,7 +623,7 @@ class MainWindow(QMainWindow):
     def _on_repeat_toggled(self, checked: bool): return on_repeat_toggled(self, checked)
 
     def _on_repeat_tick(self) -> None:
-        """Qt slot: one repeat-send step, honouring the count (U171)."""
+        """Qt slot: one repeat-send step, honouring the count."""
         return on_repeat_tick(self)
 
     def _repeat_value(self) -> int: return repeat_value(self)
@@ -729,13 +734,13 @@ class MainWindow(QMainWindow):
     def showEvent(self, event: QShowEvent):  # noqa: N802 - Qt naming
         """On first show, let the data area claim its room before the user sees a jump."""
         super().showEvent(event)
-        theme.apply_native_dark(self, bool(theme.resolved_dark()))   # U51 (frame exists now)
+        theme.apply_native_dark(self, bool(theme.resolved_dark()))   # (frame exists now)
         if not getattr(self, "_split_room_done", False):
             self._split_room_done = True
 
             def _first_layout() -> None:
-                self._give_data_area_the_room()   # U79
-                self._fit_minimum_width()         # U81
+                self._give_data_area_the_room()   # 
+                self._fit_minimum_width()         # 
 
             QTimer.singleShot(0, _first_layout)
 
@@ -743,14 +748,14 @@ class MainWindow(QMainWindow):
         """Persist the layout, stop the timers and shut the worker down without hanging."""
         self._sig_timer.stop()
         self._flush_history_save()
-        try:   # U35: remember the layout the user dragged
+        try:   # remember the layout the user dragged
             config = load_config()
             config["split_sizes"] = self._splitter.sizes()
             config["v_split_sizes"] = self._v_splitter.sizes()
             save_config(config)
         except (AttributeError, RuntimeError):
             pass
-        self.worker.close_port()     # U64: non-blocking; the worker closes the port
+        self.worker.close_port()     # non-blocking; the worker closes the port
         self.worker.wait(1500)       # bounded wait so quitting can never hang
         self._log_close()
         self.refresh_timer.stop()

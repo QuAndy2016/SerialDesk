@@ -1,4 +1,4 @@
-"""Update check (U127): ask GitHub for the latest release, quietly.
+"""Update check: ask GitHub for the latest release, quietly.
 
 Design rules this module follows:
   * stdlib only - the project does not take a dependency for one HTTP GET;

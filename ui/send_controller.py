@@ -60,7 +60,7 @@ from app.protocol import (
     hex_str_to_bytes,
     HexFormatError,
 )
-from app.increment import DEFAULT_CFG, apply_increment, has_placeholder   # U180
+from app.increment import DEFAULT_CFG, apply_increment, has_placeholder   # 
 from app import (
     __version__,
     update as update_check,
@@ -99,7 +99,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.main_window import MainWindow
 CHECKSUM_KEYS = ["none", "crc16-modbus", "crc16-ccitt", "crc32", "sum8"]
-FILE_CHUNK_BYTES = 4096     # file send chunk size (T6)
+FILE_CHUNK_BYTES = 4096     # file send chunk size
 FILE_CHUNK_MS = 20          # interval between chunks
 HISTORY_MAX = 50
 def _human_bytes(n: int) -> str:
@@ -111,7 +111,7 @@ def _human_bytes(n: int) -> str:
     return f"{n / (1024 * 1024):.2f} MB"
 def update_payload_size(win: MainWindow) -> None:
     "update payload size"
-    """Show how many bytes the current input would send (U74)."""
+    """Show how many bytes the current input would send."""
     text = win.tx_edit.toPlainText().strip()
     if not text:
         win.tx_size_lbl.setText("")
@@ -131,7 +131,7 @@ def update_payload_size(win: MainWindow) -> None:
 
 def schedule_history_save(win: MainWindow) -> None:
     "schedule history save"
-    """Debounce history persistence: one write per 2 s instead of per click (U52)."""
+    """Debounce history persistence: one write per 2 s instead of per click."""
     win._cfg_save_timer.start(2000)
 
 def flush_history_save(win: MainWindow) -> None:
@@ -172,7 +172,7 @@ def on_send_file(win: MainWindow):
     win.file_progress.setValue(0)
     win.file_progress.show()
     win.file_info_lbl.setText(tr("file.info", size=_human_bytes(len(data)), baud=baud, eta=eta))
-    win.file_cancel_btn.show()          # U192: the entry sits in the settings chip
+    win.file_cancel_btn.show()          # the entry sits in the settings chip
     win._file_timer.start(FILE_CHUNK_MS)
 
 def send_file_chunk(win: MainWindow):
@@ -214,7 +214,7 @@ def abort_file_send(win: MainWindow):
 
 def show_history(win: MainWindow) -> None:
     "show history"
-    """Open (or raise) the non-modal history popup (U87)."""
+    """Open (or raise) the non-modal history popup."""
     if win._history_dlg is None:
         win._history_dlg = HistoryDialog(win)
         win._history_dlg.fill_requested.connect(win._on_history_fill)
@@ -227,7 +227,7 @@ def show_history(win: MainWindow) -> None:
 
 def on_history_fill(win: MainWindow, text: str) -> None:
     "on history fill"
-    """Recall a stored command into the send box (U87)."""
+    """Recall a stored command into the send box."""
     win.tx_edit.setPlainText(text)
     win.tx_edit.setFocus()
     win._recall_index = -1
@@ -236,7 +236,7 @@ def on_history_fill(win: MainWindow, text: str) -> None:
 
 def recall_history(win: MainWindow, step: int) -> None:
     "recall history"
-    """Walk the send history with Ctrl+Up / Ctrl+Down (U87).
+    """Walk the send history with Ctrl+Up / Ctrl+Down.
 
     step +1 goes further back in time (older), -1 comes towards the newest;
     stepping past the newest restores whatever was typed before browsing.
@@ -286,7 +286,7 @@ def remember_send(win: MainWindow, text: str, fmt: str = '', nbytes: int | None 
 
 def update_history_button(win: MainWindow) -> None:
     "update history button"
-    """Keep the History button (label, tooltip, enabled state) in sync (U87)."""
+    """Keep the History button (label, tooltip, enabled state) in sync."""
     n = len(win._send_history)
     win.history_btn.setText(tr("tx.history.btn", n=n))
     win.history_btn.setToolTip(tr("tx.history.btn.tip", n=n))
@@ -295,7 +295,7 @@ def update_history_button(win: MainWindow) -> None:
         win._history_dlg.set_history(win._send_history, win._history_meta)
 
 def remove_history_entries(win: MainWindow, rows: list) -> None:
-    """Drop several entries at once (U183) and persist.
+    """Drop several entries at once and persist.
 
     Rows are deleted from the highest index down so the earlier indices stay valid.
     """
@@ -318,12 +318,12 @@ def remove_history_entries(win: MainWindow, rows: list) -> None:
 
 def remove_history_entry(win: MainWindow, row: int) -> None:
     "remove history entry"
-    """Drop one entry from the send history and persist (U77)."""
+    """Drop one entry from the send history and persist."""
     remove_history_entries(win, [row])
 
 def clear_history(win: MainWindow) -> None:
     "clear history"
-    """Forget every remembered command (U77)."""
+    """Forget every remembered command."""
     if not win._send_history:
         return
     win._send_history = []
@@ -339,7 +339,7 @@ def apply_checksum(win: MainWindow, payload: bytes) -> bytes:
 
 def increment_cfg(win: MainWindow) -> dict:
     "increment cfg"
-    """U180: the increment settings as a plain dict (safe if the chip is missing)."""
+    """the increment settings as a plain dict (safe if the chip is missing)."""
     def _int(widget, default: int) -> int:
         try:
             return int(widget.value())
@@ -357,14 +357,14 @@ def increment_cfg(win: MainWindow) -> dict:
 
 def increment_enabled(win: MainWindow) -> bool:
     "increment enabled"
-    """U180: is the send auto-increment switched on?"""
+    """is the send auto-increment switched on?"""
     box = getattr(win, "inc_check", None)
     return bool(box is not None and box.isChecked())
 
 
 def on_increment_changed(win: MainWindow, *_args) -> None:
     "on increment changed"
-    """U180: persist the settings and reset the counter to `start` on any change."""
+    """persist the settings and reset the counter to `start` on any change."""
     cfg = increment_cfg(win)
     cfg["enabled"] = increment_enabled(win)
     config = load_config()
@@ -378,7 +378,7 @@ def on_increment_changed(win: MainWindow, *_args) -> None:
 
 def reset_increment(win: MainWindow) -> None:
     "reset increment"
-    """U180: put the counter back to its start value."""
+    """put the counter back to its start value."""
     win._inc_value = increment_cfg(win)["start"]
     win._notify(tr("inc.reset.done"), "info", ms=2500)
 
@@ -419,12 +419,12 @@ def on_send(win: MainWindow):
     if win.tx_fmt_combo.currentIndex() == 1:
         payload += win._newline_bytes()
     if not win.worker.send(payload):
-        return          # U61: never echo or count a frame that was not queued
+        return          # never echo or count a frame that was not queued
     win._echo_tx(payload)
     win.tx_bytes += len(payload)
     win._sent_count += 1
     win._remember_send(
-        template,          # U180: the history keeps the {i} template, not the value
+        template,          # the history keeps the {i} template, not the value
         "hex" if win.tx_fmt_combo.currentIndex() == 0 else "ascii",
         len(payload))
     win.update_counts()
@@ -437,11 +437,11 @@ def on_quick_send(win: MainWindow, payload: bytes, is_hex: bool = False):
     "on quick send"
     """Send one quick-send row (button or sequence step).
 
-    2026-10-02 (Andy): the send box's line-ending picker also ends quick-send rows.
+    2026-10-02: the send box's line-ending picker also ends quick-send rows.
     An ASCII row gets the same bytes the manual send would append; a HEX row is
     byte-exact (and the send box behaves the same way in HEX mode).
     """
-    if not win.worker.is_open():     # U61: quick send / sequence obey the same rule
+    if not win.worker.is_open():     # quick send / sequence obey the same rule
         win.quick_panel.stop_sequence()
         win._notify(tr("err.tx.closed"), "error")
         return
@@ -452,7 +452,7 @@ def on_quick_send(win: MainWindow, payload: bytes, is_hex: bool = False):
         win.quick_panel.stop_sequence()
         return
     win._echo_tx(payload)
-    # U103: quick send / sequence / repeat go through here, so the send counter
+    # quick send / sequence / repeat go through here, so the send counter
     # has to move too - otherwise "已发送 N 次" stayed at the manual-send count
     # while the TX byte counter kept climbing.
     win.tx_bytes += len(payload)

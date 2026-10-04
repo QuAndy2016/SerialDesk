@@ -1,4 +1,4 @@
-"""U180: send auto-increment placeholder rules (pure functions)."""
+"""send auto-increment placeholder rules (pure functions)."""
 
 from app.increment import apply_increment, has_placeholder, next_value, render
 

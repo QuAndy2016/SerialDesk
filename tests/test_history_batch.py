@@ -1,4 +1,4 @@
-"""U183: batch selection and deletion in the send-history dialog."""
+"""batch selection and deletion in the send-history dialog."""
 
 import os
 
@@ -41,7 +41,7 @@ def _seed(win, items: list) -> object:
 
 
 def test_batch_delete_removes_every_selected_row(win):
-    """U183: multi-select (Ctrl/Shift) deletes the whole selection in one call."""
+    """multi-select (Ctrl/Shift) deletes the whole selection in one call."""
     dlg = _seed(win, ["A", "B", "C", "D"])
     dlg.list.item(0).setSelected(True)
     dlg.list.item(2).setSelected(True)

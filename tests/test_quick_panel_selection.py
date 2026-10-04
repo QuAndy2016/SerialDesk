@@ -1,13 +1,20 @@
-"""Quick-send selection model (2026-10-03): ticks belong to sequence mode only.
+"""Quick-send selection model, wired through the real main window.
 
-The bug Andy hit: ticking a row looked like a selection, but the tick is the sequence's
-member flag, so Delete stayed grey. Outside sequence mode the tick is hidden; inside it,
-ticking selects the row so a ticked row can be deleted.
+The 2026-10-04 rebuild split the two flags apart:
+
+* the **tick box** is the sequence's member flag - it exists (visible *and* enabled) only
+  in sequence mode, and ticking a row never arms a delete;
+* the **click highlight** (``armed``) is the delete target, and the header shows how many
+  rows are armed.
+
+An earlier version made a tick *mean* "armed", so ticking and clicking kept overwriting
+each other; three bug reports came out of that coupling.
 """
 
 import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("SERIALDESK_SKIP_CONFIRM", "1")
 
 import pytest                                   # noqa: E402
 
@@ -39,39 +46,41 @@ def win(app):
     window.close()
 
 
-def test_tick_is_hidden_outside_sequence_mode(app, win):
+def test_tick_is_hidden_and_disabled_outside_sequence_mode(app, win):
     panel = win.quick_panel
     panel.seq_check.setChecked(False)
     app.processEvents()
-    assert not panel._rows[0]["sel"].isVisible()
-    assert panel.selected_entries() == []
+    row = panel._rows[0]
+    assert not row.tick.isVisible() and not row.tick.isEnabled()
+    assert panel.armed_rows() == []
     assert not panel.del_btn.isEnabled()
 
 
 def test_clicking_a_row_arms_delete(app, win):
     panel = win.quick_panel
-    entry = panel._rows[0]
-    QTest.mouseClick(entry["edit"], Qt.MouseButton.LeftButton,
+    row = panel._rows[0]
+    QTest.mouseClick(row.text_edit, Qt.MouseButton.LeftButton,
                      Qt.KeyboardModifier.NoModifier, QPoint(5, 5))
     app.processEvents()
-    assert len(panel.selected_entries()) == 1
-    assert panel.del_btn.isEnabled()
+    assert row.armed() and panel.del_btn.isEnabled()
+    assert panel.armed_lbl.text() == "已选 1"
 
 
-def test_in_sequence_mode_a_tick_selects(app, win):
+def test_in_sequence_mode_a_tick_marks_membership_without_arming(app, win):
     panel = win.quick_panel
+    panel.clear_selection()               # the window is shared between the tests
     panel.seq_check.setChecked(True)
     app.processEvents()
-    entry = panel._rows[0]
-    assert entry["sel"].isVisible()
-    entry["sel"].setChecked(True)
+    row = panel._rows[0]
+    assert row.tick.isVisible() and row.tick.isEnabled()
+    row.set_ticked(True)
     app.processEvents()
-    assert len(panel.selected_entries()) == 1
-    assert panel.del_btn.isEnabled()
-    entry["sel"].setChecked(False)
+    assert row.ticked() and row.badge.text() == "1"      # ① in the run order
+    assert not row.armed()                                # ... but nothing was armed
+    row.set_ticked(False)
     panel.seq_check.setChecked(False)
     app.processEvents()
-    assert not entry["sel"].isVisible()
+    assert not row.tick.isVisible()
 
 
 def test_the_disabled_button_explains_itself(app, win):
@@ -89,33 +98,26 @@ def test_delete_without_a_selection_says_so(app, win):
     seen = []
     panel.log.connect(seen.append)
     before = len(panel._rows)
-    panel.delete_selected()
+    panel.delete_armed()
     app.processEvents()
     assert len(panel._rows) == before
     assert seen, "the delete must explain that nothing was selected"
 
 
-def test_delete_asks_for_confirmation_first(app, win):
-    """2026-10-03 (Andy): the button confirms before deleting, and Cancel keeps everything."""
+def test_delete_removes_the_row_now_and_offers_the_undo(app, win):
+    """No modal box: the row goes immediately and the window offers a 3 s undo."""
     panel = win.quick_panel
-    asked = []
-    panel._select_row(panel._rows[0], "replace")
+    row = panel._rows[0]
+    panel.arm_row(row, "replace")
     app.processEvents()
     before = len(panel._rows)
-
-    def cancel(_n):
-        asked.append("cancel")
-        return False
-
-    panel._confirm_delete = cancel
-    panel.delete_with_confirm()
+    panel.del_btn.click()
     app.processEvents()
-    assert asked == ["cancel"]
-    assert len(panel._rows) == before          # Cancel changes nothing
-
-    panel._select_row(panel._rows[0], "replace")
-    panel._confirm_delete = lambda _n: True
-    panel.delete_with_confirm()
+    assert len(panel._rows) == before - 1
+    assert panel.count_lbl.text().startswith("%d/" % (before - 1))
+    assert win._undo_btn.isVisible()          # the safety net for the missing dialog
+    assert win._undo_kind == "row"
+    win._undo_delete()
     app.processEvents()
-    assert len(panel._rows) == before - 1      # Confirm deletes
+    assert len(panel._rows) == before
     panel.clear_selection()
