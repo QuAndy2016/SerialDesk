@@ -146,7 +146,14 @@ def fit_minimum_width(win: MainWindow) -> None:
                  max(QUICK_PANEL_MIN_W, win.quick_panel.minimumSizeHint().width()))
     pair_need = (win._rx_group.minimumWidth() + panel_min + win._splitter.handleWidth()
                  + max(0, win.width() - win._splitter.width()))
-    win.setMinimumWidth(max(980, connect_need, pair_need))
+    # No remembered constant here (2026-10-04 UI report, item 6: "折叠后要比屏幕一半还窄一点").
+    # The window floor is what the measured rows and panes actually need: connect_need spans
+    # the window, pair_need is the panes side by side and is already 0 for a folded panel.
+    # A hard-coded 980 used to be the real floor on this machine (measured: connection row
+    # 787 px on the real font, half of the 1536 px logical screen = 768), so folding the
+    # quick-send panel could never get the window under half the screen. The 360 floor is
+    # the left column's own minimum, kept so the window cannot collapse to nothing.
+    win.setMinimumWidth(max(360, connect_need, pair_need))
     # The height floor is derived the same way, from the live layout: the panes' own
     # minimums plus the connection row and the status bar are the only things the user
     # must be able to see. A remembered number (it used to be a hard-coded 600 px) only
@@ -196,6 +203,10 @@ def lock_control_widths(win: MainWindow) -> None:
                 win.send_file_btn, win.repeat_btn, win.send_btn, win.history_btn)
     for wdg in controls:
         if wdg is None:
+            continue
+        if wdg is win.send_btn:
+            # the primary action is a fixed 36 px icon button now (UI report item 5);
+            # locking it to its sizeHint would fight that on a language switch
             continue
         wdg.setMinimumWidth(max(wdg.minimumWidth(), wdg.sizeHint().width()))
         if isinstance(wdg, (QPushButton, QCheckBox)):

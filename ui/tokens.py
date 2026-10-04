@@ -123,6 +123,7 @@ FONT_TOKENS: dict[str, str] = {
     "fs_badge": "9px",      # corner index on a quick-send row
     "fs_small": "12px",     # hints, property chips
     "fs_body": "13px",      # default text
+    "fs_title": "15px",     # a pane's own name (one step above body, see #qsTitle)
     "fs_action": "15px",    # the round delete glyph
     "ff_mono": 'Consolas, "Courier New", monospace',
     "fw_title": "bold",

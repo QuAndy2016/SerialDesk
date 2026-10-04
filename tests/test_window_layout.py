@@ -62,12 +62,173 @@ def test_the_log_actions_sit_together(win) -> None:
 def test_the_highlight_field_is_sized_to_its_input(win) -> None:
     """ctrl-text-boxes.md:255 - a text box's width is a clue to the expected input."""
     window, _app = win
-    assert window.find_edit.maximumWidth() == 240
-    assert window.find_edit.width() <= 260
+    # 2026-10-04 second UI report: 240 px was still too wide - halved to six English
+    # characters (the count label beside it reports matches, so nothing is hidden).
+    assert window.find_edit.maximumWidth() == 110
+    assert window.find_edit.width() <= 120
     # the rest of the row keeps its natural width instead of soaking up the slack
     for widget in (window.find_case_check, window.find_prev_btn, window.find_next_btn):
         assert widget.width() <= widget.sizeHint().width() + 8, \
             "%s was stretched instead of left at its natural width" % widget
+
+
+def test_the_find_bar_starts_hidden_and_its_arrows_are_icons(win) -> None:
+    """2026-10-04 report item 3: a tool, not furniture - and the words became arrows.
+
+    The window built by this module's fixture is the one the app starts with, so this is
+    the startup state: hidden, and the navigation controls carry glyphs (24 px targets,
+    accessible names) instead of the two-character labels they used to spell out.
+    """
+    from ui import theme
+
+    window, _app = win
+    assert window._find_bar.isHidden()
+    # the second report (same day): up/down, not left/right - matches are stacked lines
+    for button, glyph in ((window.find_prev_btn, "arrow_up"),
+                          (window.find_next_btn, "arrow_down")):
+        assert not button.icon().isNull()
+        assert button.accessibleName()
+        assert button.width() >= 24 and button.height() >= 24
+        assert button.icon().pixmap(14, 14).toImage() == \
+            theme.glyph(glyph).pixmap(14, 14).toImage(), glyph
+
+
+def test_the_match_counter_never_moves_the_navigation_buttons(win) -> None:
+    """2026-10-04 second report: the count label grew 13 -> 39 px and pushed both arrows
+    26 px to the right while the user was still typing. A fixed slot stops that."""
+    window, _app = win
+    window._toggle_find_bar(True)
+    for _ in range(6):
+        _app.processEvents()
+    # the glyphs must survive *opening* the bar: toggle_find_bar() refreshes the icons, and
+    # that refresh once kept writing the left/right pair over the up/down ones (the first
+    # version of this test checked before opening and missed it)
+    from ui import theme
+
+    for button, glyph in ((window.find_prev_btn, "arrow_up"),
+                          (window.find_next_btn, "arrow_down")):
+        assert button.icon().pixmap(14, 14).toImage() == \
+            theme.glyph(glyph).pixmap(14, 14).toImage(), glyph
+    before = (window.find_prev_btn.x(), window.find_next_btn.x(),
+              window.find_close_btn.x())
+    window.find_edit.setText("AT")
+    for _ in range(6):
+        _app.processEvents()
+    assert window.find_count_lbl.width() == 46        # the slot, not the text, sets the width
+    after = (window.find_prev_btn.x(), window.find_next_btn.x(), window.find_close_btn.x())
+    assert before == after, "the count moved the controls (%s -> %s)" % (before, after)
+    # and the close button closes the cluster instead of sitting at the far right edge
+    assert window.find_close_btn.x() - window.find_next_btn.x() <= 40
+    window._toggle_find_bar(False)
+    for _ in range(4):
+        _app.processEvents()
+
+
+def test_the_find_bar_is_a_bar_with_a_separator_and_a_menu_entry(win) -> None:
+    """Items 1 and 4: a separator line from the control row above it, and the feature says
+    "find" and lives in the More menu (Ctrl+F still opens it)."""
+    from PySide6.QtWidgets import QFrame
+
+    window, _app = win
+    assert isinstance(window._find_bar, QFrame)
+    assert window._find_bar.objectName() == "findBar"     # QSS draws the top border
+    assert window.act_find in window.more_menu.actions()
+    assert window.act_find.isCheckable()
+    window._toggle_find_bar(True)
+    for _ in range(4):
+        _app.processEvents()
+    assert window.act_find.isChecked()                    # the menu mirrors the bar
+    window._toggle_find_bar(False)
+    for _ in range(4):
+        _app.processEvents()
+    assert not window.act_find.isChecked()
+
+
+def test_the_parameter_summary_uses_the_shared_dropdown_arrow(win) -> None:
+    """Item 2: the "▾" character was tiny and belonged to no other control; every dropdown
+    indicator is the same themed glyph now."""
+    window, _app = win
+    summary = window.params_summary
+    assert "\u25be" not in summary.text()
+    assert not summary.icon().isNull()
+    assert summary.toolButtonStyle().name.startswith("ToolButtonTextBesideIcon")
+
+
+def test_the_closed_boxes_only_reserve_what_they_show(win) -> None:
+    """2026-10-04 UI report item 1: "COM5" does not need 134 px.
+
+    The dropdown lists keep their own width (the port delegate draws a two-line entry);
+    only the closed box is told to size itself to a handful of characters. Asserting the
+    policy rather than a pixel count keeps this font- and DPI-independent.
+    """
+    from PySide6.QtWidgets import QComboBox
+
+    window, _app = win
+    for combo, chars in ((window.port_combo, 5), (window.baud_combo, 6),
+                         (window.rx_fmt_combo, 5)):
+        assert combo.sizeAdjustPolicy() == \
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        assert combo.minimumContentsLength() == chars
+
+
+def test_the_folded_window_floor_is_the_measured_need(win) -> None:
+    """Item 6: folding must actually buy width - no remembered constant in the way.
+
+    The window floor used to be `max(980, ...)`, which on this machine was *larger* than
+    the widest row (measured 787 px on the real font), so folding the quick-send panel
+    changed nothing. The floor is now the measured connection row, so this asserts the
+    relation - the absolute number moves with font, DPI and translation.
+    """
+    window, _app = win
+    window._fit_minimum_width()
+    _app.processEvents()
+    unfolded = window.minimumWidth()
+    window.quick_panel.collapsed_changed.emit(True)
+    for _ in range(6):
+        _app.processEvents()
+    window._fit_minimum_width()
+    for _ in range(4):
+        _app.processEvents()
+    folded = window.minimumWidth()
+    connect_need = window._row_need(window._control_rows()[0])
+    assert folded < unfolded, "folding no longer buys any width"
+    assert folded <= connect_need + 20, \
+        "the window asks for %d px while its widest row needs %d - a constant is back" \
+        % (folded, connect_need)
+    window.quick_panel.collapsed_changed.emit(False)
+    for _ in range(6):
+        _app.processEvents()
+
+
+def test_the_send_button_is_the_same_paper_plane_as_the_rows(win) -> None:
+    """Item 5: one icon language for "send" - the asset, not the word."""
+    window, _app = win
+    button = window.send_btn
+    assert not button.icon().isNull()
+    assert button.text() == ""
+    assert button.accessibleName()          # the label lives on for screen readers
+    assert button.toolTip()
+    assert button.width() <= 40             # icon button, not a 64 px word button
+
+
+def test_the_status_message_and_the_undo_reminder_share_the_left_cluster(win) -> None:
+    """Item 7: the undo affordance belongs next to the action's feedback, not far right.
+
+    Both are normal status-bar widgets now (not permanent ones), which also means
+    QStatusBar.showMessage can no longer hide the undo button - the message is a label
+    of our own. The connection light stays on the right.
+    """
+    window, _app = win
+    window._notify("ping")
+    _app.processEvents()
+    assert window.status_msg.text() == "ping"
+    assert window.status_msg.x() < window.status_light.x()
+    window._undo_btn.show()
+    for _ in range(3):
+        _app.processEvents()
+    assert window._undo_btn.isVisible()
+    assert window._undo_btn.x() < window.status_light.x()
+    window._undo_btn.hide()
 
 
 def test_the_receive_pane_can_be_dragged_low(win) -> None:

@@ -1,9 +1,38 @@
 # Changelog
 
-## [Unreleased]
+## [v1.10.0] - 2026-10-04
 
 ### Changed
 
+- **The quick-command panel has a name and looks like one**: it was called "Quick send" (快速发送)
+  - an instruction, not a label - and its title was body-size bold text sharing a row with the
+  counters, so it read as one more chip rather than the pane's name. It is **Quick commands
+  (快捷指令)** now: a noun phrase, per the platform rule "write the label using a noun or a noun
+  phrase, not as a sentence" (`uxguide/ctrl-group-boxes.md:92`), which also stops it from
+  repeating the Send action every row already carries (`:95`). The title takes one type step
+  above body text (a new `fs_title` token, 15 px) with a matching accent bar, so the order on
+  screen is title > counters > rows. The menu entries, tooltips, shortcut help, README wording
+  and both README screenshots follow the rename.
+- **The find bar looks like a bar now, and it is called Find**: it gets a one-pixel separator
+  from the control row above it, its close button sits with the other controls instead of
+  ~600 px away at the far right, the match counter keeps a fixed slot (it used to grow from
+  13 px to 39 px and shove both arrows 26 px sideways while you typed), and the
+  previous/next arrows point up and down - matches are stacked lines - with a larger hit
+  area. Every dropdown indicator is the same 14 px arrow (the parameter summary used to draw
+  a tiny `▾` character of its own), and the feature answers to its real name: the label says
+  **Find**, and the More menu offers **Find…** while `Ctrl+F` still opens it.
+- **Tighter chrome, and folding the quick-send panel finally buys width**: the port and baud
+  boxes were sized to their longest list entry (134 px for a box that shows `COM5`); they now
+  reserve only the characters they display, the wire-format summary drops defaults it does not
+  need (`8N1 · 无 · ASCII ▾` becomes `8N1 · ASCII ▾`), button padding went from 14 px to 9 px
+  per side and the gaps between the receive controls were halved (that row: 709 px -> 618 px).
+  The highlight field is half as wide (about six English characters), its "previous / next"
+  words became arrow icons, and the whole highlight bar now stays hidden until `Ctrl+F`. The
+  primary **Send** button is the same paper-plane glyph the quick-send rows use, and the
+  "undo delete" reminder moved from the far bottom-right corner to the left of the status bar,
+  next to the message that says what was undone. With the quick-send panel folded the window's
+  minimum width is 738 px on a 1536 px logical screen - under half - where a hard-coded 980 px
+  floor used to keep it wider than the connection row needed (measured 738 px).
 - **One command per line in the quick-send panel**: a row used to spend two lines on one
   command (name line + command line), so ten commands ate twenty lines of height. The row is
   one line now - the command owns the left, the label and the action sit on the right - which
@@ -16,6 +45,49 @@
 
 ### Fixed
 
+- **One frame stays on one line: "Split: auto (by baud)" no longer cuts USB chunks apart**:
+  a frame at 115200 was shown as two lines (`...FFFFFF` / `FFFFFFFDDD`, `12345678` /
+  `90asdfgh...`) because the frame-assembly window was 10 ms. The gap between the chunks of
+  *one* frame is not the wire - it is the USB bridge's own batching delay: this machine's
+  adapter is an FTDI FT232 whose driver sets `LatencyTimer = 16 ms` (vendor INF
+  `C:\Windows\INF\oem8.inf:382`, live device node value 16), and the reported case measured
+  31 ms once USB scheduling was added. The window is **50 ms** now (that timer plus margin)
+  and it is never allowed to sit below the line-break threshold, which also rises to 50 ms
+  (the Modbus 3.5-character rule still dominates on slow links: 300 baud keeps its 117 ms
+  silence). Checked across 9600-460800 baud with chunk gaps of 1-49 ms: one frame, one line;
+  frames 100 ms apart still split; the byte-driven modes (fixed length, delimiters,
+  length-prefixed, header) never consult the clock. The **Diagnostics** dialog now reports
+  the measured chunk gaps (n / p95 / max) next to the active window, so the next tuning has
+  numbers; if your adapter lets you set it, Device Manager → Port Settings → Advanced →
+  **Latency Timer = 1 ms** makes chunks arrive almost immediately.
+- **Quick-send: Ctrl+click and Shift+click now select several command rows for deletion**:
+  clicking a row's command box moved the keyboard focus first and delivered the press second, and
+  the focus handler re-selected that row with plain "replace" semantics on the way in - so the
+  Ctrl-click that should have added the row to the selection toggled it straight off again and the
+  selection ended up empty ("nothing selected" was then the answer to Delete). Shift+click
+  collapsed to the clicked row for the same reason. The selection is now owned by the mouse press
+  alone, which is where replace / toggle / range belong; clicking the panel's own empty area also
+  really clears the selection now (the branch existed but no press ever reached it). Deleting a
+  multi-row selection stays one action with one undo.
+- **Scrolling the receive pane no longer turns auto-scroll off**: dragging the scrollbar, rolling
+  the wheel or pressing PageUp used to untick "Auto-scroll" and write `autoscroll: false` into the
+  config, so a glance at earlier data silently changed a setting that survived a restart. The tick
+  is now the setting alone - only you change it - while any scroll gesture pauses *following* for
+  the moment: the pane stays where you put it and new data does not pull it away. Getting back to
+  the newest line is the gesture you already used to leave it - scroll or drag back to the bottom
+  (or press `End`) and following resumes by itself; no extra button appears anywhere. The tooltip
+  now says exactly that, and while following is paused the status bar carries one quiet line
+  ("Following paused - return to the bottom of the pane") that costs no pane space and is empty
+  again the moment you are following.
+- **A quick-send row shows its name and command from the first character**: the row's two
+  editable fields kept whatever horizontal scroll the caret needed, and `QLineEdit` also
+  scrolls when a value is set programmatically (the caret lands at the end), so a name wider
+  than the 96 px column was painted as its *tail* - "读取设备序列号" read as "取设备序列号" - with
+  the offset surviving focus changes, which made the field look as if the text sat centred.
+  Both fields now rest on the first character: the view resets after loading a value and when
+  the field loses focus, and gaining focus puts the caret at the end so typing still appends
+  (a click still sets the insertion point where you clicked). While a field is being edited a
+  value wider than the box still scrolls with the caret - that is Qt's caret-visibility rule.
 - **The two count wheels say what their limit is**: the tooltips now state that 999 is the
   largest value you can enter (a larger entry becomes 999) and that ∞ means "repeat until
   you stop it", next to the wheel behaviour they already described. Same wording for the

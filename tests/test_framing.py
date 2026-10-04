@@ -26,6 +26,71 @@ class TestFrameAssembler:
         assert data == FRAME              # merged, not split
         assert not fa.has_pending()
 
+    def test_chunks_up_to_the_documented_usb_spacing_stay_one_line(self):
+        """2026-10-04 user report: the auto rule at 115200 split one 49-byte frame in two.
+
+        The module documents USB chunk spacing of 1-16 ms; with a 10 ms window the first
+        8-byte chunk was flushed and the remaining 41 bytes started a new line 13 ms later
+        (`[..] <- 12345678` / `[..] <- 90asdfgh...`). The window now clears the documented
+        worst case with margin, so every realistic chunk gap stays inside one frame.
+        """
+        for gap_ms in (1.0, 5.0, 10.0, 13.0, 16.0, 20.0):
+            fa = FrameAssembler(settle_ms=25.0, threshold_ms=25.0)
+            fa.feed(1.000, b"12345678")
+            fa.feed(1.000 + gap_ms / 1000.0, b"90asdfghjkQQQQQQQQQQQQQQKKKKKKKKKKKKKLLLL")
+            assert not fa.due(1.000 + (gap_ms + 1.0) / 1000.0), gap_ms
+            got = fa.take(1.000 + (gap_ms + 25.0) / 1000.0)
+            assert got is not None and got[0] is True, gap_ms
+            assert got[2] == (b"12345678"
+                              b"90asdfghjkQQQQQQQQQQQQQQKKKKKKKKKKKKKLLLL"), gap_ms
+
+    def test_the_window_is_never_below_the_break_threshold(self):
+        """A group can only be complete once the silence that ends a frame has passed."""
+        assert FrameAssembler(settle_ms=1.0, threshold_ms=25.0).settle_ms == 25.0
+        assert FrameAssembler(settle_ms=120.0, threshold_ms=25.0).settle_ms == 120.0
+        assert FrameAssembler(settle_ms=25.0, threshold_ms=None).settle_ms == 25.0
+
+    def test_the_reported_31ms_chunk_gap_stays_one_line(self):
+        """The user's adapter again (2026-10-04, second report): FTDI FT232, latency timer 16.
+
+        The driver holds data up to 16 ms and USB scheduling adds more, so one 57-byte frame
+        arrived as 44 + 13 bytes 31 ms apart and was displayed as two lines. The window is
+        50 ms now: the driver's timer plus a margin, and still far below a real frame gap.
+        """
+        fa = FrameAssembler(settle_ms=50.0, threshold_ms=50.0)
+        first, rest = b"H" * 44, b"F" * 13 + b"DDD"
+        fa.feed(1.000, first)
+        fa.feed(1.031, rest)                    # 31 ms later, same frame
+        # the window is fixed from the first byte (not a debounce), so both chunks are still
+        # in hand at 1.040 - the second arrived before the 1.050 deadline
+        assert fa.pending_bytes() == len(first) + len(rest)
+        assert not fa.due(1.040)
+        got = fa.take(1.050)
+        assert got[0] is True and got[2] == first + rest
+
+    def test_gap_stats_report_what_the_adapter_delivers(self):
+        """The numbers that make the next tuning data-driven instead of another guess."""
+        fa = FrameAssembler(settle_ms=50.0, threshold_ms=50.0)
+        fa.feed(1.000, b"a")
+        fa.feed(1.016, b"b")                    # 16 ms: the FTDI latency timer
+        fa.feed(1.047, b"c")                    # 31 ms: scheduling on top of it
+        stats = fa.gap_stats()
+        assert stats["count"] == 2
+        assert round(stats["max"]) == 31
+        assert 16 <= round(stats["p95"]) <= 31
+        fa.reset()
+        # a display clear or a port close must not erase the evidence
+        assert fa.gap_stats()["max"] == stats["max"]
+
+    def test_frames_a_hundred_milliseconds_apart_still_split(self):
+        """The floor must not glue real frames together (the user sends every 100 ms)."""
+        fa = FrameAssembler(settle_ms=25.0, threshold_ms=25.0)
+        fa.feed(1.000, b"frame-one")
+        fa.take(1.025)
+        fa.feed(1.113, b"frame-two")        # 113 ms after the first frame started
+        got = fa.take(1.138)
+        assert got[0] is True and got[2] == b"frame-two"
+
     def test_real_inter_frame_gap_still_splits(self):
         fa = FrameAssembler(settle_ms=10.0, threshold_ms=10.0)
         fa.feed(1.000, FRAME)

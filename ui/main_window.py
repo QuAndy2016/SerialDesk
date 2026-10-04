@@ -94,7 +94,7 @@ from ui.layout_controller import MIN_WINDOW_H, control_rows, fit_minimum_width, 
 from ui.config_controller import apply_config, apply_defaults, on_export_config, on_import_config, persist_theme, reset_settings, set_language, set_theme_dark, set_theme_light, set_theme_system
 from ui.update_controller import init_update_check, on_update_checked, on_update_found, probe_updates, probe_updates_worker, show_update
 from ui.dialogs_controller import diagnostics_text, edit_rules, first_run_hint, show_about, show_port_settings, show_shortcuts
-from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_case_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_tick, on_repeat_toggled, on_row_deleted, on_timestamp_toggled, open_rx_context_menu, pause_autoscroll, repeat_value, rx_separator, schedule_counts, scroll_rx_bottom, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
+from ui.actions_controller import apply_accessible_names, check_auto_reply, clear_undo, echo_tx, esc_action, find_next, load_file, on_auto_reply_toggled, on_autoscroll_toggled, on_find_case_toggled, on_find_text_changed, on_pause_toggled, on_repeat_interval, on_repeat_tick, on_repeat_toggled, on_row_deleted, on_rx_range_changed, on_rx_view_moved, on_timestamp_toggled, open_rx_context_menu, refresh_find_nav_icons, refresh_rx_follow_hint, repeat_value, rx_separator, schedule_counts, scroll_rx_bottom, set_rx_follow, setup_shortcuts, setup_tab_order, stop_repeat, toggle_find_bar, undo_delete, update_counts, update_params_summary
 from ui.startup_controller import build_everything, init_language_and_log, init_state, init_timers, init_worker, restore_settings
 from ui.regions import (BAUDRATES, DATA_FIRST_H, DATA_FIRST_V,
                         RECEIVE_MAX_LINES, SPLIT_AUTO, SPLIT_HEADER,
@@ -592,7 +592,16 @@ class MainWindow(QMainWindow):
 
     def _scroll_rx_bottom(self) -> None: return scroll_rx_bottom(self)
 
-    def _pause_autoscroll(self, _action: int = 0) -> None: return pause_autoscroll(self, _action)
+    def _on_rx_view_moved(self, _action: int = 0) -> None: return on_rx_view_moved(self, _action)
+
+    def _on_rx_range_changed(self, _minimum: int, maximum: int) -> None:
+        return on_rx_range_changed(self, _minimum, maximum)
+
+    def _set_rx_follow(self, follow: bool) -> None: return set_rx_follow(self, follow)
+
+    def _refresh_rx_follow_hint(self) -> None: return refresh_rx_follow_hint(self)
+
+    def _refresh_find_nav_icons(self) -> None: return refresh_find_nav_icons(self)
 
     def _rx_separator(self) -> str: return rx_separator(self)
 

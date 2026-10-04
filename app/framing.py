@@ -11,9 +11,32 @@ Qt-free on purpose so the timing rules can be unit-tested with synthetic clocks.
 
 from __future__ import annotations
 
-DEFAULT_SETTLE_MS = 10.0     # chunks closer than this are the same frame
+#: How long a group may keep collecting before it is flushed.
+#:
+#: The number is not a guess about the wire: it is the USB *driver*'s own batching delay.
+#: On this machine the adapter is an FTDI FT232 (VID_0403+PID_6001, COM5); the vendor INF
+#: sets `LatencyTimer` = 16 ms - `C:\Windows\INF\oem8.inf:382`
+#: (`HKR,,"LatencyTimer",0x00010001,16`) - and the live device node reports the same value
+#: (`HKLM\SYSTEM\CurrentControlSet\Enum\FTDIBUS\VID_0403+PID_6001+A50285BIA\0000\
+#: Device Parameters\LatencyTimer = 16`). FTDI's driver deliberately holds received data up
+#: to that timer before handing it to the application, so one frame reaches us in chunks
+#: tens of milliseconds apart; the reported case measured 31 ms between the first chunk and
+#: the rest of a 57-byte frame at 115200 baud (2026-10-04). 50 ms covers the default timer
+#: with margin and stays adjustable by the user (Device Manager -> Port Settings ->
+#: Advanced -> Latency Timer; 1 ms makes chunks arrive almost immediately).
+#:
+#: The window must also scale with slow links, where one character takes longer than the
+#: timer: `__init__` raises it to at least the line-break threshold, and
+#: `ui/params_controller.split_threshold_ms()` keeps that threshold at
+#: max(3.5 char times, 50 ms). It stays a *fixed* window from the group's first byte (not a
+#: debounce) so a steady stream keeps flushing instead of starving.
+DEFAULT_SETTLE_MS = 50.0
 MIN_SETTLE_MS = 2.0
 MAX_SETTLE_MS = 200.0
+
+#: Gap sampling for the diagnostics read-out (see FrameAssembler.gap_stats).
+GAP_SAMPLE_LIMIT = 4000          # keep the newest N gaps
+MAX_GAP_SAMPLE_MS = 200.0        # above this it is an inter-frame silence, not a chunk gap
 
 
 class FrameAssembler:
@@ -21,12 +44,21 @@ class FrameAssembler:
 
     def __init__(self, settle_ms: float = DEFAULT_SETTLE_MS,
                  threshold_ms: float | None = None) -> None:
-        self.settle_ms = min(MAX_SETTLE_MS, max(MIN_SETTLE_MS, float(settle_ms)))
         self.threshold_ms = threshold_ms
+        # A group can only be "complete" once the silence that would start a new line has
+        # passed, so the collection window never sits below the break threshold.
+        self.settle_ms = min(MAX_SETTLE_MS,
+                             max(MIN_SETTLE_MS, float(settle_ms),
+                                 float(threshold_ms or 0.0)))
         self._buf = bytearray()
         self._first_ts: float | None = None
         self._last_flush_ts: float | None = None
         self._start_new_line = True
+        #: Inter-chunk gaps seen inside a burst (ms). The USB adapter's latency timer is what
+        #: these measure, so they are the evidence for tuning the window: the diagnostics
+        #: dialog prints them, and a gap above the window is exactly what splits a frame.
+        self._gaps_ms: list[float] = []
+        self._last_chunk_ts: float | None = None
 
     # -- input (called from the GUI thread on every received chunk) ----------
 
@@ -34,6 +66,13 @@ class FrameAssembler:
         """Add a chunk; the line-break decision is taken once per group."""
         if not data:
             return
+        if self._last_chunk_ts is not None:
+            gap = (ts - self._last_chunk_ts) * 1000.0
+            if 0.0 < gap < MAX_GAP_SAMPLE_MS:      # ignore the long inter-frame silences
+                self._gaps_ms.append(gap)
+                if len(self._gaps_ms) > GAP_SAMPLE_LIMIT:
+                    del self._gaps_ms[:len(self._gaps_ms) - GAP_SAMPLE_LIMIT]
+        self._last_chunk_ts = ts
         if self._first_ts is None:
             self._first_ts = ts
             self._start_new_line = self._decide_break(ts)
@@ -86,6 +125,14 @@ class FrameAssembler:
         self._buf.clear()
         self._first_ts = None
         self._start_new_line = True
+
+    def gap_stats(self) -> dict:
+        """Observed intra-burst chunk gaps in ms: count, p95 and max (0 when none yet)."""
+        if not self._gaps_ms:
+            return {"count": 0, "p95": 0.0, "max": 0.0}
+        ordered = sorted(self._gaps_ms)
+        index = min(len(ordered) - 1, int(round(0.95 * (len(ordered) - 1))))
+        return {"count": len(ordered), "p95": ordered[index], "max": ordered[-1]}
 
 
 # -- B3: stream splitters (pure, Qt-free) -----------------------------------

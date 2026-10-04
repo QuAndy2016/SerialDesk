@@ -7,7 +7,7 @@ constants they need moved along and are re-exported for main_window.
 from __future__ import annotations
 
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
@@ -142,7 +142,13 @@ def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win._port_lbl = QLabel(tr("port.label"))     # these two were English-only
     bar.addWidget(win._port_lbl)
     win.port_combo = QComboBox()
-    win.port_combo.setMinimumWidth(100)   # the closed box only shows "COMx"
+    # 2026-10-04 UI report: the closed box only ever shows "COMx" - it was 134 px because the
+    # combo sized itself to its longest item. Ask Qt for the minimum-contents width instead
+    # (the dropdown list keeps its own, delegate-driven width).
+    win.port_combo.setSizeAdjustPolicy(
+        QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    win.port_combo.setMinimumContentsLength(5)     # "COM15" + the arrow
+    win.port_combo.setMinimumWidth(76)
     win.port_combo.view().setItemDelegate(PortItemDelegate(win.port_combo.view()))
     bar.addWidget(win.port_combo)
 
@@ -157,8 +163,10 @@ def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     win.baud_combo.setEditable(True)
     win.baud_combo.setCurrentText("115200")
     win.baud_combo.setToolTip(tr("baud.tip"))
-    win.baud_combo.setMinimumWidth(112)          # /1000000/3000000 still fit
-    win.baud_combo.setMinimumContentsLength(7)
+    win.baud_combo.setSizeAdjustPolicy(
+        QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    win.baud_combo.setMinimumWidth(92)            # 6 digits + arrow; longer values scroll
+    win.baud_combo.setMinimumContentsLength(6)
     win.baud_combo.lineEdit().textChanged.connect(win._check_baud)
     bar.addWidget(win.baud_combo)
 
@@ -170,27 +178,36 @@ def _build_port_controls(win: MainWindow, bar: QHBoxLayout) -> None:
 
 def _build_receive_format_controls(win: MainWindow, bar: QHBoxLayout) -> None:
     """Receive format, the wire-format summary, the divider and the two icon buttons."""
-    bar.addSpacing(12)
+    bar.addSpacing(6)
     win._rx_fmt_lbl = QLabel(tr("rxfmt.label"))
     bar.addWidget(win._rx_fmt_lbl)
     win.rx_fmt_combo = QComboBox()
     win.rx_fmt_combo.addItems(["ASCII", "HEX", "HEX+ASCII", "HEX cols"])   # c: column hexdump
     win.rx_fmt_combo.setCurrentIndex(RX_HEX)
     win.rx_fmt_combo.setToolTip(tr("rxfmt.tip"))
+    # the closed box shows one short word; the list keeps the long names (item 1)
+    win.rx_fmt_combo.setSizeAdjustPolicy(
+        QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    win.rx_fmt_combo.setMinimumContentsLength(5)
+    win.rx_fmt_combo.setMinimumWidth(84)
     bar.addWidget(win.rx_fmt_combo)
 
-    bar.addSpacing(12)
+    bar.addSpacing(6)
     # (revised): the wire-format summary and its dialog opener are one compact
     # control - label plus button cost ~245 px and no label needed shortening.
     win.params_summary = QToolButton()
     win.params_summary.setObjectName("paramsBtn")
-    win.params_summary.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+    # text + the shared dropdown glyph, so it matches the combos beside it (item 2)
+    win.params_summary.setToolButtonStyle(
+        Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+    win.params_summary.setIcon(theme.glyph("arrow_down"))
+    win.params_summary.setIconSize(QSize(14, 14))
     win.params_summary.setToolTip(tr("portset.tip"))
     win.params_summary.clicked.connect(win._show_port_settings)
     win.port_set_btn = win.params_summary   # the open/close lock hint uses this
     bar.addWidget(win.params_summary)
 
-    bar.addSpacing(10)
+    bar.addSpacing(6)
     conn_div = QFrame()                     # app-level entry, set apart
     conn_div.setObjectName("connDivider")
     conn_div.setFrameShape(QFrame.Shape.VLine)
@@ -262,6 +279,21 @@ def build_status_bar(win: MainWindow) -> None:
         _sig.connect(win._update_payload_size)      # live payload size
     win._update_payload_size()
 
+    # UI-30: "following is paused" is reported here, in the status bar, so it costs no
+    # pane space, and the label is always present (empty while following) so nothing is
+    # added or removed while data flows. One owner: set_rx_follow() writes its text.
+    win.rx_follow_hint = QLabel("")
+    win.rx_follow_hint.setObjectName("rxFollowHint")
+    win.statusBar().addPermanentWidget(win.rx_follow_hint)
+    win._refresh_rx_follow_hint()
+
+    # The message area of the left cluster (see notify()): a label of our own instead of
+    # QStatusBar.showMessage, so the widgets beside it - the undo affordance above all -
+    # are never hidden while a message is up. Item 7 of the 2026-10-04 UI report.
+    win.status_msg = QLabel("")
+    win.status_msg.setObjectName("statusMsg")
+    win.statusBar().addWidget(win.status_msg, 1)
+
     win.status_light = QLabel(tr("status.disconnected"))
     win.status_light.setStyleSheet(
         f"color: {theme.status_colors()['idle']}; font-weight: bold; padding-right: 8px;")
@@ -276,9 +308,10 @@ def build_status_bar(win: MainWindow) -> None:
     win._undo_timer.timeout.connect(win._clear_undo)
     win._undo_btn = QPushButton(tr("qs.undo"))
     win._undo_btn.setToolTip(tr("qs.deleted"))
+    # Add *before* hiding: addWidget would show it again otherwise.
+    win.statusBar().addWidget(win._undo_btn)
     win._undo_btn.hide()
     win._undo_btn.clicked.connect(win._undo_delete)
-    win.statusBar().addPermanentWidget(win._undo_btn)
     win._notify(tr("status.idle"))
 
 def build_send_group(win: MainWindow) -> None:
@@ -573,12 +606,17 @@ def _build_action_column(win: MainWindow) -> QWidget:
 
     top_row = QHBoxLayout()
     top_row.setSpacing(6)
-    win.send_btn = QPushButton(tr("btn.send"))
+    # 2026-10-04 report (item 5): the primary action is an icon like the quick-send rows -
+    # the same paper-plane asset, one visual language for "send". The label lives on in the
+    # tooltip and the accessible name, so nothing is lost for screen readers or hover.
+    win.send_btn = QPushButton()
     win.send_btn.clicked.connect(win.on_send)
     win.send_btn.setDefault(True)
-    win.send_btn.setMinimumWidth(64)
-    win.send_btn.setMaximumWidth(96)
+    win.send_btn.setFixedWidth(36)
     win.send_btn.setToolTip(tr("sc.send.tip"))
+    win.send_btn.setAccessibleName(tr("btn.send"))
+    win.send_btn.setIcon(theme.glyph("send"))      # theme switch refreshes it in retranslate
+    win.send_btn.setIconSize(QSize(16, 16))
     top_row.addWidget(win.send_btn)
     # the history is a popup now, so it costs one compact button beside the
     # primary action instead of a whole row of its own.
@@ -816,6 +854,12 @@ def _build_more_controls(win: MainWindow) -> QToolButton:
     win.more_btn.setAccessibleName(tr("btn.more"))
     win.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
     win.more_menu = QMenu(win.more_btn)
+    # item 4 of the 2026-10-04 UI report: the find feature belongs in the menu too (its bar
+    # is hidden by default, so it needs a discoverable entry, not only Ctrl+F).
+    win.act_find = win.more_menu.addAction(tr("find.menu"))
+    win.act_find.setToolTip(tr("find.menu.tip"))
+    win.act_find.setCheckable(True)
+    win.act_find.triggered.connect(lambda: win._toggle_find_bar())
     win.act_pause = win.more_menu.addAction(tr("rx.pause"))
     win.act_pause.setToolTip(tr("rx.pause.tip"))
     win.more_menu.addSeparator()
@@ -841,7 +885,7 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     win.rx_filter_combo.currentIndexChanged.connect(win._on_rx_filter_changed)
     rx_opts.addWidget(win.rx_filter_combo)
 
-    rx_opts.addSpacing(12)
+    rx_opts.addSpacing(6)
     win.ts_check = QCheckBox(tr("ts.label"))                   # on/off only
     win.ts_check.setChecked(bool(load_config().get("timestamp_on", True)))
     win.ts_check.setToolTip(tr("ts.tip"))
@@ -849,7 +893,7 @@ def _build_display_switches(win: MainWindow, rx_opts: QHBoxLayout) -> None:
     rx_opts.addWidget(win.ts_check)
 
     more = _build_more_controls(win)        # creates the hidden switches + the menu
-    rx_opts.addSpacing(12)
+    rx_opts.addSpacing(6)
     rx_opts.addWidget(win.autoscroll_check)   # high-frequency -> back in the row
     rx_opts.addSpacing(12)
     rx_opts.addWidget(more)
@@ -891,10 +935,18 @@ def _build_status_counters(win: MainWindow) -> None:
 
 
 def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
-    """find bar, hidden until Ctrl+F."""
-    win._find_bar = QWidget()
+    """find bar, hidden until Ctrl+F (or the More menu's Find entry).
+
+    2026-10-04 report, items 1/3: it is a *bar*, so it owns a separator line from the
+    control row above it, keeps every control in one cluster instead of throwing the close
+    button 600 px to the right, and reserves a fixed slot for the match counter so the
+    navigation buttons never move when the count appears.
+    """
+    win._find_bar = QFrame()                     # QFrame: QSS can draw its top border
+    win._find_bar.setObjectName("findBar")
     find_row = QHBoxLayout(win._find_bar)
-    find_row.setContentsMargins(0, 0, 0, 0)
+    find_row.setContentsMargins(0, 5, 0, 0)      # room under the separator line
+    find_row.setSpacing(4)
     win._find_lbl = QLabel(tr("find.label"))
     find_row.addWidget(win._find_lbl)
     win.find_edit = QLineEdit()
@@ -903,11 +955,18 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     # the longest likely keyword rather than stretched across the pane - it used to take
     # 550 px of an 880 px row (2026-10-04 report). Official wording:
     # uxguide/ctrl-text-boxes.md:255,257,259.
-    win.find_edit.setMaximumWidth(240)
+    # 2026-10-04 second report: still too wide - halved to about six English characters.
+    # A longer keyword scrolls inside the box (caret visibility is Qt's contract) and the
+    # match count next to it says whether anything was found.
+    win.find_edit.setMaximumWidth(110)
     win.find_edit.returnPressed.connect(lambda: win._find_next(True))
     win.find_edit.textChanged.connect(win._on_find_text_changed)
     find_row.addWidget(win.find_edit, 1)
     win.find_count_lbl = QLabel("")
+    # A fixed slot: it used to grow from 13 px to 39 px when the first match arrived, which
+    # pushed both arrows 26 px right mid-typing (measured with cache/ui_density_audit.py).
+    win.find_count_lbl.setFixedWidth(46)
+    win.find_count_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     win.find_count_lbl.setToolTip(tr("find.count.tip"))
     find_row.addWidget(win.find_count_lbl)
     win.find_case_check = QCheckBox(tr("find.case"))     # 
@@ -915,25 +974,42 @@ def _build_find_bar(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     win.find_case_check.setToolTip(tr("find.case.tip"))
     win.find_case_check.toggled.connect(win._on_find_case_toggled)
     find_row.addWidget(win.find_case_check)
-    win.find_prev_btn = QPushButton(tr("find.prev"))
+    # Up/down, not left/right (2026-10-04 second report, item 3): matches are stacked lines
+    # in the log, so "previous / next" reads vertically. 30x26 keeps a generous hit target
+    # (>= 24 px, WCAG 2.2 SC 2.5.8) while staying compact.
+    win.find_prev_btn = QToolButton()
+    win.find_prev_btn.setObjectName("findNav")
+    win.find_prev_btn.setToolTip(tr("find.prev"))
+    win.find_prev_btn.setAccessibleName(tr("find.prev"))
+    win.find_prev_btn.setFixedSize(30, 26)
+    win.find_prev_btn.setIconSize(QSize(14, 14))
+    win.find_prev_btn.setIcon(theme.glyph("arrow_up"))
     win.find_prev_btn.clicked.connect(lambda: win._find_next(False))
     find_row.addWidget(win.find_prev_btn)
-    win.find_next_btn = QPushButton(tr("find.next"))
+    win.find_next_btn = QToolButton()
+    win.find_next_btn.setObjectName("findNav")
+    win.find_next_btn.setToolTip(tr("find.next"))
+    win.find_next_btn.setAccessibleName(tr("find.next"))
+    win.find_next_btn.setFixedSize(30, 26)
+    win.find_next_btn.setIconSize(QSize(14, 14))
+    win.find_next_btn.setIcon(theme.glyph("arrow_down"))
     win.find_next_btn.clicked.connect(lambda: win._find_next(True))
     find_row.addWidget(win.find_next_btn)
-    # the close button stays on the right edge; the stretch keeps the keyword field at its
-    # working width and the buttons at their natural size instead of stretching them
-    find_row.addStretch(1)
+    # the close button closes the cluster instead of sitting ~600 px away from it
     win.find_close_btn = QPushButton("\u00d7")
     win.find_close_btn.setObjectName("qsDel")
-    win.find_close_btn.setFixedWidth(28)
+    win.find_close_btn.setFixedSize(26, 26)
     win.find_close_btn.setToolTip(tr("find.close.tip"))
+    win.find_close_btn.setAccessibleName(tr("find.close.tip"))
     win.find_close_btn.clicked.connect(lambda: win._toggle_find_bar(False))
     find_row.addWidget(win.find_close_btn)
+    find_row.addStretch(1)      # whatever is left over stays on the right
     win._find_bar.setSizePolicy(QSizePolicy.Policy.Preferred,
                                 QSizePolicy.Policy.Fixed)   # 
-    # the bar is a persistent highlight box now (default on, remembered)
-    win._find_bar.setVisible(bool(load_config().get("find_bar_on", True)))
+    # 2026-10-04 report (item 3): the highlight bar is a tool, not furniture - it stays
+    # hidden until Ctrl+F asks for it. The stored flag only remembers the user's last
+    # explicit choice; a fresh start is always "not in use".
+    win._find_bar.setVisible(False)
     rx_layout.addWidget(win._find_bar)
 
 
@@ -948,7 +1024,12 @@ def _build_receive_view(win: MainWindow, rx_layout: QVBoxLayout) -> None:
     # 2026-10-02: the receive pane always soft-wraps now - the switch was removed.
     win.rx_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
     win.rx_view.setMinimumHeight(RX_VIEW_MIN_H)   # the divider can drag the log this low
-    win.rx_view.verticalScrollBar().actionTriggered.connect(win._pause_autoscroll)   # 
+    # UI-30: the view state is read from user gestures only - a programmatic jump to
+    # the newest line must not be read back as "the user scrolled".
+    win._rx_follow = True                    # the pane starts following the newest line
+    _rx_bar = win.rx_view.verticalScrollBar()
+    _rx_bar.actionTriggered.connect(win._on_rx_view_moved)    # 
+    _rx_bar.rangeChanged.connect(win._on_rx_range_changed)    # 
     win.rx_view.setMaximumBlockCount(RECEIVE_MAX_LINES)   #
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))    # an empty pane says why
     win.rx_view.setAccessibleName(tr("rx.view.name"))      # a screen reader needs a name,

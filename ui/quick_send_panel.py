@@ -55,6 +55,7 @@ from PySide6.QtWidgets import (
 )
 
 import ui.theme as theme
+from ui.line_edit import StartVisibleLineEdit              # rests at the first character
 from ui.rounds import ROUNDS_LIMIT, RoundsSpinBox     # the shared rounds wheel
 
 from app.config import load_config, save_config
@@ -252,8 +253,10 @@ class RowItem(QFrame):
         than the real mono face, where those 162 px read as ~20 characters).
         """
         row = QHBoxLayout(self)
-        row.setContentsMargins(0, 2, 0, 2)
-        row.setSpacing(6)
+        # 2026-10-04 UI report (item 4): the row was 30 px tall with 6 px gaps - tightened
+        # to 28 px with 4 px gaps, which is still a comfortable target for the fields.
+        row.setContentsMargins(0, 1, 0, 1)
+        row.setSpacing(4)
         self._build_leading(row)
         self._build_command(row)
         self._build_trailing(row)
@@ -275,7 +278,9 @@ class RowItem(QFrame):
 
     def _build_command(self, row: QHBoxLayout) -> None:
         """The command box - the row's primary content, and the only stretch item."""
-        self.text_edit = QLineEdit(self)
+        # the box is narrower than a long MODBUS frame, so the field must rest at the first
+        # character instead of painting the scrolled caret slice (user 2026-10-04)
+        self.text_edit = StartVisibleLineEdit(self)
         self.text_edit.setPlaceholderText(tr("qs.empty_row"))
         self.text_edit.setAccessibleName(tr("qs.row.tip"))
         self.text_edit.setMinimumWidth(COMMAND_MIN_W)
@@ -306,7 +311,7 @@ class RowItem(QFrame):
         row.addWidget(self.chip)
         self._build_chip_menu()
 
-        self.name_edit = QLineEdit(self)
+        self.name_edit = StartVisibleLineEdit(self)
         self.name_edit.setObjectName("qsName")
         self.name_edit.setPlaceholderText(tr("qs.name.ph"))
         self.name_edit.setToolTip(tr("qs.name.tip"))
@@ -529,6 +534,12 @@ class QuickSendPanel(QWidget):
         outer.setSpacing(0)
         self._content = QWidget(self)
         outer.addWidget(self._content, 1)
+        # A press on the panel's own area (below the rows, next to the counters) drops the
+        # delete selection. The filter has to be installed here for that to be real: the
+        # old code had the branch but nothing ever delivered those presses to it, and the
+        # test hid it by calling the filter directly (2026-10-04, same report).
+        self.installEventFilter(self)
+        self._content.installEventFilter(self)
         layout = QVBoxLayout(self._content)
         layout.setContentsMargins(6, 6, 6, 6)
         self._build_head(layout)
@@ -544,10 +555,10 @@ class QuickSendPanel(QWidget):
         splitter with it (a tick used to change the panel's width).
         """
         head = QHBoxLayout()
-        head.setSpacing(6)
+        head.setSpacing(8)                 # the title needs air around it (item: header level)
         accent = QFrame(self._content)
         accent.setObjectName("qsTitleBar")
-        accent.setFixedSize(3, 14)
+        accent.setFixedSize(3, 16)         # matches the title's line box
         head.addWidget(accent)
         self._title_lbl = QLabel(tr("qs.title"), self._content)
         self._title_lbl.setObjectName("qsTitle")
@@ -625,6 +636,10 @@ class QuickSendPanel(QWidget):
             return None
         row = RowItem(text=text, is_hex=is_hex, delay_ms=delay_ms, name=name, note=note,
                       ticked=selected, parent=self._container)
+        # A row press must not reach the content area: the row frame ignores mouse presses,
+        # so without this the press would propagate and the "clicked the empty area" branch
+        # would clear the selection the row had just armed.
+        row.setAttribute(Qt.WidgetAttribute.WA_NoMousePropagation, True)
         self._row_layout.insertWidget(self._row_layout.count() - 1, row)
         for widget in row.watched():
             widget.installEventFilter(self)
@@ -751,7 +766,16 @@ class QuickSendPanel(QWidget):
                 self.clear_selection()          # a click on the panel's own empty area
         elif kind == QEvent.Type.FocusIn:
             row = self._row_of(obj)
-            if row is not None and not row.armed():
+            # A mouse click focuses the clicked widget *before* the press reaches this
+            # filter (Qt hands the focus over as part of the press), so arming here would
+            # apply "replace" first and then let the press undo its own modifier meaning:
+            # Ctrl+click armed the row and toggled it straight off again, Shift+click
+            # anchored on itself - the multi-selection was gone before it existed
+            # (user bug report 2026-10-04: "不支持多选删除和点选删除"). The press handler
+            # below owns replace/toggle/range, so focus only arms when it did not come
+            # from a click - keyboard and programmatic focus (arrow-key navigation).
+            if (row is not None and not row.armed()
+                    and event.reason() != Qt.FocusReason.MouseFocusReason):
                 self.arm_row(row, "replace")
         elif kind == QEvent.Type.Resize:
             if self._row_of(obj) is not None:

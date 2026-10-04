@@ -10,7 +10,7 @@ import os
 import sys
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import QApplication
 
 from typing import TYPE_CHECKING
@@ -45,7 +45,7 @@ QPushButton {
     background: $border_muted;
     border: 1px solid $border_strong;
     border-radius: 4px;
-    padding: 5px 14px;
+    padding: 5px 9px;   /* 2026-10-04 UI report: 14 px each side read as slack */
 }
 QPushButton:hover { background: $border_strong; }
 QPushButton:pressed { background: $surface_pressed_alt; }
@@ -58,7 +58,7 @@ QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 3px 7px;   /* item 4: a combo's own padding was part of the "roomy" feel */
 }
 QComboBox:hover, QLineEdit:hover { border-color: $accent; }
 /* a visible keyboard focus ring (WCAG 2.4.7) - a tint plus the accent border,
@@ -69,8 +69,11 @@ QPushButton:focus, QToolButton:focus { border: 1px solid $focus_ring; }
    enough for a non-text indicator, and 12.98:1 in the data area was stealing attention) */
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
-QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
-QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 12px; height: 12px; }
+QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 18px; }
+/* item 2 of the 2026-10-04 UI report: one arrow size for combos, spin boxes and the
+   parameter summary (12 px read as a speck next to the 14 px spin arrows). */
+QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_dark.png); width: 14px; height: 14px; }
+QFrame#findBar { border-top: 1px solid $border_muted; }   /* item 1: a bar, not a floating row */
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
 QComboBox QAbstractItemView {
     background: $surface_1;
@@ -107,6 +110,12 @@ QCheckBox { spacing: 6px; }
 QCheckBox::indicator { width: 14px; height: 14px; }
 QStatusBar { background: $surface_1; }
 QStatusBar::item { border: none; }
+/* UI-30: the paused-follow line - a hint, not a status light (status_light keeps its own
+   colour inline). Token colour so the contrast audit covers it. */
+QLabel#rxFollowHint { color: $text_secondary; }
+/* UI-report item 7: the status message is a label of our own (not showMessage), so its
+   resting colour is a token; notify() overrides it per level. */
+QLabel#statusMsg { color: $text_primary; }
 QScrollArea { border: none; background: transparent; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 QMenuBar { background: $bg_base; color: $text_primary; }
@@ -182,7 +191,11 @@ QScrollBar::handle:horizontal:hover { background: $border_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* corner badge */
-QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* panel header level */
+/* The panel's own name (2026-10-04 report: it read as a chip, not as the pane's title - it
+   was body-size bold sitting in the same row as the counters). One size step above body,
+   per text-ui.md:257 "use title-style capitalization for titles" and the hierarchy rule in
+   the layout guide; the counters stay $fs_small so the order is title > counters > rows. */
+QLabel#qsTitle { color: $text_primary; font-size: $fs_title; font-weight: $fw_title; background: transparent; }
 QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(139, 233, 253, 0.14); border: 1px solid rgba(139, 233, 253, 0.55); }   /* the click highlight must differ from a grey hover */
@@ -221,7 +234,7 @@ QPushButton {
     background: $surface_1;
     border: 1px solid $border_strong;
     border-radius: 4px;
-    padding: 5px 14px;
+    padding: 5px 9px;   /* see the dark theme */
 }
 QPushButton:hover { background: $surface_soft; }
 QPushButton:pressed { background: $surface_pressed_alt; }
@@ -233,7 +246,7 @@ QComboBox, QLineEdit {
     background: $surface_1;
     border: 1px solid $border_strong;
     border-radius: 4px;
-    padding: 3px 8px;
+    padding: 3px 7px;   /* see the dark theme */
 }
 QComboBox:hover, QLineEdit:hover { border-color: $accent; }
 /* see the dark theme */
@@ -241,8 +254,10 @@ QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus, QSpinBox:focus { border:
 QPushButton:focus, QToolButton:focus { border: 1px solid $focus_ring; }
 QCheckBox:focus { color: $accent; }
 QLabel#statusCounters { font-family: $ff_mono; }
-QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 22px; }
-QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 12px; height: 12px; }
+QComboBox::drop-down { border: none; border-left: 1px solid $border_strong; width: 18px; }
+/* see the dark theme - one arrow size everywhere */
+QComboBox::down-arrow { image: url(__ASSETS__/arrow_down_light.png); width: 14px; height: 14px; }
+QFrame#findBar { border-top: 1px solid $border_sep; }   /* see the dark theme */
 QComboBox[invalid="true"] { border: 1px solid $invalid; }
 QComboBox QAbstractItemView {
     background: $surface_1;
@@ -277,6 +292,9 @@ QCheckBox { spacing: 6px; }
 QCheckBox::indicator { width: 14px; height: 14px; }
 QStatusBar { background: $surface_disabled; }
 QStatusBar::item { border: none; }
+/* see the dark theme - same hint, same token */
+QLabel#rxFollowHint { color: $text_secondary; }
+QLabel#statusMsg { color: $text_primary; }   /* see the dark theme */
 QScrollArea { border: none; background: transparent; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 QMenuBar { background: $bg_base; color: $text_primary; }
@@ -342,7 +360,7 @@ QScrollBar::handle:horizontal:hover { background: $scroll_handle_hover; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }
 QLabel#seqOrd { color: $accent; font-size: $fs_badge; font-weight: $fw_title; background: transparent; }   /* corner badge */
-QLabel#qsTitle { color: $text_primary; font-weight: $fw_title; background: transparent; }   /* panel header level */
+QLabel#qsTitle { color: $text_primary; font-size: $fs_title; font-weight: $fw_title; background: transparent; }   /* see the dark theme */
 QFrame#qsTitleBar { background: $accent; border-radius: 1px; }   /* accent bar */
 QFrame#qsRow { border: 1px solid transparent; border-radius: 4px; }
 QFrame#qsRow[selected="true"] { background: rgba(30, 90, 168, 0.12); border: 1px solid rgba(30, 90, 168, 0.45); }   /* click highlight, clearly not a hover */
@@ -362,6 +380,17 @@ def asset_dir() -> str:
     if not base:
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, "assets").replace("\\", "/")
+
+
+def glyph(name: str) -> QIcon:
+    """A themed glyph from assets/ (``<name>_dark.png`` / ``<name>_light.png``).
+
+    One helper for every icon button, so a theme switch refreshes them the same way
+    (the receive-side plane already did this inline; the send button and the find bar
+    arrows join it now - UI report 2026-10-04, items 3 and 5).
+    """
+    suffix = "dark" if resolved_dark() else "light"
+    return QIcon("%s/%s_%s.png" % (asset_dir(), name, suffix))
 
 
 def qss(text: str) -> str:

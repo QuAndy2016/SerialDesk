@@ -145,12 +145,25 @@ def diagnostics_text(win: MainWindow) -> str:
         pyserial = _serial.__version__
     except ImportError:
         pyserial = "-"
+    # Framing evidence (2026-10-04): the split mode's window has to clear the USB adapter's
+    # own batching delay, so report what this machine actually delivers. A max gap near the
+    # window is the early warning for "one frame shown as two lines".
+    stats = getattr(win, "_frames", None)
+    gaps = stats.gap_stats() if stats is not None and hasattr(stats, "gap_stats") else {}
+    if gaps.get("count"):
+        framing = ("Chunk gaps: n=%d, p95=%.1f ms, max=%.1f ms (window %.0f ms)"
+                   % (gaps["count"], gaps["p95"], gaps["max"], stats.settle_ms))
+    else:
+        framing = "Chunk gaps: none yet (send some data, then reopen this dialog)"
     return "\n".join((
         "SerialDesk %s" % __version__,
         "OS: %s" % platform.platform(),
         "Python %s / PySide6 %s / pyserial %s" % (sys.version.split()[0], PySide6.__version__, pyserial),
         "Port: %s @ %s" % (win.port_combo.currentData() or "-", win.baud_combo.currentText().strip()),
         "Format: %s / RX %s" % (win.tx_fmt_combo.currentText(), win.rx_fmt_combo.currentText()),
+        "Split: %s / %s" % (win.split_combo.currentText(),
+                            "%.0f ms window" % (stats.settle_ms if stats else 0.0)),
+        framing,
         "Log folder: %s" % win._log_dir,
         "Last error log: %s" % os.path.join(data_dir(), "logs", "lasterror.log"),
     ))

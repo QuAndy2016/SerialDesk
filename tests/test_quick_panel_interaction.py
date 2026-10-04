@@ -33,6 +33,7 @@ import app.config as appconfig                       # noqa: E402
 import ui.quick_send_panel as qsp                    # noqa: E402
 import ui.theme as theme                             # noqa: E402
 from app import i18n                                 # noqa: E402
+from ui.line_edit import StartVisibleLineEdit        # noqa: E402
 from ui.tokens import DARK_TOKENS                    # noqa: E402
 
 ROWS = [{"text": "AT0", "hex": False, "delay": 0},
@@ -85,13 +86,21 @@ def make_panel(app, path, rows=ROWS):
     return panel
 
 
-def press(panel, widget, mods=Qt.KeyboardModifier.NoModifier):
-    """Deliver the left-button press the panel's event filter sees (widget centre)."""
-    local = QPointF(widget.width() / 2.0, widget.height() / 2.0)
-    glob = QPointF(widget.mapToGlobal(local.toPoint()))
-    event = QMouseEvent(QEvent.Type.MouseButtonPress, local, glob,
-                        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton, mods)
-    return panel.eventFilter(widget, event)
+def press(panel, widget, mods=Qt.KeyboardModifier.NoModifier, pos=None):
+    """Click a widget the way the user does, and let Qt deliver it in Qt's own order.
+
+    The helper used to hand the press straight to ``panel.eventFilter`` - which looked
+    precise and hid a real defect: Qt moves the focus to the clicked widget *before* the
+    press arrives, and the panel's FocusIn branch re-armed the row with "replace"
+    semantics on the way in, so every Ctrl+click ended up clearing the selection
+    (user bug report 2026-10-04: "不支持多选删除和点选删除"). QTest.mouseClick sends
+    press *and* release through QApplication, so focus, propagation and modifiers are
+    the real ones; a test that must not depend on them should say so out loud.
+    """
+    point = pos or QPoint(widget.width() // 2, widget.height() // 2)
+    QTest.mouseClick(widget, Qt.MouseButton.LeftButton, mods, point)
+    QApplication.processEvents()
+    return True
 
 
 def key_event(key, mods=Qt.KeyboardModifier.NoModifier):
@@ -187,6 +196,80 @@ def test_the_send_icon_follows_the_theme(app, config_path, monkeypatch):
     monkeypatch.setattr(theme, "resolved_dark", lambda *args, **kwargs: False)
     row.refresh_send_icon()
     assert row.send_btn.icon().pixmap(16, 16).toImage() != dark_glyph
+
+
+def test_a_long_value_rests_at_its_first_character(app, config_path):
+    """R29 (user 2026-10-04): the capped fields must not paint the scrolled slice.
+
+    Qt keeps the caret visible and ``setText`` leaves the caret at the end, so a name wider
+    than the 96 px column was drawn as its *end* - "读取设备序列号" read as "取设备序列号" - and
+    the row looked as if the text sat centred in the box. Microsoft's guide says the opposite
+    for a field whose width is a deliberate cap: "Don't make users scroll unnecessarily"
+    (``uxguide/ctrl-text-boxes.md:78``, ``:257``).
+    """
+    long_name = "读取设备序列号"
+    panel = make_panel(app, config_path,
+                       rows=[{"text": "01 03 00 00 00 02 C4 0B", "hex": True, "delay": 0,
+                              "name": long_name}])
+    row = panel._rows[0]
+    assert row.name_edit.text() == long_name
+    assert row.name_edit.cursorPosition() == 0        # the view rests on the first character
+    assert row.text_edit.cursorPosition() == 0        # same field class, same rule
+    assert row.name_edit.isVisible() and row.text_edit.isVisible()
+
+
+def test_leaving_a_field_undoes_the_editing_scroll(app, config_path):
+    """Qt keeps the editing offset after focus-out, so the field has to reset it itself."""
+    panel = make_panel(app, config_path)
+    row = panel._rows[0]
+    row.name_edit.setText("读取设备序列号")
+    row.name_edit.setFocus()                          # edit the name...
+    app.processEvents()
+    row.name_edit.setCursorPosition(len(row.name_edit.text()))
+    assert row.name_edit.cursorPosition() == 7
+    row.text_edit.setFocus()                          # ...then leave it for the command box
+    app.processEvents()
+    assert not row.name_edit.hasFocus()
+    assert row.name_edit.cursorPosition() == 0        # the view is back on the first character
+    assert row.name_edit.text() == "读取设备序列号"     # only the view moved
+
+
+def test_entering_a_field_puts_the_caret_at_the_end(app, config_path):
+    """Typing after re-entering appends, so the reset never makes the text prepend."""
+    panel = make_panel(app, config_path)
+    row = panel._rows[1]
+    row.name_edit.setFocus()
+    app.processEvents()
+    assert row.name_edit.cursorPosition() == len(row.name_edit.text())
+    QTest.keyClicks(row.name_edit, "X")
+    app.processEvents()
+    assert row.name_edit.text().endswith("X")
+    assert row.name_edit.cursorPosition() == len(row.name_edit.text())
+
+
+def test_a_click_still_sets_the_insertion_point(app):
+    """UI-01 (``inter-mouse.md:210``): focus-in's caret-to-end must not beat the click.
+
+    The click lands inside the fourth character; which side of the boundary the caret ends on
+    depends on font hinting (3 or 2), so the assertion checks the *property* - the caret stays
+    near the click instead of jumping to the end - rather than one particular index (E-021).
+    """
+    box = StartVisibleLineEdit()
+    box.setText("abcdefghij")
+    box.resize(300, 24)
+    box.show()
+    app.processEvents()
+    box.clearFocus()
+    app.processEvents()
+    click_x = box.fontMetrics().horizontalAdvance("abc")
+    QTest.mouseClick(box, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                     QPoint(click_x, box.height() // 2))
+    app.processEvents()
+    caret = box.cursorPosition()
+    assert caret != len(box.text()), "focus-in moved the caret to the end over the click"
+    assert 2 <= caret <= 4, "the caret should stay where the click put it (%d)" % caret
+    box.close()
+    box.deleteLater()
 
 
 # -- selection: click / Ctrl / Shift / keyboard ---------------------------------------

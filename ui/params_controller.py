@@ -189,14 +189,20 @@ def split_threshold_ms(win: MainWindow) -> float | None:
             return max(0.0, float(win.split_ms_edit.text().strip()))
         except ValueError:
             return None
-    # auto: 3.5-char rule (Modbus RTU), with 2 ms USB clustering floor
+    # auto: the Modbus RTU 3.5-character silence rule, with a USB floor.
     try:
         baud = int(win.baud_combo.currentText().strip())
     except ValueError:
         return None
     char_ms = 10.0 / baud * 1000.0  # 8N1: one char = 10 bits
-    # 10 ms floor: below that, USB chunk delivery (not the wire) decides
-    return max(3.5 * char_ms, 10.0)
+    # 50 ms floor: the gap between the chunks of one frame is the USB *driver's* latency, not
+    # the wire. This machine's FTDI FT232 has LatencyTimer = 16 ms (vendor INF
+    # C:\Windows\INF\oem8.inf:382, confirmed in the device node's registry key) and the
+    # reported case measured 31 ms between the first chunk and the rest of a 57-byte frame at
+    # 115200 baud (2026-10-04) - with smaller floors that gap was read as "a new frame" and
+    # the display split one frame into two lines. Above the floor the rule scales with the
+    # link, so slow links (one character > 50 ms, i.e. below 200 baud) keep their own silence.
+    return max(3.5 * char_ms, 50.0)
 
 def _hex_bytes(text: str) -> bytes:
     "hex bytes"

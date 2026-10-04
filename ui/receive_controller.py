@@ -517,6 +517,7 @@ def on_clear(win: MainWindow):
     win._cur_line_tx = False
     win._col_off = 0            # c: the hexdump offset starts over with the pane
     win.rx_view.clear()
+    win._set_rx_follow(True)    # nothing is left above the bottom, so a pause is over
     win._line_is_tx = False
     win._cap_warned = False
     win.update_counts()

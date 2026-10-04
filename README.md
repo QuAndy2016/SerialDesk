@@ -20,7 +20,7 @@
 
 ## What is it (English)
 
-A cross-platform serial debugging tool for embedded, motor-control and industrial-control engineers, built on **PySide6 + PySerial**: HEX and ASCII views, framing, timestamps, CRC16 / CRC32 / SUM8, quick-send banks, command sequences, file transfer, receive logs that save themselves, and a UI in Chinese and English — shipped as a single-file Windows installer or a portable zip.
+A cross-platform serial debugging tool for embedded, motor-control and industrial-control engineers, built on **PySide6 + PySerial**: HEX and ASCII views, framing, timestamps, CRC16 / CRC32 / SUM8, quick command banks, command sequences, file transfer, receive logs that save themselves, and a UI in Chinese and English — shipped as a single-file Windows installer or a portable zip.
 
 **Download:** [Windows x64 · installer](https://github.com/QuAndy2016/SerialDesk/releases/latest) — no Python needed. The exe is unsigned, so Windows may warn on first run; the three-step fix is in ***Download for Windows*** below.
 
@@ -32,9 +32,9 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 ![Main window overview](assets/screenshots/en_01_main.png)
 
-**Quick-send panel** — saved commands as a sequence, with an endless (∞) loop.
+**Quick commands** — saved commands as a sequence, with an endless (∞) loop.
 
-![Quick-send panel](assets/screenshots/en_02_quicksend.png)
+![Quick commands](assets/screenshots/en_02_quicksend.png)
 
 **Send settings** — escape parsing and file sending live in one compact popup.
 
@@ -84,9 +84,9 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 ![主界面](assets/screenshots/zh_01_main.png)
 
-**快速发送面板** —— 常用指令编成序列，支持 ∞ 不限次数循环。
+**快捷指令** —— 常用指令编成序列，支持 ∞ 不限次数循环。
 
-![快速发送面板](assets/screenshots/zh_02_quicksend.png)
+![快捷指令](assets/screenshots/zh_02_quicksend.png)
 
 **发送设置** —— 转义解析与发送文件收在一个紧凑的下拉里。
 
@@ -171,10 +171,10 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | 功能 | 说明 |
 |------|------|
 | 校验追加套件 | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
-| 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快速发送的 ASCII 行同样追加**；HEX 模式下选择器可见但禁用（按字节原样发送，需要行尾自己写 `0D 0A`） |
+| 追加 `\r\n` | ASCII 模式下发送自动追加回车换行（AT 指令常用）；**快捷指令行的 ASCII 行同样追加**；HEX 模式下选择器可见但禁用（按字节原样发送，需要行尾自己写 `0D 0A`） |
 | 定时循环发送 | 点一下开始、再点一下停止（运行中按钮显示「停止循环」），10~60000 ms 间隔；间隔与次数收在旁边的下拉按钮里 |
 | 重复发送次数 | 循环可设次数（1–9999）；勾选「∞ 不限」则一直循环，直到手动停止 |
-| 快速发送面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢；勾选行或单击行即选中，点「删除」即可删除（3 秒内可撤销） |
+| 快捷指令面板 | 默认 10 条、最多 99 条指令，config.json 持久化，重启不丢；勾选行或单击行即选中，点「删除」即可删除（3 秒内可撤销） |
 | 命令名称 + 备注 | 每条可填名称与备注（行内两行显示，右键编辑备注），旧配置无损迁移 |
 | 发送内容自动递增 | `{i}` 占位符在发送前替换为递增计数，详见下方示例 |
 | 指令序列 | 序列模式：每条指令自带延迟，点「运行」按序自动发出（上电时序、AT 初始化）；头部显示「已发 N 次」，正在发送的那一行高亮 |
@@ -205,7 +205,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 |------|------|
 | 接收日志保存 | 一键保存到日志目录（状态栏给出路径）、另存为…；自动保存开关、单文件上限、时长、日志目录统一在「设置 → 日志保存设置…」 |
 | 自动应答规则 | 收到指定匹配串自动回复指定内容，规则可增删改并持久化（HEX 模式可选） |
-| 配置导入导出 | 快速发送列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复 |
+| 配置导入导出 | 快捷指令列表、主题、语言、发送历史、自动应答规则打包成一个 JSON，换机器导入即恢复 |
 
 ### 工程与打包
 
@@ -218,7 +218,7 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 ## 开发进度
 
 - **已发布**：86 个版本标签（最新 **v1.9.7**），178 次提交，187 条自动化测试全绿
-- **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快速发送（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包
+- **已完成**：串口收发全链路（HEX/ASCII、分包、时间戳、校验、日志、发送历史、自动应答、断线重连）、快捷指令（序列/循环/递增/命名备注）、接收增强（关键词高亮、视图过滤、列式 HEX、复制语义）、中英双语 + 深浅主题、Windows 安装器与免安装包
 - **待开发**：33 项（协议解析层、波形显示、小工具箱、多串口、终端模式等；完整清单在开发任务文档里）
 
 **下一个开发任务（仅此一项）**：声明式协议解析（）—— 免脚本的字段化解析：帧头 / 字段长度 / 数据类型（含 float、大小端）/ 校验规则，内置 Modbus RTU、AT、NMEA 模板；先做纯解析内核 + 单测，再接字段面板。
@@ -396,10 +396,10 @@ Both share the same notes:
 | Feature | Notes |
 |---------|-------|
 | Checksum append | CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8 |
-| Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick-send ASCII rows append it too**; in HEX mode the picker stays visible but off (bytes are exact - type `0D 0A` yourself) |
+| Append `\r\n` | optional CRLF on send in ASCII mode (handy for AT commands); **quick command rows append it too**; in HEX mode the picker stays visible but off (bytes are exact - type `0D 0A` yourself) |
 | Repeat send | click once to start, again to stop (the button reads Stop repeat); 10-60000 ms interval; interval and count sit in a dropdown beside it |
 | Repeat count | optional limit (1-9999); tick ∞ to keep going until stopped by hand |
-| Quick-send panel | 10 rows by default, up to 99 commands, persisted to config.json |
+| Quick commands panel | 10 rows by default, up to 99 commands, persisted to config.json |
 | Names and notes | every row can carry a name and a free-text note (two-line row, right-click to edit the note); old configs migrate losslessly |
 | Auto-increment | the `{i}` placeholder becomes a running counter before sending - see the example below |
 | Command sequence | sequence mode: each row has its own delay, press Run to fire them in order; the header shows a "sent N times" counter and the row being sent is highlighted |
@@ -430,7 +430,7 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 |---------|-------|
 | Receive log to file | one-click save into the log folder (path in the status bar) and Save as…; the auto-save switch, size/duration limits and the folder live in Settings → Log saving settings… |
 | Auto-reply rules | send a configured reply when a match string arrives; rules are editable, persisted and support HEX |
-| Config import / export | quick-send list, theme, language, send history and auto-reply rules in one JSON file |
+| Config import / export | quick command list, theme, language, send history and auto-reply rules in one JSON file |
 
 #### Engineering and packaging
 

@@ -232,15 +232,75 @@ def echo_tx(win: MainWindow, data: bytes) -> None:
 def scroll_rx_bottom(win: MainWindow) -> None:
     "scroll rx bottom"
     """Follow the newest line unless the user paused auto-scroll."""
-    if win.autoscroll_check.isChecked():
+    if win.autoscroll_check.isChecked() and win._rx_follow:
         bar = win.rx_view.verticalScrollBar()
         bar.setValue(bar.maximum())
 
-def pause_autoscroll(win: MainWindow, _action: int = 0) -> None:
-    "pause autoscroll"
-    """Manual scrolling means the user is reading: stop following."""
-    if win.autoscroll_check.isChecked():
-        win.autoscroll_check.setChecked(False)
+def set_rx_follow(win: MainWindow, follow: bool) -> None:
+    "set rx follow"
+    """The single owner of "the pane follows the newest line".
+
+    One tick used to carry three different ideas: the *setting* (do we follow at
+    all - persisted), the *view position* (the user is reading older data right
+    now) and the feedback for it.  Scrolling cancelled the setting, so a glance at
+    history silently rewrote config.json.  The tick is now the setting only and the
+    user is its only writer; this flag is the session's view state.
+
+    There is deliberately no button for it (the user dropped the jump-to-latest
+    button on 2026-10-04: scrolling back to the bottom is the way to resume), so the
+    status bar carries one quiet line instead - rule UI-30.
+    """
+    win._rx_follow = bool(follow)
+    refresh_rx_follow_hint(win)
+
+def refresh_rx_follow_hint(win: MainWindow) -> None:
+    "refresh rx follow hint"
+    """The single place that decides the status-bar line, so nothing can desync it.
+
+    Only a *paused follow* is worth a hint: with the tick off there is nothing to
+    resume, and while following the pane is showing the newest line anyway.  The
+    caller may be a scroll gesture, the tick, a clear or a language switch.
+    """
+    hint = getattr(win, "rx_follow_hint", None)   # built with the status bar
+    if hint is None:
+        return
+    paused = bool(win.autoscroll_check.isChecked()) and not getattr(win, "_rx_follow", True)
+    hint.setText(tr("rx.follow.paused") if paused else "")
+
+def refresh_find_nav_icons(win: MainWindow) -> None:
+    "refresh find nav icons"
+    """The previous/next arrows follow the theme (called on show and on retranslate).
+
+    Up/down, not left/right: matches are stacked lines in the log. This single place is also
+    what `toggle_find_bar()` calls, so it is the one that decides - it used to keep setting
+    the left/right pair and silently overwrote the up/down icons every time the bar opened
+    (caught by rendering the bar and looking at it, 2026-10-04).
+    """
+    win.find_prev_btn.setIcon(theme.glyph("arrow_up"))
+    win.find_next_btn.setIcon(theme.glyph("arrow_down"))
+
+def on_rx_view_moved(win: MainWindow, _action: int = 0) -> None:
+    "on rx view moved"
+    """Any user scroll gesture re-reads the position: bottom follows, above it pauses.
+
+    Qt emits actionTriggered only for user-driven slider actions, and documents that
+    inside the slot sliderPosition() already holds the new position while value() is
+    still stale (qt-qtbase .../qabstractslider.cpp:152-165; triggerAction() adjusts
+    the position, emits, then calls setValue() - :572-602).  A programmatic
+    setValue() - including our own follow jump - emits nothing, which is what makes
+    this a pure "the user moved the view" hook.  Measured per gesture in
+    local_docs/05_tooling/cache/autoscroll_follow_probe.py.
+    """
+    if not win.autoscroll_check.isChecked():
+        return                       # following is off: the pane is the user's to move
+    bar = win.rx_view.verticalScrollBar()
+    set_rx_follow(win, bar.sliderPosition() >= bar.maximum())
+
+def on_rx_range_changed(win: MainWindow, _minimum: int, maximum: int) -> None:
+    "on rx range changed"
+    """Everything fits again, so there is nothing left to look back at."""
+    if maximum <= 0 and not win._rx_follow:
+        set_rx_follow(win, True)
 
 def rx_separator(win: MainWindow) -> str:
     "rx separator"
@@ -249,10 +309,13 @@ def rx_separator(win: MainWindow) -> str:
 
 def on_autoscroll_toggled(win: MainWindow, checked: bool) -> None:
     "on autoscroll toggled"
-    """Remember the auto-scroll preference."""
+    """Remember the auto-scroll preference; ticking it follows the newest line again."""
     config = load_config()
     config["autoscroll"] = bool(checked)
     save_config(config)
+    set_rx_follow(win, bool(checked))
+    if checked:
+        win._scroll_rx_bottom()      # following means "show me the newest"
 
 def on_timestamp_toggled(win: MainWindow, checked: bool) -> None:
     "on timestamp toggled"
@@ -453,10 +516,20 @@ def update_params_summary(win: MainWindow) -> None:
     stop = win.stopbits_combo.currentText()
     flow = win.flow_combo.currentText()
     enc = win.encoding_combo.currentText()
-    text = f"{data}{parity}{stop} · {flow} · {enc}"
+    # Only what differs from the defaults earns a place in the summary (2026-10-04 UI
+    # report, item 4): "无" flow control is what the dialog starts with, and the chip sits
+    # in the connection row, whose width is the window's own floor.
+    parts = [f"{data}{parity}{stop}"]
+    if flow.strip() not in ("", "无", "None"):
+        parts.append(flow)
+    parts.append(enc)
+    text = " · ".join(parts)
     if len(text) > 16:                      # elide instead of widening the row
         text = text[:15] + "…"
-    win.params_summary.setText(text + " ▾")
+    # The dropdown indicator is a real icon now, at the same size as every other combo arrow
+    # (2026-10-04 report item 2: the "▾" character was tiny and inconsistent).
+    win.params_summary.setText(text)
+    win.params_summary.setIcon(theme.glyph("arrow_down"))
 
 FIND_HIGHLIGHT_CAP = 10000  # cap on how many matches get a background colour
 
@@ -588,11 +661,18 @@ def toggle_find_bar(win: MainWindow, show: bool | None = None) -> None:
     "toggle find bar"
     """Show/hide the receive find bar and remember it.
 
-    the bar is a persistent highlight box - it defaults to visible and its
-    state is persisted, so the keyword highlighter is always one keystroke away.
+    The bar is a tool, so it starts hidden (2026-10-04 report: "不用的时候可以隐藏起来");
+    Ctrl+F shows it, Esc or the close button hides it. The stored flag records the user's
+    last explicit choice - it never forces the bar back on at startup.
     """
     visible = (not win._find_bar.isVisible()) if show is None else show
     win._find_bar.setVisible(visible)
+    win._refresh_find_nav_icons()      # a theme switch may have swapped the arrows
+    # the More menu entry mirrors the bar (cmd-menus.md:257: a view that is on keeps its
+    # checkmark); toggling either way goes through here, so the two can never disagree
+    action = getattr(win, "act_find", None)
+    if action is not None:
+        action.setChecked(bool(visible))
     config = load_config()
     config["find_bar_on"] = bool(visible)
     save_config(config)

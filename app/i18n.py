@@ -26,8 +26,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "cfg.reset": {"zh": "恢复默认设置(&R)…", "en": "&Restore defaults…"},
     "cfg.reset.title": {"zh": "恢复默认设置", "en": "Restore default settings"},
     "cfg.reset.text": {
-        "zh": "将把主题、语言、自动保存、自动重连、接收区选项、快速发送列表、发送历史与自动应答规则全部恢复为默认值。\n\n当前配置会先自动备份到数据目录（config.backup_日期_时间.json），随时可以手工恢复。\n\n确定继续吗？",
-        "en": "This resets theme, language, auto-save, auto-reconnect, receive options, the quick-send list, send history and auto-reply rules to their defaults.\n\nYour current config is backed up first (config.backup_<date>_<time>.json in the data folder), so it can be restored by hand.\n\nContinue?",
+        "zh": "将把主题、语言、自动保存、自动重连、接收区选项、快捷指令列表、发送历史与自动应答规则全部恢复为默认值。\n\n当前配置会先自动备份到数据目录（config.backup_日期_时间.json），随时可以手工恢复。\n\n确定继续吗？",
+        "en": "This resets theme, language, auto-save, auto-reconnect, receive options, the quick command list, send history and auto-reply rules to their defaults.\n\nYour current config is backed up first (config.backup_<date>_<time>.json in the data folder), so it can be restored by hand.\n\nContinue?",
     },
     "cfg.reset.done": {"zh": "已恢复默认设置（原配置已备份）", "en": "Defaults restored (the previous config was backed up)"},
     "cfg.reset.done.tip": {"zh": "原配置备份：{path}", "en": "Previous config backed up to: {path}"},
@@ -79,8 +79,12 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "rx.autoscroll": {"zh": "自动滚动", "en": "Auto-scroll"},
     "rx.autoscroll.tip": {
-        "zh": "接收时自动滚到底部；取消勾选可暂停（手动滚动时也会自动暂停）",
-        "en": "Scroll to the newest line while receiving; untick to pause (manual scrolling pauses it too)",
+        "zh": "接收时自动滚到最新一行；往回看时自动暂停跟随（不会取消这个勾选），拖回最底部就继续",
+        "en": "Scroll to the newest line while receiving; looking back pauses following without unticking this box - scrolling back to the bottom continues",
+    },
+    "rx.follow.paused": {
+        "zh": "已暂停跟随 · 拖回接收区底部继续",
+        "en": "Following paused - return to the bottom of the pane",
     },
     "rx.pause": {"zh": "暂停显示", "en": "Pause display"},
     "rx.pause.tip": {"zh": "暂停时数据继续写入日志，恢复后继续显示", "en": "While paused, data keeps going to the log; resume to show live data again"},
@@ -129,12 +133,19 @@ STRINGS: dict[str, dict[str, str]] = {
     "rx.cleared": {"zh": "已清空接收区（5 秒内可撤销）", "en": "Receive pane cleared (undo within 5 s)"},
     "rx.undo.done": {"zh": "已恢复清空前的显示", "en": "Display restored"},
     "undo.label": {"zh": "撤销", "en": "Undo"},
-    "find.label": {"zh": "高亮", "en": "Highlight"},
-    "find.placeholder": {"zh": "输入关键词，接收区自动高亮（回车 / 上一下一个跳转）", "en": "Type a keyword to highlight matches (Enter / prev-next to jump)"},
+    # 2026-10-04 report item 4: this is a find feature - it says so now, and it also lives in
+    # the More menu (Ctrl+F still works).
+    "find.label": {"zh": "查找", "en": "Find"},
+    "find.menu": {"zh": "查找…", "en": "Find…"},
+    # The shortcut is named in the tooltip on purpose: registering it on the menu action
+    # would compete with the window's own Ctrl+F QShortcut (Qt calls that ambiguous and can
+    # drop both). One owner for the key, the hint belongs in the text.
+    "find.menu.tip": {"zh": "打开查找栏（Ctrl+F）", "en": "Open the find bar (Ctrl+F)"},
+    "find.placeholder": {"zh": "输入关键词，接收区自动高亮（回车 / 上下一处跳转）", "en": "Type a keyword to highlight matches (Enter / up-down to jump)"},
     "find.case": {"zh": "区分大小写", "en": "Case"},
     "find.case.tip": {"zh": "搜索时区分大小写（默认不区分）", "en": "Match case when searching (off by default)"},
-    "find.prev": {"zh": "上一个", "en": "Previous"},
-    "find.next": {"zh": "下一个", "en": "Next"},
+    "find.prev": {"zh": "上一处匹配", "en": "Previous match"},
+    "find.next": {"zh": "下一处匹配", "en": "Next match"},
     "find.close.tip": {"zh": "关闭查找（Esc）", "en": "Close the find bar (Esc)"},
     "find.none": {"zh": "未找到: {text}", "en": "Not found: {text}"},
     "sc.send.tip": {"zh": "发送（Ctrl+Enter）", "en": "Send (Ctrl+Enter)"},
@@ -197,8 +208,14 @@ STRINGS: dict[str, dict[str, str]] = {
     "btn.more": {"zh": "更多", "en": "More"},
     "btn.more.tip": {"zh": "暂停显示 / 自动换行 / 日志另存为…", "en": "Pause / Wrap / Save log as…"},
     "split.tip": {
-        "zh": "分包分行方式\n自动：按波特率 3.5 字符时间\n手动：指定毫秒间隔\n按帧头：识别帧头字符串分行",
-        "en": "How frames are split\nAuto: 3.5-char time by baud rate\nManual: fixed millisecond gap\nBy header: split on the header string",
+        # 2026-10-04: the auto rule gained a 50 ms floor (the USB adapter's latency timer is
+        # 16 ms by default), so the tooltip must not promise a pure "3.5 char" window.
+        "zh": "分包分行方式\n自动：按波特率 3.5 字符时间，且不小于 50 ms"
+              "（USB 转串口适配器的延迟定时器默认 16 ms，分片可能隔几十毫秒才交上来）\n"
+              "手动：指定毫秒间隔\n按帧头：识别帧头字符串分行",
+        "en": "How frames are split\nAuto: 3.5-char time by baud rate, never below 50 ms "
+              "(USB-serial adapters batch data up to their 16 ms latency timer)\n"
+              "Manual: fixed millisecond gap\nBy header: split on the header string",
     },
     "split.ms.tip": {"zh": "手动分包间隔（毫秒，0~60000，默认 10）", "en": "Manual split gap in ms (0-60000, default 10)"},
     "header.placeholder.hex": {"zh": "帧头示例：AA 55 或 0xAA,0x55", "en": "e.g. AA 55 or 0xAA,0x55"},
@@ -347,14 +364,14 @@ STRINGS: dict[str, dict[str, str]] = {
     "sc.save_log": {"zh": "一键保存日志", "en": "Save the log to the log folder"},
     "sc.focus_input": {"zh": "跳到发送输入框", "en": "Jump to the send input"},
     "sc.toggle_open": {"zh": "打开 / 关闭串口", "en": "Open or close the port"},
-    "sc.panel": {"zh": "显示 / 隐藏快速发送面板", "en": "Show or hide the quick-send panel"},
+    "sc.panel": {"zh": "显示 / 隐藏快捷指令面板", "en": "Show or hide the quick commands panel"},
     "sc.hist_prev": {"zh": "上一条发送历史", "en": "Previous send-history entry"},
     "sc.hist_next": {"zh": "下一条发送历史", "en": "Next send-history entry"},
     "sc.find": {"zh": "在接收区查找", "en": "Find in the receive pane"},
     "sc.settings": {"zh": "打开设置菜单", "en": "Open the settings menu"},
     "sc.esc": {"zh": "取消选中 / 关闭查找条", "en": "Clear the selection / close the find bar"},
-    "sc.scope.quick_panel": {"zh": "（焦点在快速发送面板时生效）", "en": " (active while the quick-send panel has focus)"},
-    "sc.del_quick_row": {"zh": "删除选中的快速发送条目", "en": "Delete the selected quick-send rows"},
+    "sc.scope.quick_panel": {"zh": "（焦点在快捷指令面板时生效）", "en": " (active while the quick commands panel has focus)"},
+    "sc.del_quick_row": {"zh": "删除选中的快捷指令条目", "en": "Delete the selected quick command rows"},
     "tx.payload": {"zh": "将发送 {n} 字节", "en": "payload: {n} B"},
     "tx.payload.bad": {"zh": "内容格式有误", "en": "invalid input"},
     "tx.payload.tip": {
@@ -531,14 +548,18 @@ STRINGS: dict[str, dict[str, str]] = {
     # ---- quick send panel ----
     "qs.seq.sent": {"zh": "已发 {n} 次", "en": "Sent {n}x"},
     "qs.seq.sent.tip": {"zh": "本序列已完成的发送轮数", "en": "Sequence rounds completed so far"},
-    "menu.quick_panel": {"zh": "显示快速发送面板", "en": "Show the quick-send panel"},
-    "menu.quick_panel.tip": {"zh": "显示/隐藏快速发送面板 (Ctrl+B)", "en": "Show or hide the quick-send panel (Ctrl+B)"},
+    "menu.quick_panel": {"zh": "显示快捷指令面板", "en": "Show the quick commands panel"},
+    "menu.quick_panel.tip": {"zh": "显示/隐藏快捷指令面板 (Ctrl+B)", "en": "Show or hide the quick commands panel (Ctrl+B)"},
     "qs.collapsed": {
-        "zh": "已折叠快速发送面板，显示区已加宽（Ctrl+B 或「设置」菜单可恢复）",
-        "en": "Quick-send panel collapsed - the log is wider now (Ctrl+B or the Settings menu restores it)",
+        "zh": "已折叠快捷指令面板，显示区已加宽（Ctrl+B 或「设置」菜单可恢复）",
+        "en": "Quick commands panel collapsed - the log is wider now (Ctrl+B or the Settings menu restores it)",
     },
-    "qs.expanded": {"zh": "已展开快速发送面板", "en": "Quick-send panel expanded"},
-    "qs.title": {"zh": "快速发送", "en": "Quick send"},
+    "qs.expanded": {"zh": "已展开快捷指令面板", "en": "Quick commands panel expanded"},
+    # The pane's own name: a noun phrase, not an instruction (uxguide/ctrl-group-boxes.md:92
+    # "Write the label using a noun or a noun phrase"; :94 "Don't use instructional text as
+    # the label"; :95 "Don't repeat the group box label in control labels within the box" -
+    # every row already carries a Send action, which "quick send" duplicated).
+    "qs.title": {"zh": "快捷指令", "en": "Quick commands"},
     "qs.add": {"zh": "+ 添加指令", "en": "+ Add command"},
     "qs.add.tip": {"zh": "添加一条快速指令（最多 {n} 条）", "en": "Add a quick command (up to {n})"},
     "qs.max": {"zh": "最多支持 {n} 条指令", "en": "command limit: {n}"},
@@ -607,7 +628,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "qs.run": {"zh": "运行", "en": "Run"},
     "qs.stop": {"zh": "停止", "en": "Stop"},
     "qs.delay.tip": {"zh": "本条发送后等待的毫秒数（0~60000，默认 500）", "en": "Delay after this row, in ms (0-60000, default 500)"},
-    "qs.rail.tip": {"zh": "展开快速发送面板（Ctrl+B）", "en": "Show the quick-send panel (Ctrl+B)"},
+    "qs.rail.tip": {"zh": "展开快捷指令面板（Ctrl+B）", "en": "Show the quick commands panel (Ctrl+B)"},
     "qs.seq.progress": {"zh": "序列 {i}/{n}", "en": "Step {i}/{n}"},
     "qs.seq.done": {"zh": "序列发送完成", "en": "Sequence finished"},
     "qs.seq.done.n": {"zh": "序列发送完成（{n} 轮）", "en": "Sequence finished ({n} rounds)"},

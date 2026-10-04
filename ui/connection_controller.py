@@ -122,15 +122,32 @@ def notify(win: MainWindow, msg: str, level: str = 'info', ms: int | None = None
 
     level: info (auto 5 s) / warn (auto 10 s) / error (persistent until the
     next action). Colour follows the active theme via theme.level_color().
+
+    2026-10-04 report (item 7): messages used to go through QStatusBar.showMessage,
+    which hides every *normal* status-bar widget for as long as it is up - so the
+    "undo delete" button, which sits next to the message, vanished exactly when a
+    clear/delete had just produced a message. The message is a label of our own now
+    (left side, level colour, self-clearing timer), which keeps the left cluster -
+    message + undo - permanently intact and puts the undo affordance next to where
+    the action happened instead of in the far bottom-right corner.
     """
-    sb = win.statusBar()
-    sb.setStyleSheet(f"QStatusBar {{ color: {theme.level_color(level)}; }}")
+    label = getattr(win, "status_msg", None)
+    if label is None:                       # window without a status bar (tests)
+        win.statusBar().showMessage(msg)
+        return
     if ms is None:
         ms = -1 if level == "error" else (10000 if level == "warn" else 5000)
-    if ms < 0:
-        sb.showMessage(msg)
-    else:
-        sb.showMessage(msg, ms)
+    label.setText(msg)
+    label.setStyleSheet("color: %s;" % theme.level_color(level))
+    timer = getattr(win, "_status_msg_timer", None)
+    if timer is None:
+        timer = QTimer(win)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: win.status_msg.setText(""))
+        win._status_msg_timer = timer
+    timer.stop()
+    if ms >= 0:
+        timer.start(ms)
 
 def recolor_status_light(win: MainWindow) -> None:
     "recolor status light"

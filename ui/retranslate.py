@@ -8,6 +8,7 @@ from __future__ import annotations
 
 
 from app.i18n import tr
+from ui import theme        # icon assets (paper plane, find arrows) follow the theme
 
 from typing import TYPE_CHECKING
 
@@ -107,6 +108,19 @@ def _retranslate_receive_options(win: MainWindow) -> None:
     win.more_btn.setText(tr("btn.more"))
     win.more_btn.setToolTip(tr("btn.more.tip"))
     win.more_btn.setAccessibleName(tr("btn.more"))
+    win.act_find.setText(tr("find.menu"))
+    win.act_find.setToolTip(tr("find.menu.tip"))
+    # the find bar's own copy (it was never retranslated - found while renaming 高亮 -> 查找)
+    win._find_lbl.setText(tr("find.label"))
+    win.find_edit.setPlaceholderText(tr("find.placeholder"))
+    win.find_count_lbl.setToolTip(tr("find.count.tip"))
+    win.find_case_check.setText(tr("find.case"))
+    win.find_case_check.setToolTip(tr("find.case.tip"))
+    for button, key in ((win.find_prev_btn, "find.prev"), (win.find_next_btn, "find.next")):
+        button.setToolTip(tr(key))
+        button.setAccessibleName(tr(key))
+    win.find_close_btn.setToolTip(tr("find.close.tip"))
+    win.find_close_btn.setAccessibleName(tr("find.close.tip"))
     win.act_pause.setText(tr("rx.pause"))
     win.act_pause.setToolTip(tr("rx.pause.tip"))
     win.act_save_as.setText(tr("btn.save_log_as"))
@@ -172,12 +186,17 @@ def _retranslate_status(win: MainWindow) -> None:
     win._reload_combo(win.checksum_combo, [
         tr("crc.none"), "CRC16-Modbus", "CRC16-CCITT", "CRC32", "SUM8"])
     win.checksum_combo.setToolTip(tr("crc.tip"))
-    win.send_btn.setText(tr("btn.send"))
+    win.send_btn.setText("")                       # the paper plane carries the meaning
+    win.send_btn.setToolTip(tr("sc.send.tip"))
+    win.send_btn.setAccessibleName(tr("btn.send"))
+    win.send_btn.setIcon(theme.glyph("send"))
+    win._refresh_find_nav_icons()                  # arrows follow the theme like the plane does
     win.quick_panel.retranslate()
     win.rx_view.setPlaceholderText(tr("rx.empty.hint"))
     win.rx_view.setAccessibleName(tr("rx.view.name"))   # a screen reader needs a name, not just a hint
     win.update_counts()
     win._notify(tr("status.opened") if win.worker.is_open() else tr("status.idle"))
+    win._refresh_rx_follow_hint()     # the paused line is text, so a language switch owns it
     if win.worker.is_open():
         port = win.port_combo.currentData() or ""
         baud = win.baud_combo.currentText().strip()
