@@ -85,6 +85,7 @@ from ui.retranslate import retranslate_ui
 from ui.menus import build_menu
 from ui.log_controller import apply_autosave_settings, log_append, log_close, log_header_text, log_open, on_log_line, on_save_log_as, on_save_log_quick, show_autosave_settings
 from ui.receive_controller import append_header_split, append_rx_group, emit_rx_text, flush_rx_frames, on_clear, on_received, recolor_rx_view, snapshot_rx_fragments
+from ui.rounds import ROUNDS_LIMIT
 from ui.send_controller import abort_file_send, apply_checksum, clear_history, finish_file_send, flush_history_save, on_history_fill, on_quick_send, on_send, on_send_file, prune_history_meta, recall_history, remember_send, remove_history_entry, schedule_history_save, send_file_chunk, show_history, update_history_button, update_payload_size
 from ui.connection_controller import ensure_port, notify, on_opened_changed, on_reconnect_toggled, on_worker_error, poll_signals, recolor_status_light, refresh_ports, signals_html, toggle_open, update_port_tooltip
 from ui.params_controller import baud_value, check_baud, check_hex_input, encoding, format_rx, newline_bytes, on_header_changed, on_split_mode_changed, on_tx_fmt_changed, persist_newline, refresh_tx_settings_chip, serial_params, split_threshold_ms, ts_prefix, update_input_placeholder
@@ -170,14 +171,12 @@ def repeat_count(win: MainWindow) -> int:
     "repeat count"
     """how many repeats to send (0 = keep going until stopped)."""
     try:
-        if getattr(win, "repeat_endless", None) is not None and win.repeat_endless.isChecked():
-            return 0            # 2026-10-03: unlimited is the switch, not a magic count
-        return max(1, min(9999, int(win.repeat_times.value())))
-    except (AttributeError, ValueError):
-        # 2026-10-03 (review): 0 means "keep sending", so a read failure must not land
-        # there. "I cannot tell" is read as one send - the same choice the quick-send
-        # panel's rounds chip makes
-        # makes for the sequence rounds.
+        if win.repeat_times.endless():      # ∞ is a value of the wheel, not a second switch
+            return 0
+        return max(1, min(ROUNDS_LIMIT, int(win.repeat_times.value())))
+    except (AttributeError, TypeError, ValueError):
+        # 0 means "keep sending", so a read failure must not land there. "I cannot tell" is
+        # read as one send - the same choice the quick-send panel's rounds wheel makes.
         return 1
 
 
@@ -707,6 +706,7 @@ def setup_tab_order(win: MainWindow) -> None:
              "save_log_btn", "save_log_as_btn", "clear_btn", "rx_view",
              "nl_combo", "escape_check",   # the two pickers live in a popup
              "tx_edit", "send_btn", "history_btn", "repeat_btn", "repeat_ms",
+             "repeat_times",              # the popup's two fields tab in order
              "send_file_btn"]
     widgets = [w for w in (getattr(win, n, None) for n in names) if w is not None]
     for first, second in zip(widgets, widgets[1:]):

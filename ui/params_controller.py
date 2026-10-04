@@ -312,9 +312,7 @@ def refresh_repeat_chip(win: MainWindow) -> None:
     """the repeat chip shows interval and count at a glance - the same idea as
     the format chip. The two fields live inside, their state stays visible outside."""
     ms = (win.repeat_ms.text() or "").strip() or "?"
-    times = 0 if (hasattr(win, "repeat_endless") and win.repeat_endless.isChecked()) \
-        else win.repeat_times.value()
-    count = "\u221e" if times == 0 else str(times)
+    count = "\u221e" if win.repeat_times.endless() else str(win.repeat_times.value())
     win.repeat_chip.setText("%sms\u00d7%s" % (ms, count))
 
 

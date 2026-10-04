@@ -373,17 +373,48 @@ def test_sequence_loop_rule():
     assert loop_should_continue(99, 0) is True
 
 
-def test_repeat_count_reads_the_switch_and_the_spin(app, win):
-    # 0 is not a magic count any more - the ∞ switch decides, the spin is 1..9999
+def test_repeat_count_reads_the_rounds_wheel(app, win):
+    """2026-10-04: one wheel, exactly like the quick-send panel - ∞ is its default value."""
     from ui.actions_controller import repeat_count
-    win.repeat_endless.setChecked(True)
-    win.repeat_times.setValue(7)
-    assert repeat_count(win) == 0             # unlimited comes from the switch
-    win.repeat_endless.setChecked(False)
+    win.repeat_times.setValue(0)              # 0 is the wheel's ∞ state, never a count
+    assert win.repeat_times.endless() and repeat_count(win) == 0
     win.repeat_times.setValue(5)
     assert repeat_count(win) == 5
-    win.repeat_times.setValue(0)              # the spin clamps to 1, so 0 cannot mean endless
-    assert repeat_count(win) == 1
+    win.repeat_times.setValue(9999)           # the wheel clamps at its top
+    assert (win.repeat_times.value(), repeat_count(win)) == (999, 999)
+
+
+def test_the_repeat_wheel_spins_like_the_panel_one(app, win):
+    """Same behaviour the sequence panel got: ∞ sits below 1 and above the top."""
+    wheel = win.repeat_times
+    wheel.setValue(0)
+    assert wheel.text() == "\u221e" and wheel.endless()      # default: until stopped
+    wheel.stepBy(1)                                          # ∞ -> 1
+    assert wheel.value() == 1
+    wheel.stepBy(1)
+    assert wheel.value() == 2
+    wheel.stepBy(-1)
+    assert wheel.value() == 1
+    wheel.stepBy(-1)                                         # 1 -> ∞
+    assert wheel.endless()
+    wheel.setValue(999)
+    wheel.stepBy(1)                                          # 999 -> ∞ (restart the range)
+    assert wheel.endless()
+    wheel.stepBy(-1)                                         # ∞ -> 999, the other end
+    assert wheel.value() == 999
+    assert wheel.valueFromText("\u221e") == 0                 # typing ∞ works too
+    wheel.setValue(0)
+
+
+def test_the_repeat_chip_shows_the_wheel(app, win):
+    """The chip keeps the wheel's state visible while the popup is closed."""
+    win.repeat_ms.setText("250")
+    win.repeat_times.setValue(0)
+    assert win.repeat_chip.text() == "250ms\u00d7\u221e"
+    win.repeat_times.setValue(7)
+    assert win.repeat_chip.text() == "250ms\u00d77"
+    win.repeat_times.setValue(0)
+    win.repeat_ms.setText("1000")
 
 
 def test_repeat_count_falls_back_to_one_send(app, win):
@@ -391,10 +422,9 @@ def test_repeat_count_falls_back_to_one_send(app, win):
     from ui.actions_controller import repeat_count
 
     class _Boom:
-        def value(self):
+        def endless(self):
             raise ValueError("no value")
 
-    win.repeat_endless.setChecked(False)
     real, win.repeat_times = win.repeat_times, _Boom()
     try:
         assert repeat_count(win) == 1

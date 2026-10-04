@@ -81,6 +81,7 @@ from ui.autosave_dialog import AutoSaveDialog
 from ui.history_dialog import HistoryDialog
 from ui.port_settings_dialog import PortSettingsDialog
 from ui.quick_send_panel import RAIL_W, QuickSendPanel
+from ui.rounds import RoundsSpinBox
 from ui.tx_input import TxInputEdit
 from ui.retranslate import retranslate_ui
 from app.i18n import hex_error_message, tr
@@ -618,12 +619,11 @@ def _build_action_column(win: MainWindow) -> QWidget:
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win.repeat_ms.textChanged.connect(win._on_repeat_interval)
     win._repeat_cnt_lbl = QLabel(tr("tx.repeat.count"))
-    win.repeat_times = QSpinBox()
-    win.repeat_times.setRange(1, 9999)
-    win.repeat_times.setValue(1)
-    win.repeat_times.setMinimumWidth(56)
-    win.repeat_times.setMaximumWidth(76)
-    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))
+    # One wheel, the same control the quick-send panel uses: ∞ is the default *and* a value
+    # of the wheel, so there is no second switch to keep in step (2026-10-04 report:
+    # "无穷大次数和上下箭头设置次数这里的逻辑不好"; ctrl-spin-controls.md:117 "restart the range",
+    # :124 "use text instead of special numeric values - allow users to spin to these").
+    win.repeat_times = RoundsSpinBox(tip=tr("tx.repeat.count.tip"), name=tr("tx.repeat.count"))
     _rep_form = QWidget()
     _rf = QHBoxLayout(_rep_form)
     _rf.setContentsMargins(8, 6, 8, 6)
@@ -631,12 +631,6 @@ def _build_action_column(win: MainWindow) -> QWidget:
     _rf.addWidget(win._repeat_lbl)
     _rf.addWidget(win.repeat_ms)
     _rf.addWidget(win._repeat_cnt_lbl)
-    win.repeat_endless = QCheckBox("\u221e")            # 2026-10-03: explicit, not 0=endless
-    win.repeat_endless.setToolTip(tr("tx.repeat.endless.tip"))
-    win.repeat_endless.setChecked(True)
-    win.repeat_times.setDisabled(True)
-    win.repeat_endless.toggled.connect(win.repeat_times.setDisabled)
-    _rf.addWidget(win.repeat_endless)
     _rf.addWidget(win.repeat_times)
     win.repeat_chip = QToolButton()
     win.repeat_chip.setObjectName("qsChip")

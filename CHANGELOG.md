@@ -4,6 +4,13 @@
 
 ### Fixed
 
+- **The repeat-send count is one wheel now, ∞ included**: the send area used to pair an
+  "∞" checkbox with a plain spin box (the box greyed out while the checkbox was ticked).
+  It now uses the same wheel as the quick-send sequence: ∞ is the default *and* a value of
+  the wheel - up steps ∞ -> 1 -> 2 ..., down counts back, 1 steps down to ∞ and the top
+  wraps around too, and you can type a number (or ∞) directly. One implementation
+  (`ui/rounds.py`) serves both places, so they cannot drift apart. The wheel's top is 999
+  (it was a typed 9999 in this one field); ∞ covers anything longer.
 - **Every icon button shows a keyboard focus ring again**: the settings gear, the parameter
   chip, the "More" menu and the quick-send chips were styled with an object-name rule, which
   outranks the shared `QToolButton:focus` rule in Qt's conflict resolution - so tabbing to them

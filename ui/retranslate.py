@@ -134,6 +134,9 @@ def _retranslate_send(win: MainWindow) -> None:
     win.repeat_btn.setToolTip(tr("tx.repeat.tip"))
     win.repeat_ms.setToolTip(tr("tx.interval.tip"))
     win._repeat_lbl.setText(tr("tx.interval.label"))
+    win._repeat_cnt_lbl.setText(tr("tx.repeat.count"))
+    win.repeat_times.setToolTip(tr("tx.repeat.count.tip"))     # the rounds wheel
+    win.repeat_times.setAccessibleName(tr("tx.repeat.count"))
     if hasattr(win, "_tx_content_lbl"):
         win._tx_content_lbl.setText(tr("tx.content.label"))
     win.tx_edit.setPlaceholderText(tr("tx.placeholder.hex"))   # (set by the format below)

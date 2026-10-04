@@ -409,16 +409,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "tx.repeat.stop": {"zh": "停止循环", "en": "Stop repeat"},
     "tx.repeat.count": {"zh": "次数", "en": "Count"},
     "tx.repeat.chip.tip": {"zh": "循环间隔与次数", "en": "Repeat interval and count"},
-    "qs.loops.endless.tip": {"zh": "不限次数（∞）：一直循环，直到手动停止",
-                            "en": "Unlimited (∞): keep going until stopped by hand"},
-    "tx.repeat.endless.tip": {"zh": "不限次数（∞）：一直循环，直到手动停止",
-                             "en": "Unlimited (∞): keep going until stopped by hand"},
     "qs.del.none.tip": {"zh": "先点一行选中（Ctrl/Shift 可多选），再点删除；序列模式下勾选的行也可直接删",
                         "en": "Click a row to select it first (Ctrl/Shift for several), then Delete; in sequence mode a ticked row can be deleted too"},
     "qs.del.none": {"zh": "没有选中任何行：先点一下要删的那行，再点删除",
                     "en": "Nothing selected - click the row you want to delete, then press Delete"},
-    "tx.repeat.count.tip": {"zh": "循环发送的次数；勾选左侧 ∞ 表示不限次数（一直循环，手动停止）",
-                           "en": "How many times to repeat; tick ∞ on the left to repeat until stopped by hand"},
+    "tx.repeat.count.tip": {"zh": "循环发送多少次。默认 ∞（一直循环，手动停止）：点上箭头 ∞ → 1 → 2 …，"
+                                  "点下箭头减少，1 再往下回到 ∞，到顶也会绕回 ∞（轮盘式）；"
+                                  "也可以直接把数字（或 ∞）敲进去",
+                           "en": "How many times to repeat. Default \u221e (until stopped): "
+                                 "Up \u221e -> 1 -> 2 ..., Down counts back, 1 steps down to \u221e "
+                                 "and the top wraps to \u221e as well (a wheel). You can also type "
+                                 "a number (or \u221e)."},
     "tx.repeat.done": {"zh": "循环发送完成（{n} 次）", "en": "Repeat finished ({n} times)"},
     "tx.interval.tip": {"zh": "重复间隔（毫秒，范围 10~60000，默认 1000）", "en": "Repeat interval (ms, 10-60000, default 1000)"},
     "tx.sent_count": {"zh": "已发送 {n} 次", "en": "sent \u00d7{n}"},

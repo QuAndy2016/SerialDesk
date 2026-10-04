@@ -31,7 +31,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF, QValidator
+from PySide6.QtGui import QColor, QIntValidator, QPainter, QPolygonF
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
@@ -46,7 +46,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
-    QSpinBox,
     QStyle,
     QStyleOption,
     QToolButton,
@@ -56,6 +55,7 @@ from PySide6.QtWidgets import (
 )
 
 import ui.theme as theme
+from ui.rounds import ROUNDS_LIMIT, RoundsSpinBox     # the shared rounds wheel
 
 from app.config import load_config, save_config
 from app.i18n import hex_error_message, tr
@@ -77,7 +77,6 @@ EXAMPLES = (                            # seeded once so the panel is never a bl
 )
 SELECTED_PROP = "selected"
 SENDING_PROP = "sending"
-ROUNDS_LIMIT = 999
 
 
 # -- small pure helpers (no Qt: these can be read and tested on their own) -------------
@@ -147,75 +146,6 @@ class _GrowingLabel(QLabel):
                                             self.width())
         painter.drawText(self.rect(), self.alignment(), text)
         painter.end()
-
-
-class RoundsSpinBox(QSpinBox):
-    """How many times the sequence runs: one control, ∞ included.
-
-    Windows' spin-control guide asks for exactly this shape:
-
-    * "At the end of a range of valid values, **restart the range**. The spin control
-      metaphor is that the user is spinning a wheel of values, hence this wheel-like
-      behavior." (the exception - don't restart when the next value would be wrong -
-      does not apply: every value in our wheel is valid)
-    * "**Use text instead of special numeric values.** Allow users to spin to these
-      special values instead of having to know them and type them in." (their example is
-      literally a "sleep after (never)" spin box)
-
-    So the wheel is ``∞ -up-> 1 -up-> 2 ... 999 -up-> ∞`` and backwards the same way;
-    typing a number still works, and so does typing ∞. Internally the ∞ state is the spin
-    box's minimum (0) shown through ``specialValueText`` - the documented Qt mechanism for
-    a special value - so nothing in the UI ever shows or asks for "0".
-    """
-
-    ENDLESS = 0
-
-    def __init__(self, parent: QWidget | None=None):
-        super().__init__(parent)
-        self.setRange(self.ENDLESS, ROUNDS_LIMIT)
-        self.setValue(self.ENDLESS)              # default: run until stopped
-        self.setSpecialValueText("\u221e")
-        self.setMinimumWidth(56)
-        self.setMaximumWidth(72)
-        self.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.setToolTip(tr("qs.rounds.tip"))
-        self.setAccessibleName(tr("qs.rounds.label"))
-
-    def endless(self) -> bool:
-        """True while the sequence runs until it is stopped."""
-        return self.value() == self.ENDLESS
-
-    def stepBy(self, steps: int) -> None:  # noqa: N802 - Qt naming
-        """Spin the wheel: ∞ sits just below 1 and just above the maximum."""
-        value = self.value()
-        if steps == 1:
-            self.setValue(1 if value == self.ENDLESS else
-                          (self.ENDLESS if value >= ROUNDS_LIMIT else value + 1))
-            return
-        if steps == -1:
-            if value == self.ENDLESS:            # ∞ wraps backwards to the top of the wheel
-                self.setValue(ROUNDS_LIMIT)
-            elif value <= 1:                     # 1 -> ∞
-                self.setValue(self.ENDLESS)
-            else:
-                self.setValue(value - 1)
-            return
-        if steps > 0 and value == self.ENDLESS:
-            self.setValue(min(ROUNDS_LIMIT, steps))
-            return
-        super().stepBy(steps)
-
-    def valueFromText(self, text: str) -> int:  # noqa: N802 - Qt naming
-        """Typed "∞" (or 0) means the endless state."""
-        if text.strip().lower() in ("\u221e", "inf", "infinity"):
-            return self.ENDLESS
-        return super().valueFromText(text)
-
-    def validate(self, text: str, pos: int):  # noqa: N802 - Qt naming
-        """Let the special value pass validation so it can be typed and committed."""
-        if text.strip().lower() in ("\u221e", "inf", "infinity"):
-            return (QValidator.State.Acceptable, text, pos)
-        return super().validate(text, pos)
 
 
 class RailStrip(QWidget):
@@ -594,7 +524,8 @@ class QuickSendPanel(QWidget):
         self.seq_btn.setEnabled(False)
         self.seq_btn.clicked.connect(self.toggle_sequence)
         controls.addWidget(self.seq_btn)
-        self.rounds = RoundsSpinBox(self._content)
+        self.rounds = RoundsSpinBox(self._content, tip=tr("qs.rounds.tip"),
+                                    name=tr("qs.rounds.label"))
         controls.addWidget(self.rounds)
         controls.addStretch(1)
         controls.addSpacing(16)          # keep a destructive action away from Run
