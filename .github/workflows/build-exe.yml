@@ -35,7 +35,27 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           PYTHONUTF8: '1'
-        run: python -m pytest -q
+        shell: pwsh
+        # A red test must name itself in the job's annotations: the raw log needs a signed-in
+        # browser, while `GET /check-runs/{id}/annotations` is readable for a public repo - so a
+        # failure here is diagnosable without credentials (2026-10-04: the v1.10.0 run failed in
+        # this step and the only annotation said "exit code 1").
+        run: |
+          python -m pytest -q -rf --tb=line 2>&1 | Tee-Object -FilePath pytest.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $lines = Get-Content pytest.log | Where-Object { $_ -match '^(FAILED|ERROR)\s' } |
+                     Select-Object -First 25
+            foreach ($line in $lines) {
+              $safe = ($line -replace '%', '%25') -replace "`r|`n", ' '
+              Write-Host "::error title=pytest failure::$safe"
+            }
+            foreach ($line in (Get-Content pytest.log -Tail 25)) {
+              $safe = ($line -replace '%', '%25') -replace "`r|`n", ' '
+              Write-Host "::error ::$safe"
+            }
+          }
+          exit $code
 
       # Dependency check (SSDF PW: reuse well-secured components). Deliberately not part of
       # the local gate: pip-audit resolves against PyPI/OSV, which did not finish on a slow

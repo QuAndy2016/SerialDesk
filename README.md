@@ -78,6 +78,25 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 它不追求功能堆叠，只想成为你调试时最不需要思考的那一个窗口。
 
+### 核心特性
+
+- **一帧一行，不被 USB 适配器拆散**：分包支持 **自动（按波特率）/ 手动毫秒 / 按帧头**，以及不依赖时间的
+  **定长 / 起止定界 / 长度前缀（可带 CRC-16 校验并自动重新同步）**。自动模式的下限按 **USB 转串口芯片的延迟
+  定时器**（FTDI 默认 16 ms）取 **50 ms**——这是很多助手把一帧显示成两行的真正原因。
+- **快捷指令面板**：一条命令一行、**纸飞机单击即发**、**序列模式支持 ∞ 无限循环**、每行可写名称与备注、
+  多选删除带 **3 秒撤销**；`Ctrl+B` 折叠给接收区让位，**折叠后窗口最小宽度不到半屏**。
+- **自动滚动"跟随但不粘人"**：往回看历史只**临时暂停跟随**，不会取消"自动滚动"勾选、也不会改配置；
+  拖回最底部自动继续跟，状态栏有明确提示。
+- **接收区**：查找（`Ctrl+F`，高亮 + 命中计数 + 上下一处）、**视图过滤（全部 / 只看接收 / 只看发送）**、
+  **列式 HEX**、毫秒时间戳、**暂停显示（界面冻结但数据继续写日志，不丢字节）**。
+- **发送侧**：HEX / ASCII、行尾 CR/LF/CRLF、转义解析、**CRC16-Modbus / CRC16-CCITT / CRC32 / SUM8**、
+  **`{i}` 自动递增**（扫从机地址、测序列号）、循环发送、发送历史、发送文件。
+- **日志与诊断**：接收日志自动保存（可设分片与总量配额）；**诊断信息一键复制**，其中包含**实测的 USB
+  分片间隔（n / p95 / max）与当前分包窗口**——提 Issue 时贴上它，定位快得多。
+- **双语与主题**：中文 / English 一键切换，深色 / 浅色 / 跟随系统；正文对比度 ≥ 4.5:1、
+  点击目标 ≥ 24×24 px、键盘可走完主要流程。
+- **开源免费**：MIT 许可，无广告、无弹窗、无"基础免费高级收费"。
+
 ### 界面截图
 
 **主界面** —— 收发同屏，时间戳与 TX/RX 计数一目了然。
@@ -241,8 +260,8 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 | **v1.3.0** | 快速发送面板与发送区空间优化：单行条目 + 属性按钮、多选删除、发送选项按钮、输入框吸收富余高度、面板折叠零占位 | ✅ 本次发布 |
 | **v1.4.0** | 质量批：键盘焦点环与无障碍名、诊断信息与崩溃日志、状态栏计数合并（等宽）、快捷键一览、CI 测试门禁 | ✅ 本次发布 |
 | **v1.5.0** | 启动时静默检查新版本（可关、失败静默、不发送本机信息），有新版本时状态栏提示 + 设置菜单直达下载页 | ✅ 已完成 |
-| **v1.6.0 ~ v1.6.3** | UI 批 A-D：居中图标与双折角、四类收/发过滤、接收行重排、面板标题、清空分体按钮、发送框换行、端口下拉显示全名 | ✅ 已完成 |
-| **v1.7.0** | 序列循环轮数、重复发送次数，UI 批 A-D 收口（图标重绘、行重排、过滤缺陷修复） | ✅ 已完成 |
+| **v1.6.0 ~ v1.6.3** | 界面改造：居中图标与双折角、四类收/发过滤、接收行重排、面板标题、清空分体按钮、发送框换行、端口下拉显示全名 | ✅ 已完成 |
+| **v1.7.0** | 序列循环轮数、重复发送次数；界面改造收口（图标重绘、行重排、过滤缺陷修复） | ✅ 已完成 |
 | **v1.8.0** | 发送区 `{i}` 自动递增、接收区常驻关键词高亮条、快速发送命令名称 + 备注（两行、无损迁移） | ✅ 已完成 |
 | **v1.8.1** | 修复与打磨：新数据即时高亮、序列「已发 N 次」计数 + 当前发送行高亮、折叠控件去重、SpinBox 上下箭头与清空下拉箭头放大 | ✅ 已完成 |
 | **v1.8.2** | 发送区按分区标注（发送内容区 / 循环发送 / 发送·历史）、打勾即可删除选中、折叠按钮移至连接行最右端 | ✅ 已完成 |
@@ -310,7 +329,7 @@ tests/                   # unit tests
 
 ## 参与贡献
 
-Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issue 描述你的场景即可。
+Issue、PR、Star 都欢迎 —— 如果你觉得这个工具有用，点一个 Star、提一个 Issue，或者转给同样在调串口的同事，就是最大的支持。有任何串口调试上的痛点，直接开 Issue 描述你的场景即可。
 
 ## 支持这个项目
 
@@ -323,8 +342,6 @@ Issue、PR、Star 都欢迎。有任何串口调试上的痛点，直接开 Issu
   <br>
   <sub>微信扫码，随心就好</sub>
 </p>
-
-**海外读者**：微信个人收款码在境外无法使用，本项目暂不设海外收款渠道。如果你觉得这个工具有用，点一个 Star、提一个 Issue、或者把它分享给同样在调串口的同事，就是最大的支持。
 
 ## 许可证
 
@@ -363,6 +380,32 @@ Both share the same notes:
 - For the zip, **extract the whole folder and run it from there**; do not copy the exe out on its own (the sibling folder holds the runtime)
 - **Portable mode**: drop an empty `portable.txt` next to the exe and the settings and logs stay in the program folder (otherwise they live in `%APPDATA%\SerialDesk`)
 - **Verify the download**: `certutil -hashfile SerialDesk_vX.Y.Z-win64.zip SHA256` and compare it with the matching `.sha256` file
+
+### Highlights
+
+- **One frame, one line - even through a USB adapter**: framing offers **auto (by baud)**, a manual
+  millisecond gap and split-by-header, plus timing-free modes: **fixed length**, **start/end
+  delimiters** and **length-prefixed frames (optional CRC-16 with automatic resynchronisation)**.
+  The auto rule is floored at **50 ms**, which is the USB bridge's own batching delay (an FTDI
+  adapter's latency timer defaults to 16 ms) - the usual reason other tools show one frame as two lines.
+- **Quick commands**: one command per line, **click the paper plane to send**, **sequence mode with an
+  endless (∞) loop**, names and notes per row, multi-select delete with a **3-second undo**, and
+  `Ctrl+B` to fold the panel - **folded, the window's minimum width is under half the screen**.
+- **Auto-scroll that follows without sticking**: scrolling back **pauses following temporarily**, it
+  never unticks the setting and never rewrites your config; return to the bottom and it follows
+  again, with the state stated in the status bar.
+- **Receive pane**: find (`Ctrl+F`, highlighting + match counter + previous/next), **view filters
+  (all / RX only / TX only)**, **column HEX**, millisecond timestamps, and **pause display** (the
+  view freezes while the log keeps every byte).
+- **Sending**: HEX / ASCII, CR/LF/CRLF line endings, escape parsing, **CRC16-Modbus / CRC16-CCITT /
+  CRC32 / SUM8**, **`{i}` auto-increment** (sweep slave addresses, step serial numbers), repeat send,
+  send history and file sending.
+- **Logs and diagnostics**: receive logs save themselves (with size/time rotation and a total quota);
+  **one-click diagnostics** include the **measured USB chunk gaps (n / p95 / max) and the active
+  framing window**, which makes a bug report land in one round.
+- **Bilingual and themed**: Chinese / English, dark / light / follow system; text contrast ≥ 4.5:1,
+  pointer targets ≥ 24x24 px, and the main workflows are keyboard-reachable.
+- **Open source and free**: MIT licensed, no ads, no pop-ups, no "free core, paid extras".
 
 ### Features
 
@@ -466,8 +509,8 @@ At the limit: with Wrap on it restarts from the start value, with Wrap off it st
 | **v1.3.0** | Quick-send and send area: one-line rows with a property button, multi-select delete, an options button, an input box that owns the pane's spare height, and a fold that costs no width | ✅ This release |
 | **v1.4.0** | Quality pass: focus rings and accessible names, diagnostics plus a crash log, one monospace counter, a shortcut reference, and a CI test gate | ✅ This release |
 | **v1.5.0** | A quiet startup update check (disable-able, fails silently, sends nothing about this machine) with a status-bar note and a Settings link to the download page | ✅ This release |
-| **v1.6.0 ~ v1.6.3** | UI batches A-D: centred icons and double chevrons, a four-way RX/TX filter, a receive-row re-plan, panel titles, the clear split button, send-box wrapping, full device names in the port dropdown | ✅ Done |
-| **v1.7.0** | Sequence loop count and repeat-send count, closing out UI batches A-D (regenerated icons, row re-plan, filter fixes) | ✅ Done |
+| **v1.6.0 ~ v1.6.3** | Interface pass: centred icons and double chevrons, a four-way RX/TX filter, a receive-row re-plan, panel titles, the clear split button, send-box wrapping, full device names in the port dropdown | ✅ Done |
+| **v1.7.0** | Sequence loop count and repeat-send count; closing out the interface pass (regenerated icons, row re-plan, filter fixes) | ✅ Done |
 | **v1.8.0** | `{i}` auto-increment in the send box, a persistent receive keyword highlight bar, named quick-send commands with notes (two-line rows, lossless migration) | ✅ Done |
 | **v1.8.1** | Fixes and polish: live highlighting for newly received rows, a "sent N times" sequence counter plus a highlight on the row being sent, the duplicate fold control removed, and larger spin-box / clear-dropdown arrows | ✅ Done |
 | **v1.8.2** | Send area labelled by its sections (send content / repeat send / send·history), ticking a row now arms "Delete selected", and the fold toggle moved to the far right of the connection row | ✅ Done |
@@ -535,15 +578,13 @@ And thanks to everyone who shares serial-debugging experience, interface design 
 
 ### Contributing
 
-Issues, PRs and stars are all welcome. If a serial debugging pain point is missing here, open an issue and describe your workflow.
+Issues, PRs and stars are all welcome — a star, an issue, or a share with a colleague who debugs serial ports means just as much. If a serial debugging pain point is missing here, open an issue and describe your workflow.
 
 ### Support
 
 This tool was built line by line, late at night. No ads, no pop-ups, no "free core, paid extras" playbook — the code stays open, and it stays yours.
 
 If it has ever saved you an afternoon of debugging, you are welcome to buy the author a coffee. It changes nothing for you, and it is what keeps this project moving. Donations are entirely optional — the tool keeps getting updates either way.
-
-The donation QR code in the Chinese section is a personal WeChat Pay code, which only works inside mainland China; this project does not run an overseas donation channel. If the tool is useful to you, a star, an issue, or a share with a colleague who debugs serial ports means just as much.
 
 ### License
 
