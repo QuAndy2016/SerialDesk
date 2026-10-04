@@ -139,15 +139,21 @@ def test_ctrl_click_selects_several_rows_for_delete(app, win):
     again - a click that should have selected two rows selected none. The gestures here
     go through QTest (focus, propagation and modifiers are Qt's own), which is what the
     older filter-only helper could not reproduce.
+
+    The counter is compared against ``tr(...)``, not a Chinese literal: the suite pins the
+    language in conftest (a window applies the *config's* language at startup, and the CI
+    runner's system language is English - the v1.10.0 tag run failed on exactly that).
     """
+    from app import i18n
+
     panel = win.quick_panel
     panel.clear_selection()
     app.processEvents()
     click_row(app, panel._rows[0])
-    assert panel.armed_lbl.text() == "已选 1"
+    assert panel.armed_lbl.text() == i18n.tr("qs.armed", n=1)
     click_row(app, panel._rows[2], Qt.KeyboardModifier.ControlModifier)
     assert [row for row in panel._rows if row.armed()] == [panel._rows[0], panel._rows[2]]
-    assert panel.armed_lbl.text() == "已选 2"
+    assert panel.armed_lbl.text() == i18n.tr("qs.armed", n=2)
     assert panel.del_btn.isEnabled()
     panel.clear_selection()
 
