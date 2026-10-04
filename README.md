@@ -68,6 +68,32 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 
 ![Dark theme](assets/screenshots/en_10_dark.png)
 
+**Close-ups** (the parts a full-window shot cannot show)
+
+**One quick-command row** — the command owns the left, the format marker and name sit on the right, and the paper plane sends on a single click.
+
+![One quick-command row](assets/screenshots/en_11_detail_row.png)
+
+**Find bar** — a separator from the control row above, a fixed-width slot for the match counter (so the buttons never jump when the number appears), up/down arrows and the close button closing the cluster.
+
+![Find bar](assets/screenshots/en_12_detail_findbar.png)
+
+**Receive control row** — view filter, timestamps, auto-scroll, More, save log and clear, packed tight.
+
+![Receive control row](assets/screenshots/en_13_detail_receive_row.png)
+
+**Status bar** — looking back pauses following temporarily and says so ("Following paused - return to the bottom of the pane"); the tick and your config stay untouched.
+
+![Status bar](assets/screenshots/en_14_detail_statusbar.png)
+
+**Framing parameters** — length-prefixed frames here: prefix size, endianness and the optional CRC-16/Modbus check that drops a bad frame and resynchronises.
+
+![Framing parameters](assets/screenshots/en_15_detail_split_slot.png)
+
+**Send settings** — escape parsing and file sending live in one compact popup instead of taking space in the main window.
+
+![Send settings](assets/screenshots/en_16_detail_send_popup.png)
+
 ---
 
 ## 这是什么
@@ -138,6 +164,32 @@ A cross-platform serial debugging tool for embedded, motor-control and industria
 **深色主题** —— 同样的工作区，夜间更护眼。
 
 ![深色主题](assets/screenshots/zh_10_dark.png)
+
+**细节特写**（整窗图看不清的地方，这里放大看）
+
+**快捷指令的一行** —— 命令在左、格式标记与名称在右、最右一个纸飞机：单击即发。
+
+![快捷指令的一行](assets/screenshots/zh_11_detail_row.png)
+
+**查找栏** —— 与上方控件行之间有分隔线；命中计数占固定槽位（数字出现时按钮不会跳），上/下一处是箭头，关闭键跟在簇尾。
+
+![查找栏](assets/screenshots/zh_12_detail_findbar.png)
+
+**接收区控件行** —— 视图过滤、时间戳、自动滚动、更多、保存日志、清空各就各位，间距收得很紧。
+
+![接收区控件行](assets/screenshots/zh_13_detail_receive_row.png)
+
+**状态栏** —— 往回看历史时只临时暂停跟随，这里会写明「已暂停跟随 · 拖回接收区底部继续」，而勾选与配置都不动。
+
+![状态栏](assets/screenshots/zh_14_detail_statusbar.png)
+
+**分包参数** —— 以「长度前缀」为例：前缀字节数、大小端、可选的 CRC-16/Modbus 校验（校验失败自动丢帧并重新同步）。
+
+![分包参数](assets/screenshots/zh_15_detail_split_slot.png)
+
+**发送设置** —— 转义解析与发送文件收在一个紧凑弹层里，不占主界面空间。
+
+![发送设置](assets/screenshots/zh_16_detail_send_popup.png)
 
 ## 下载与安装（Windows 64 位，无需 Python）
 
